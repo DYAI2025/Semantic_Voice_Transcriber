@@ -2,6 +2,28 @@
 
 Ein intelligentes System zur automatischen Transkription von WhatsApp-Audionachrichten mit Sprechererkennung und Memory-System Integration.
 
+## 🏥 Therapeutic Transcription System (NEW)
+
+**Professional-grade transcription for therapeutic use**
+
+### Features
+- ✅ High-quality transcription with confidence scoring
+- 🎭 Emotion analysis (text + audio)
+- 🎵 Prosody extraction (pitch, tempo, energy)
+- 🧠 Learning speaker profiles
+- ⚠️ Quality warnings for low-confidence segments
+- 🖥️ Professional GUI with one-click workflow
+
+### Quick Start
+```bash
+# Launch therapeutic GUI
+python3 therapeutic_transcriber_gui.py
+```
+
+📖 **Full documentation**: See [docs/THERAPEUTIC_TRANSCRIPTION_GUIDE.md](docs/THERAPEUTIC_TRANSCRIPTION_GUIDE.md)
+
+---
+
 ## 🚀 Features
 
 - **Automatische Audio-Transkription** mit OpenAI Whisper
