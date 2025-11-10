@@ -13,6 +13,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict, Counter
+from typing import Dict, Any
 import json
 
 # Logging Setup
@@ -305,6 +306,133 @@ class MemoryBuilder:
             json.dump(report, f, ensure_ascii=False, indent=2)
         
         logger.info(f"📊 Zusammenfassungsbericht erstellt: {report_path}")
+
+def update_speaker_memory(speaker: str, transcript_data: Dict[str, Any], memory_dir: Path):
+    """
+    Aktualisiert das Memory-Profil für einen Sprecher
+
+    Args:
+        speaker: Sprecher-Name
+        transcript_data: Transkript mit Metadaten (text, emotion, etc.)
+        memory_dir: Memory-Verzeichnis
+    """
+    memory_file = memory_dir / f"{speaker}.yaml"
+
+    # Lade existierendes Profil oder erstelle neues
+    if memory_file.exists():
+        with open(memory_file, 'r', encoding='utf-8') as f:
+            memory = yaml.safe_load(f) or {}
+    else:
+        memory = {
+            'name': speaker,
+            'last_updated': None,
+            'total_interactions': 0,
+            'statistics': {
+                'avg_sentence_length': 0,
+                'most_common_words': {},
+                'sentiment': {'positive': 0, 'negative': 0, 'ratio': 0}
+            },
+            'topics': {},
+            'characteristics': [],
+            'prosody_patterns': {
+                'pitch_profile': {
+                    'mean_pitch': 0,
+                    'pitch_variability': 0,
+                    'sample_count': 0
+                },
+                'tempo_profile': {
+                    'mean_bpm': 0,
+                    'mean_speech_rate': 0,
+                    'sample_count': 0
+                },
+                'energy_profile': {
+                    'mean_energy': 0,
+                    'energy_variability': 0,
+                    'mean_dynamic_range': 0,
+                    'sample_count': 0
+                }
+            }
+        }
+
+    # Update statistics from transcript
+    text = transcript_data.get('text', '')
+    if text:
+        sentences = text.split('.')
+        memory['statistics']['avg_sentence_length'] = len(text.split()) / max(len(sentences), 1)
+
+    # UPDATE PROSODY PATTERNS
+    if 'emotion' in transcript_data and 'prosody' in transcript_data['emotion']:
+        prosody = transcript_data['emotion']['prosody']
+
+        # Update pitch profile
+        if 'pitch' in prosody:
+            pitch_data = prosody['pitch']
+            pitch_profile = memory['prosody_patterns']['pitch_profile']
+            n = pitch_profile['sample_count']
+
+            # Running average
+            if n > 0:
+                pitch_profile['mean_pitch'] = (
+                    (pitch_profile['mean_pitch'] * n + pitch_data.get('mean', 0)) / (n + 1)
+                )
+                pitch_profile['pitch_variability'] = (
+                    (pitch_profile['pitch_variability'] * n + pitch_data.get('std', 0)) / (n + 1)
+                )
+            else:
+                pitch_profile['mean_pitch'] = pitch_data.get('mean', 0)
+                pitch_profile['pitch_variability'] = pitch_data.get('std', 0)
+
+            pitch_profile['sample_count'] = n + 1
+
+        # Update tempo profile
+        if 'tempo' in prosody:
+            tempo_data = prosody['tempo']
+            tempo_profile = memory['prosody_patterns']['tempo_profile']
+            n = tempo_profile['sample_count']
+
+            if n > 0:
+                tempo_profile['mean_bpm'] = (
+                    (tempo_profile['mean_bpm'] * n + tempo_data.get('bpm', 0)) / (n + 1)
+                )
+                tempo_profile['mean_speech_rate'] = (
+                    (tempo_profile['mean_speech_rate'] * n + tempo_data.get('speech_rate', 0)) / (n + 1)
+                )
+            else:
+                tempo_profile['mean_bpm'] = tempo_data.get('bpm', 0)
+                tempo_profile['mean_speech_rate'] = tempo_data.get('speech_rate', 0)
+
+            tempo_profile['sample_count'] = n + 1
+
+        # Update energy profile
+        if 'energy' in prosody:
+            energy_data = prosody['energy']
+            energy_profile = memory['prosody_patterns']['energy_profile']
+            n = energy_profile['sample_count']
+
+            if n > 0:
+                energy_profile['mean_energy'] = (
+                    (energy_profile['mean_energy'] * n + energy_data.get('mean', 0)) / (n + 1)
+                )
+                energy_profile['energy_variability'] = (
+                    (energy_profile['energy_variability'] * n + energy_data.get('std', 0)) / (n + 1)
+                )
+                energy_profile['mean_dynamic_range'] = (
+                    (energy_profile['mean_dynamic_range'] * n + energy_data.get('dynamic_range', 0)) / (n + 1)
+                )
+            else:
+                energy_profile['mean_energy'] = energy_data.get('mean', 0)
+                energy_profile['energy_variability'] = energy_data.get('std', 0)
+                energy_profile['mean_dynamic_range'] = energy_data.get('dynamic_range', 0)
+
+            energy_profile['sample_count'] = n + 1
+
+    # Update metadata
+    memory['last_updated'] = datetime.now().isoformat()
+    memory['total_interactions'] += 1
+
+    # Save
+    with open(memory_file, 'w', encoding='utf-8') as f:
+        yaml.dump(memory, f, allow_unicode=True, default_flow_style=False)
 
 def main():
     """Hauptfunktion"""
