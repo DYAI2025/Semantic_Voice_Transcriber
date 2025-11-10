@@ -19,7 +19,7 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime
 import shutil
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 
 # Versuche zusätzliche Audio-Bibliotheken zu importieren
 try:
@@ -52,6 +52,9 @@ class EmotionalAnalyzer:
     
     def __init__(self):
         self.emotional_markers = self._load_emotional_markers()
+        # ADD THIS LINE:
+        from prosody_analyzer import ProsodyAnalyzer
+        self.prosody_analyzer = ProsodyAnalyzer()
         
     def _load_emotional_markers(self):
         """Lade emotionale Marker aus deinem bestehenden System"""
@@ -248,6 +251,127 @@ class EmotionalAnalyzer:
             return 'neugierig_forschend'
         else:
             return 'hoffnungsvoll_antreibend'
+
+    def analyze_emotion(self, text: str, audio_path: Optional[str] = None,
+                       audio_data: Optional[np.ndarray] = None,
+                       sr: int = 22050) -> Dict[str, Any]:
+        """
+        Analysiert emotionale Färbung aus Text und optionalem Audio
+
+        Args:
+            text: Transkribierter Text
+            audio_path: Pfad zur Audio-Datei (optional)
+            audio_data: Audio als numpy array (optional)
+            sr: Sample rate
+
+        Returns:
+            Dict mit emotion, valence, confidence, text_sentiment, audio_features, prosody
+        """
+        result = {
+            'emotion': 'neutral',
+            'valence': 0.0,
+            'confidence': 0.0,
+            'text_sentiment': {},
+            'audio_features': {},
+            'prosody': {}  # ADD THIS
+        }
+
+        # Text-Sentiment-Analyse
+        text_sentiment = self.analyze_text_emotion(text)
+        result['text_sentiment'] = text_sentiment
+
+        # Audio-Feature-Extraktion
+        audio_features = {}
+        if LIBROSA_AVAILABLE and (audio_path or audio_data is not None):
+            if audio_path:
+                audio_features = self.analyze_audio_features(Path(audio_path))
+            elif audio_data is not None:
+                audio_features = self._extract_audio_features_from_array(audio_data, sr)
+            result['audio_features'] = audio_features
+
+            # PROSODY EXTRACTION - ADD THIS BLOCK:
+            try:
+                if audio_data is not None:
+                    prosody_features = self.prosody_analyzer.extract_prosody(audio_data, sr)
+                elif audio_path:
+                    prosody_features = self.prosody_analyzer.extract_from_file(audio_path)
+                else:
+                    prosody_features = {}
+                result['prosody'] = prosody_features
+            except Exception as e:
+                logger.warning(f"Prosody extraction failed: {e}")
+                result['prosody'] = {}
+
+        # Kombiniere Text + Audio für Gesamtemotion
+        combined_emotion = self._combine_text_audio_emotion(text_sentiment, audio_features)
+        result.update(combined_emotion)
+
+        return result
+
+    def _extract_audio_features_from_array(self, audio_data: np.ndarray, sr: int) -> Dict[str, float]:
+        """Extrahiert Audio-Features aus numpy array"""
+        try:
+            features = {}
+
+            # Pitch
+            pitches, magnitudes = librosa.piptrack(y=audio_data, sr=sr)
+            pitch_values = []
+            for t in range(pitches.shape[1]):
+                index = magnitudes[:, t].argmax()
+                pitch = pitches[index, t]
+                if pitch > 0:
+                    pitch_values.append(pitch)
+
+            if pitch_values:
+                features['pitch_mean'] = float(np.mean(pitch_values))
+                features['pitch_std'] = float(np.std(pitch_values))
+
+            # Energy
+            rms = librosa.feature.rms(y=audio_data)[0]
+            features['energy_mean'] = float(np.mean(rms))
+            features['energy_std'] = float(np.std(rms))
+
+            # Tempo
+            onset_env = librosa.onset.onset_strength(y=audio_data, sr=sr)
+            tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=sr)
+            features['tempo'] = float(tempo[0]) if len(tempo) > 0 else 0.0
+
+            # Spectral features
+            spectral_centroids = librosa.feature.spectral_centroid(y=audio_data, sr=sr)[0]
+            features['spectral_centroid_mean'] = float(np.mean(spectral_centroids))
+
+            return features
+
+        except Exception as e:
+            logger.error(f"Fehler bei Audio-Feature-Extraktion: {e}")
+            return {}
+
+    def _combine_text_audio_emotion(self, text_sentiment: Dict[str, Any], audio_features: Dict[str, float]) -> Dict[str, Any]:
+        """Kombiniert Text- und Audio-Emotionen zu Gesamtbewertung"""
+        # Get text emotion
+        text_emotion = text_sentiment.get('dominant_emotion', 'neutral')
+        text_valence = text_sentiment.get('valence', 0.0)
+
+        # Get audio emotion if available
+        audio_emotion = 'neutral'
+        if audio_features:
+            audio_emotion = self.classify_emotion_from_audio(audio_features)
+
+        # Combine (simple weighted average for now)
+        if audio_features:
+            # Both text and audio available - give equal weight
+            combined_emotion = text_emotion if text_valence != 0 else audio_emotion
+            confidence = 0.8
+        else:
+            # Text only
+            combined_emotion = text_emotion
+            confidence = 0.6
+
+        return {
+            'emotion': combined_emotion,
+            'valence': text_valence,
+            'confidence': confidence
+        }
 
 class WhisperSpeakerMatcherV4:
     def __init__(self, base_path=None, use_faster_whisper=True):
