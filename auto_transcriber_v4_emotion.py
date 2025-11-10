@@ -50,8 +50,9 @@ logger = logging.getLogger(__name__)
 class EmotionalAnalyzer:
     """Analysiert emotionale Sprachfärbung aus Audio und Text"""
     
-    def __init__(self):
+    def __init__(self, confidence_threshold: float = 0.5):
         self.emotional_markers = self._load_emotional_markers()
+        self.confidence_threshold = confidence_threshold
         # ADD THIS LINE:
         from prosody_analyzer import ProsodyAnalyzer
         self.prosody_analyzer = ProsodyAnalyzer()
@@ -786,6 +787,146 @@ Die Sprachanalyse zeigt {emotion_analysis.get('dominant_emotion', 'neutrale')} e
                 continue
         
         logger.info(f"Verarbeitung abgeschlossen. {processed_count} neue Dateien verarbeitet.")
+
+def transcribe_with_whisper(audio_path: str, model_size: str = 'base', language: str = 'de') -> Dict[str, Any]:
+    """
+    Transkribiert Audio mit Whisper und extrahiert Confidence Scores
+
+    Args:
+        audio_path: Pfad zur Audio-Datei
+        model_size: Whisper-Modell (tiny, base, small, medium, large)
+        language: Sprache (de, en, etc.)
+
+    Returns:
+        Dict mit text, segments, und confidence_scores
+    """
+    try:
+        import whisper
+
+        logger.info(f"Lade Whisper-Modell: {model_size}")
+        model = whisper.load_model(model_size)
+
+        logger.info(f"Transkribiere: {audio_path}")
+        result = model.transcribe(
+            audio_path,
+            language=language,
+            verbose=False,
+            word_timestamps=True  # Enable word-level timestamps
+        )
+
+        # EXTRACT CONFIDENCE SCORES
+        confidence_scores = _extract_confidence_scores(result)
+
+        return {
+            'text': result['text'],
+            'segments': result.get('segments', []),
+            'confidence_scores': confidence_scores
+        }
+
+    except Exception as e:
+        logger.error(f"Fehler bei Transkription: {e}")
+        return {
+            'text': '',
+            'segments': [],
+            'confidence_scores': {
+                'overall_confidence': 0.0,
+                'segments': [],
+                'low_confidence_segments': []
+            }
+        }
+
+def _extract_confidence_scores(whisper_result: Dict[str, Any],
+                               low_confidence_threshold: float = 0.5) -> Dict[str, Any]:
+    """
+    Extrahiert Confidence Scores aus Whisper-Ergebnis
+
+    Args:
+        whisper_result: Whisper transcribe() Ergebnis
+        low_confidence_threshold: Schwellwert für niedrige Confidence
+
+    Returns:
+        Dict mit confidence-Informationen
+    """
+    segments = whisper_result.get('segments', [])
+
+    segment_confidences = []
+    low_confidence_segments = []
+    total_confidence = 0.0
+
+    for seg in segments:
+        # Whisper gibt avg_logprob (negative log probability)
+        # Konvertiere zu 0-1 Confidence Score
+        avg_logprob = seg.get('avg_logprob', -1.0)
+        no_speech_prob = seg.get('no_speech_prob', 0.0)
+
+        # Heuristik: exp(avg_logprob) gibt ungefähre Wahrscheinlichkeit
+        # Adjustiere mit no_speech_prob
+        confidence = min(1.0, max(0.0, np.exp(avg_logprob) * (1 - no_speech_prob)))
+
+        segment_info = {
+            'text': seg.get('text', '').strip(),
+            'start': seg.get('start', 0.0),
+            'end': seg.get('end', 0.0),
+            'confidence': float(confidence),
+            'avg_logprob': float(avg_logprob),
+            'no_speech_prob': float(no_speech_prob)
+        }
+
+        segment_confidences.append(segment_info)
+        total_confidence += confidence
+
+        # Mark low confidence segments
+        if confidence < low_confidence_threshold:
+            low_confidence_segments.append(segment_info)
+
+    overall_confidence = total_confidence / len(segments) if segments else 0.0
+
+    return {
+        'overall_confidence': float(overall_confidence),
+        'segments': segment_confidences,
+        'low_confidence_segments': low_confidence_segments,
+        'low_confidence_threshold': low_confidence_threshold,
+        'total_segments': len(segments)
+    }
+
+def mark_low_confidence_segments(transcription_result: Dict[str, Any]) -> str:
+    """
+    Markiert Segmente mit niedriger Confidence im Text
+
+    Args:
+        transcription_result: Ergebnis von transcribe_with_whisper
+
+    Returns:
+        Text mit Markierungen für unsichere Stellen
+    """
+    text = transcription_result.get('text', '')
+    confidence_scores = transcription_result.get('confidence_scores', {})
+
+    # Get all segments
+    segments = confidence_scores.get('segments', [])
+    if not segments:
+        return text
+
+    # Erstelle markierten Text
+    marked_text = text
+
+    # Sortiere Segmente nach Position (rückwärts für korrekte String-Insertion)
+    sorted_segments = sorted(
+        segments,
+        key=lambda s: s['start'],
+        reverse=True
+    )
+
+    for seg in sorted_segments:
+        if seg['confidence'] < confidence_scores.get('low_confidence_threshold', 0.5):
+            # Finde Segment im Text
+            seg_text = seg['text'].strip()
+            if seg_text in marked_text:
+                # Markiere mit Confidence Score
+                marker = f" [UNSICHER:{seg['confidence']:.2f}]"
+                marked_text = marked_text.replace(seg_text, seg_text + marker, 1)
+
+    return marked_text
 
 def main():
     """Hauptfunktion"""
