@@ -371,7 +371,7 @@ class SuperSemanticProcessor:
 
     def _infer_sender_from_name(self, name: str) -> str:
         """Versuche, den Sender aus dem Dateinamen zu ermitteln"""
-        match = re.search(r'(Ben|Zoe|Max|Anna|[A-Z][a-z]+)', name)
+        match = re.search(r'(Ben|Max|Anna|[A-Z][a-z]+)', name)
         return match.group(1) if match else 'unknown'
 
     def process_export_folder(self, export_path: Path) -> Dict[str, Any]:

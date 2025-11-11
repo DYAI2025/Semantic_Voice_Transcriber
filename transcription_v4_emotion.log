@@ -25032,3 +25032,27 @@ found unknown escape character '\x00'
 2025-11-10 20:31:26,629 - INFO - Transkribiere: /tmp/tmpjtcatn_o/Eingang/test_speaker/test_audio.wav
 2025-11-10 20:32:53,763 - INFO - Lade Whisper-Modell: tiny
 2025-11-10 20:32:54,368 - INFO - Transkribiere: /tmp/tmppr8oe_0f/Eingang/test_speaker/test_audio.wav
+2025-11-11 09:49:52,535 - INFO - Quality metrics - SNR: 56.0dB (0.93), Clipping: 0.000 (1.00), Silence: 0.231 (1.00), Overall: 0.97
+2025-11-11 09:50:06,031 - INFO - Analyzed KAH EGOSTATE (2).m4a: Quality=0.97
+2025-11-11 09:50:06,044 - INFO - Applying intelligent preprocessing (quality: 0.97)
+2025-11-11 09:50:12,479 - INFO - Quality 0.97: No preprocessing
+2025-11-11 09:50:13,045 - INFO - Lade Whisper-Modell: small
+2025-11-11 09:50:52,387 - INFO - Transkribiere: /home/dyai/Dokumente/DYAI_home/DEV/TOOLS/TransSemantic/Super_semantic_whisper/Eingang/KAH EGOSTATE (2).m4a
+2025-11-11 10:11:01,414 - INFO - Quality metrics - SNR: 56.0dB (0.93), Clipping: 0.000 (1.00), Silence: 0.231 (1.00), Overall: 0.97
+2025-11-11 10:11:15,001 - INFO - Analyzed KAH EGOSTATE (2).m4a: Quality=0.97
+2025-11-11 10:11:15,003 - INFO - Applying intelligent preprocessing (quality: 0.97)
+2025-11-11 10:11:21,470 - INFO - Quality 0.97: No preprocessing
+2025-11-11 10:11:22,036 - INFO - Lade Whisper-Modell: small
+2025-11-11 10:11:24,356 - INFO - Transkribiere: /home/dyai/Dokumente/DYAI_home/DEV/TOOLS/TransSemantic/Super_semantic_whisper/Eingang/KAH EGOSTATE (2).m4a
+2025-11-11 10:28:30,992 - INFO - Quality metrics - SNR: 56.0dB (0.93), Clipping: 0.000 (1.00), Silence: 0.231 (1.00), Overall: 0.97
+2025-11-11 10:28:44,052 - INFO - Analyzed KAH EGOSTATE (2).m4a: Quality=0.97
+2025-11-11 10:28:44,061 - INFO - Applying intelligent preprocessing (quality: 0.97)
+2025-11-11 10:28:50,307 - INFO - Quality 0.97: No preprocessing
+2025-11-11 10:28:50,867 - INFO - Lade Whisper-Modell: small
+2025-11-11 10:28:52,866 - INFO - Transkribiere: Eingang/Patient/KAH EGOSTATE (2).m4a
+2025-11-11 13:49:47,730 - INFO - Quality metrics - SNR: 56.0dB (0.93), Clipping: 0.000 (1.00), Silence: 0.231 (1.00), Overall: 0.97
+2025-11-11 13:50:02,386 - INFO - Analyzed KAH EGOSTATE (2).m4a: Quality=0.97
+2025-11-11 13:50:02,388 - INFO - Applying intelligent preprocessing (quality: 0.97)
+2025-11-11 13:50:08,835 - INFO - Quality 0.97: No preprocessing
+2025-11-11 13:50:09,399 - INFO - Lade Whisper-Modell: small
+2025-11-11 13:50:11,096 - INFO - Transkribiere: Eingang/Patient/KAH EGOSTATE (2).m4a

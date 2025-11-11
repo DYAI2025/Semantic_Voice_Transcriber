@@ -214,10 +214,10 @@ if __name__ == "__main__":
         'messages': [
             {
                 'timestamp': datetime.now(),
-                'sender': 'Zoe',
-                'content': 'Hey, ich vermisse dich so sehr!',
+                'sender': 'Speaker',
+                'content': 'Beispiel-Nachricht',
                 'type': 'text',
-                'emotion': {'valence': -0.3, 'dominant_emotion': 'sehnsuchtsvoll_still'}
+                'emotion': {'valence': 0.0, 'dominant_emotion': 'neutral'}
             }
         ]
     }

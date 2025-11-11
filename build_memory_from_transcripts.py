@@ -48,7 +48,7 @@ class MemoryBuilder:
             return match.group(1)
             
         # Alternative Pattern: speaker im Dateinamen
-        known_speakers = ['ben', 'zoe', 'schroeti', 'freddy', 'marike', 'elke', 'christoph']
+        known_speakers = ['ben', 'schroeti', 'freddy', 'marike', 'elke', 'christoph']
         filename_lower = filename.lower()
         
         for speaker in known_speakers:

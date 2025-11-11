@@ -21,6 +21,12 @@ from datetime import datetime
 import shutil
 from typing import List, Dict, Tuple, Optional, Any
 
+# Lokales TextBlob einbinden (falls vorhanden)
+textblob_local_path = Path(__file__).parent / "TextBlob" / "src"
+if textblob_local_path.exists() and str(textblob_local_path) not in sys.path:
+    sys.path.insert(0, str(textblob_local_path))
+    print(f"✅ Lokales TextBlob eingebunden: {textblob_local_path}")
+
 # Versuche zusätzliche Audio-Bibliotheken zu importieren
 try:
     import librosa
@@ -28,6 +34,13 @@ try:
 except ImportError:
     LIBROSA_AVAILABLE = False
     print("⚠️ Librosa nicht installiert. Audio-Feature-Extraktion limitiert.")
+
+try:
+    from prosody_extractor import ProsodyExtractor, ProsodyFeatures, ProsodyBaseline
+    PROSODY_AVAILABLE = True
+except ImportError:
+    PROSODY_AVAILABLE = False
+    print("⚠️ Prosody Extractor nicht gefunden. Prosodieanalyse deaktiviert.")
 
 try:
     from textblob import TextBlob
@@ -432,10 +445,6 @@ class WhisperSpeakerMatcherV4:
                 'name': 'Benjamin Poersch',
                 'keywords': ['also', 'genau', 'interessant', 'technisch', 'system']
             },
-            'zoe': {
-                'name': 'Zoe',
-                'keywords': ['wow', 'krass', 'mega', 'cool', 'schön']
-            },
             'ich': {
                 'name': 'Ich',
                 'keywords': []
@@ -490,10 +499,10 @@ class WhisperSpeakerMatcherV4:
             return chatpartner.replace('_', ' ')
         
         filename = file_path.name.lower()
-        for known_person in ['zoe', 'schroeti', 'freddy', 'marike', 'vincent', 'elke']:
+        for known_person in ['schroeti', 'freddy', 'marike', 'vincent', 'elke']:
             if known_person in filename:
                 return known_person.title()
-        
+
         return "Unbekannt"
 
     def transcribe_audio_standard(self, audio_path: Path) -> Optional[str]:
@@ -675,40 +684,26 @@ Die Sprachanalyse zeigt {emotion_analysis.get('dominant_emotion', 'neutrale')} e
         return emoji
 
     def get_sorted_audio_files(self) -> List[Path]:
-        """Hole alle OPUS-Dateien, priorisiere Zoe-Ordner"""
+        """Hole alle OPUS-Dateien sortiert nach Datum"""
         if not self.eingang_path.exists():
             logger.error(f"Eingang-Ordner nicht gefunden: {self.eingang_path}")
             return []
 
         all_opus_files = list(self.eingang_path.rglob("*.opus"))
-        
-        zoe_files = []
-        other_files = []
-        
-        for file in all_opus_files:
-            if 'zoe' in str(file).lower():
-                zoe_files.append(file)
-            else:
-                other_files.append(file)
-        
+
         def sort_by_whatsapp_date(file_path):
             dt, _ = self.extract_whatsapp_datetime(file_path.name)
             return dt if dt else datetime.fromtimestamp(file_path.stat().st_mtime)
-        
-        zoe_files.sort(key=sort_by_whatsapp_date, reverse=True)
-        other_files.sort(key=sort_by_whatsapp_date, reverse=True)
-        
-        return zoe_files + other_files
+
+        all_opus_files.sort(key=sort_by_whatsapp_date, reverse=True)
+
+        return all_opus_files
 
     def process_audio_files(self):
         """Verarbeite alle OPUS Audio-Dateien mit emotionaler Analyse"""
-        
+
         audio_files = self.get_sorted_audio_files()
         logger.info(f"Gefunden: {len(audio_files)} OPUS-Dateien")
-        
-        if audio_files:
-            zoe_count = sum(1 for f in audio_files if 'zoe' in str(f).lower())
-            logger.info(f"Davon {zoe_count} Dateien im Zoe-Ordner (werden zuerst verarbeitet)")
         
         processed_count = 0
         for audio_file in audio_files:
@@ -795,7 +790,8 @@ def transcribe_with_whisper(
     use_intelligent_pipeline: bool = False,
     quality_score: Optional[float] = None,
     quality_analyzer: Optional[Any] = None,
-    audio_preprocessor: Optional[Any] = None
+    audio_preprocessor: Optional[Any] = None,
+    extract_prosody: bool = False
 ) -> Dict[str, Any]:
     """
     Transkribiert Audio mit Whisper und extrahiert Confidence Scores
@@ -808,9 +804,10 @@ def transcribe_with_whisper(
         quality_score: Pre-calculated quality score (0-1)
         quality_analyzer: AudioQualityAnalyzer instance
         audio_preprocessor: AudioPreprocessor instance
+        extract_prosody: Extract prosodic features (tempo, pitch, energy, pauses)
 
     Returns:
-        Dict mit text, segments, und confidence_scores
+        Dict mit text, segments, confidence_scores, und optional prosody_features/prosody_baseline
     """
     try:
         import whisper
@@ -860,10 +857,38 @@ def transcribe_with_whisper(
         # EXTRACT CONFIDENCE SCORES
         confidence_scores = _extract_confidence_scores(result)
 
+        # EXTRACT PROSODY FEATURES (Phase 1: Big 4)
+        prosody_features = []
+        prosody_baseline = None
+
+        if extract_prosody and PROSODY_AVAILABLE:
+            try:
+                logger.info("🎵 Extrahiere Prosodiemerkmale...")
+                extractor = ProsodyExtractor(sample_rate=16000)
+
+                # Extract from original audio file (not preprocessed temp file)
+                prosody_features, prosody_baseline = extractor.extract_from_segments(
+                    audio_path,  # Use original file
+                    result.get('segments', []),
+                    calculate_baseline=True
+                )
+
+                # Convert to dict for JSON serialization
+                prosody_features = [f.to_dict() for f in prosody_features]
+                if prosody_baseline:
+                    prosody_baseline = prosody_baseline.to_dict()
+
+                logger.info(f"✅ Prosodieanalyse abgeschlossen: {len(prosody_features)} Segmente")
+
+            except Exception as e:
+                logger.error(f"Fehler bei Prosodieextraktion: {e}")
+
         return {
             'text': result['text'],
             'segments': result.get('segments', []),
-            'confidence_scores': confidence_scores
+            'confidence_scores': confidence_scores,
+            'prosody_features': prosody_features,
+            'prosody_baseline': prosody_baseline
         }
 
     except Exception as e:
@@ -875,7 +900,9 @@ def transcribe_with_whisper(
                 'overall_confidence': 0.0,
                 'segments': [],
                 'low_confidence_segments': []
-            }
+            },
+            'prosody_features': [],
+            'prosody_baseline': None
         }
 
 def _extract_confidence_scores(whisper_result: Dict[str, Any],

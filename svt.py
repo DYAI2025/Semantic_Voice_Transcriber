@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any
 import auto_transcriber_v4_emotion as v4
 from audio_quality_analyzer import AudioQualityAnalyzer
 from audio_preprocessor import AudioPreprocessor
+from output_formatter import OutputFormatter
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +44,7 @@ class SemanticVoiceTranscriberGUI:
         # Intelligent pipeline components
         self.quality_analyzer = AudioQualityAnalyzer()
         self.audio_preprocessor = AudioPreprocessor()
+        self.output_formatter = OutputFormatter()
 
         self._create_widgets()
         self._check_progress_queue()
@@ -169,17 +171,22 @@ class SemanticVoiceTranscriberGUI:
             variable=self.memory_var
         ).grid(row=2, column=0, sticky=tk.W, pady=2)
 
-        # Speaker selection frame
-        speaker_frame = ttk.LabelFrame(self.root, text="Sprecher-Auswahl", padding="10")
-        speaker_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+        # Audio file selection frame
+        file_frame = ttk.LabelFrame(self.root, text="Audio-Dateien", padding="10")
+        file_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
 
-        ttk.Label(speaker_frame, text="Zu verarbeitende Sprecher:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Label(file_frame, text="Audio-Dateien auswählen:").grid(row=0, column=0, sticky=tk.W, pady=5)
 
-        self.speaker_listbox = tk.Listbox(speaker_frame, selectmode=tk.MULTIPLE, height=5, width=60)
-        self.speaker_listbox.grid(row=1, column=0, columnspan=2, pady=5, padx=5)
+        self.file_listbox = tk.Listbox(file_frame, selectmode=tk.MULTIPLE, height=8, width=80)
+        self.file_listbox.grid(row=1, column=0, columnspan=2, pady=5, padx=5)
 
-        ttk.Button(speaker_frame, text="Sprecher aktualisieren", command=self._refresh_speakers).grid(row=2, column=0, pady=5)
-        ttk.Button(speaker_frame, text="Alle auswählen", command=self._select_all_speakers).grid(row=2, column=1, pady=5)
+        # Scrollbar for file listbox
+        scrollbar = ttk.Scrollbar(file_frame, orient=tk.VERTICAL, command=self.file_listbox.yview)
+        scrollbar.grid(row=1, column=2, sticky=(tk.N, tk.S))
+        self.file_listbox.config(yscrollcommand=scrollbar.set)
+
+        ttk.Button(file_frame, text="🔄 Dateien aktualisieren", command=self._refresh_files).grid(row=2, column=0, pady=5, sticky=tk.W)
+        ttk.Button(file_frame, text="✓ Alle auswählen", command=self._select_all_files).grid(row=2, column=1, pady=5, sticky=tk.W)
 
         # Control buttons frame
         control_frame = ttk.Frame(self.root, padding="10")
@@ -208,6 +215,13 @@ class SemanticVoiceTranscriberGUI:
         )
         self.test_button.pack(side=tk.LEFT, padx=5)
 
+        self.prosody_test_button = ttk.Button(
+            control_frame,
+            text="🎵 Prosody Test (30s)",
+            command=self._run_prosody_test
+        )
+        self.prosody_test_button.pack(side=tk.LEFT, padx=5)
+
         # Progress frame
         progress_frame = ttk.LabelFrame(self.root, text="Fortschritt", padding="10")
         progress_frame.grid(row=6, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=10, pady=5)
@@ -235,15 +249,16 @@ class SemanticVoiceTranscriberGUI:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(7, weight=1)
 
-        # Initial speaker refresh
-        self._refresh_speakers()
+        # Initial file refresh
+        self.audio_files = []  # Initialize audio files list
+        self._refresh_files()
 
     def _browse_input_dir(self):
         """Browse for input directory"""
         directory = filedialog.askdirectory(initialdir=self.input_dir)
         if directory:
             self.input_dir_var.set(directory)
-            self._refresh_speakers()
+            self._refresh_files()
 
     def _browse_output_dir(self):
         """Browse for output directory"""
@@ -251,49 +266,50 @@ class SemanticVoiceTranscriberGUI:
         if directory:
             self.output_dir_var.set(directory)
 
-    def _refresh_speakers(self):
-        """Refresh list of available speakers from input directory"""
-        self.speaker_listbox.delete(0, tk.END)
+    def _refresh_files(self):
+        """Refresh list of available audio files from input directory"""
+        self.file_listbox.delete(0, tk.END)
+        self.audio_files = []  # Store full paths
 
         input_path = Path(self.input_dir_var.get())
         if not input_path.exists():
             self._log("⚠️ Eingabe-Ordner existiert nicht")
             return
 
-        # Find all subdirectories (speakers)
-        speakers = [d.name for d in input_path.iterdir() if d.is_dir()]
-        speakers.sort()
+        # Find all audio files recursively
+        audio_extensions = ['*.m4a', '*.opus', '*.wav', '*.mp3', '*.flac', '*.ogg']
+        for ext in audio_extensions:
+            self.audio_files.extend(input_path.rglob(ext))
 
-        for speaker in speakers:
-            self.speaker_listbox.insert(tk.END, speaker)
+        self.audio_files.sort()
 
-        # Select Zoe by default (priority)
-        if "Zoe" in speakers or "zoe" in speakers:
-            idx = speakers.index("Zoe") if "Zoe" in speakers else speakers.index("zoe")
-            self.speaker_listbox.selection_set(idx)
+        for audio_file in self.audio_files:
+            # Display relative path for better readability
+            relative_path = audio_file.relative_to(input_path)
+            display_name = f"{relative_path} ({audio_file.stat().st_size / 1024 / 1024:.1f} MB)"
+            self.file_listbox.insert(tk.END, display_name)
 
-        self._log(f"✓ {len(speakers)} Sprecher gefunden")
+        self._log(f"✓ {len(self.audio_files)} Audio-Dateien gefunden")
 
-    def _select_all_speakers(self):
-        """Select all speakers in listbox"""
-        self.speaker_listbox.selection_set(0, tk.END)
+    def _select_all_files(self):
+        """Select all audio files in listbox"""
+        self.file_listbox.selection_set(0, tk.END)
 
     def _start_transcription(self):
         """Start transcription in background thread"""
         # Validate inputs
-        input_dir = Path(self.input_dir_var.get())
         output_dir = Path(self.output_dir_var.get())
 
-        if not input_dir.exists():
-            messagebox.showerror("Fehler", "Eingabe-Ordner existiert nicht")
-            return
-
-        selected_indices = self.speaker_listbox.curselection()
+        selected_indices = self.file_listbox.curselection()
         if not selected_indices:
-            messagebox.showwarning("Warnung", "Bitte wähle mindestens einen Sprecher aus")
+            messagebox.showwarning("Warnung", "Bitte wähle mindestens eine Audio-Datei aus")
             return
 
-        selected_speakers = [self.speaker_listbox.get(i) for i in selected_indices]
+        if not hasattr(self, 'audio_files') or not self.audio_files:
+            messagebox.showerror("Fehler", "Keine Audio-Dateien gefunden. Klicke auf 'Dateien aktualisieren'")
+            return
+
+        selected_files = [self.audio_files[i] for i in selected_indices]
 
         # Create output directory
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -301,14 +317,14 @@ class SemanticVoiceTranscriberGUI:
         # Disable start button, enable stop
         self.start_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
+        self.test_button.config(state=tk.DISABLED)
         self.is_processing = True
 
         # Collect settings
         settings = {
-            'input_dir': input_dir,
             'output_dir': output_dir,
             'memory_dir': self.memory_dir,
-            'speakers': selected_speakers,
+            'audio_files': selected_files,
             'model': self.model_var.get(),
             'language': self.language_var.get(),
             'confidence_threshold': self.confidence_var.get(),
@@ -317,6 +333,10 @@ class SemanticVoiceTranscriberGUI:
             'enable_memory': self.memory_var.get(),
             'use_intelligent_pipeline': self.intelligent_pipeline_var.get()
         }
+
+        self._log(f"\n{'='*60}")
+        self._log(f"🚀 Starte Transkription von {len(selected_files)} Datei(en)")
+        self._log(f"{'='*60}\n")
 
         # Start processing thread
         self.processing_thread = threading.Thread(
@@ -421,7 +441,8 @@ class SemanticVoiceTranscriberGUI:
                 use_intelligent_pipeline=use_intelligent,
                 quality_score=quality_score,
                 quality_analyzer=self.quality_analyzer if use_intelligent else None,
-                audio_preprocessor=self.audio_preprocessor if use_intelligent else None
+                audio_preprocessor=self.audio_preprocessor if use_intelligent else None,
+                extract_prosody=True  # Always extract for quick test
             )
             transcription_time = time.time() - start_time
 
@@ -464,6 +485,154 @@ class SemanticVoiceTranscriberGUI:
             # Re-enable buttons
             self.progress_queue.put(('enable_buttons', None))
 
+    def _run_prosody_test(self):
+        """Run prosody pipeline test on first 30 seconds of first audio file"""
+        input_dir = Path(self.input_dir_var.get())
+
+        if not input_dir.exists():
+            messagebox.showerror("Fehler", "Eingabe-Ordner existiert nicht")
+            return
+
+        # Find first audio file recursively
+        audio_files = []
+        for ext in ['*.m4a', '*.opus', '*.wav', '*.mp3', '*.flac']:
+            audio_files.extend(list(input_dir.rglob(ext)))
+
+        if not audio_files:
+            messagebox.showwarning("Keine Dateien", "Keine Audio-Dateien im Eingabe-Ordner gefunden")
+            return
+
+        audio_file = sorted(audio_files)[0]
+
+        # Disable buttons during test
+        self.prosody_test_button.config(state=tk.DISABLED)
+        self.test_button.config(state=tk.DISABLED)
+        self.start_button.config(state=tk.DISABLED)
+
+        self._log(f"\n{'='*60}")
+        self._log("🎵 PROSODY PIPELINE TEST (30 Sekunden)")
+        self._log(f"{'='*60}")
+        self._log(f"📂 Datei: {audio_file.name}")
+        self._log(f"📊 Größe: {audio_file.stat().st_size / 1024 / 1024:.1f} MB\n")
+
+        # Start test in background thread
+        test_thread = threading.Thread(
+            target=self._run_prosody_test_worker,
+            args=(audio_file,),
+            daemon=True
+        )
+        test_thread.start()
+
+    def _run_prosody_test_worker(self, audio_file: Path):
+        """Worker thread for prosody test using test_prosody_pipeline.py"""
+        import time
+        import librosa
+        import soundfile as sf
+        import tempfile
+
+        try:
+            duration_seconds = 30
+            self.progress_queue.put(('log', f"⏱️  Extrahiere erste {duration_seconds} Sekunden...\n"))
+
+            # Extract first 30 seconds
+            audio, sr = librosa.load(str(audio_file), sr=16000, duration=duration_seconds)
+
+            # Save to temp file
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+                sf.write(tmp_path, audio, sr)
+
+            # Step 1: Quality Analysis
+            self.progress_queue.put(('log', "🔍 STEP 1: Audio-Qualitätsanalyse..."))
+            quality_metrics = self.quality_analyzer.analyze_audio_file(tmp_path)
+            quality_score = quality_metrics['quality_score']
+
+            self.progress_queue.put(('log', f"   Quality Score: {quality_score:.2f}"))
+            self.progress_queue.put(('log', f"   SNR: {quality_metrics['snr_db']:.1f} dB"))
+            self.progress_queue.put(('log', f"   Clipping: {quality_metrics['clipping_ratio']:.1%}"))
+            self.progress_queue.put(('log', f"   Silence: {quality_metrics['silence_ratio']:.1%}\n"))
+
+            # Step 2: Transcription with Prosody
+            self.progress_queue.put(('log', "🎤 STEP 2: Whisper Transkription + Prosodieextraktion..."))
+
+            start_time = time.time()
+            result = v4.transcribe_with_whisper(
+                tmp_path,
+                model_size='small',
+                language='de',
+                use_intelligent_pipeline=False,
+                extract_prosody=True
+            )
+            transcription_time = time.time() - start_time
+
+            self.progress_queue.put(('log', f"   ✅ Transkription fertig in {transcription_time:.1f}s"))
+            self.progress_queue.put(('log', f"   Text-Länge: {len(result['text'])} Zeichen"))
+            self.progress_queue.put(('log', f"   Segmente: {len(result.get('segments', []))}"))
+            self.progress_queue.put(('log', f"   Confidence: {result['confidence_scores']['overall_confidence']:.1%}\n"))
+
+            # Step 3: Prosody Results
+            prosody_features = result.get('prosody_features', [])
+            prosody_baseline = result.get('prosody_baseline', None)
+
+            if prosody_features:
+                self.progress_queue.put(('log', "🎵 STEP 3: Prosodieanalyse-Ergebnisse"))
+                self.progress_queue.put(('log', f"   Segmente mit Prosody: {len(prosody_features)}"))
+
+                if prosody_baseline:
+                    self.progress_queue.put(('log', f"\n   📊 Baseline:"))
+                    self.progress_queue.put(('log', f"      Tempo: {prosody_baseline['tempo_wpm_mean']:.1f} WPM"))
+                    self.progress_queue.put(('log', f"      Tonhöhe: {prosody_baseline['pitch_mean_hz']:.1f} Hz"))
+                    self.progress_queue.put(('log', f"      Energie: {prosody_baseline['energy_rms_mean']:.4f}"))
+
+                # Show first segment
+                if len(prosody_features) > 0:
+                    first = prosody_features[0]
+                    self.progress_queue.put(('log', f"\n   🔬 Erstes Segment Beispiel:"))
+                    self.progress_queue.put(('log', f"      Zeit: {first['start_time']:.1f}s - {first['end_time']:.1f}s"))
+                    self.progress_queue.put(('log', f"      Tempo: {first.get('tempo_wpm', 0):.1f} WPM ({first.get('tempo_deviation_pct', 0):+.1f}%)"))
+                    self.progress_queue.put(('log', f"      Tonhöhe: {first.get('pitch_mean_hz', 0):.1f} Hz ({first.get('pitch_deviation_pct', 0):+.1f}%)"))
+                    self.progress_queue.put(('log', f"      Energie: {first.get('energy_rms', 0):.4f} ({first.get('energy_deviation_pct', 0):+.1f}%)\n"))
+
+            # Step 4: Generate Outputs
+            self.progress_queue.put(('log', "📝 STEP 4: Generiere Ausgaben..."))
+
+            output_base = Path(self.output_dir_var.get()) / f"prosody_test_{audio_file.stem}"
+            output_base.parent.mkdir(exist_ok=True)
+
+            files = self.output_formatter.format_transcript(
+                result,
+                audio_file.name,
+                output_base,
+                include_prosody_markers=True
+            )
+
+            self.progress_queue.put(('log', f"   ✅ Ausgaben erstellt:"))
+            self.progress_queue.put(('log', f"      📄 Markdown: {files['markdown'].name}"))
+            self.progress_queue.put(('log', f"      📊 JSON: {files['json'].name}\n"))
+
+            # Show markdown preview
+            self.progress_queue.put(('log', "📄 Markdown Vorschau (erste 400 Zeichen):"))
+            self.progress_queue.put(('log', "-" * 50))
+            with open(files['markdown'], 'r', encoding='utf-8') as f:
+                content = f.read()
+                self.progress_queue.put(('log', content[:400] + "..."))
+            self.progress_queue.put(('log', "-" * 50))
+
+            # Cleanup
+            Path(tmp_path).unlink(missing_ok=True)
+
+            self.progress_queue.put(('log', f"\n{'='*60}"))
+            self.progress_queue.put(('log', "✅ PROSODY TEST ABGESCHLOSSEN"))
+            self.progress_queue.put(('log', f"{'='*60}\n"))
+
+        except Exception as e:
+            logger.error(f"Prosody test error: {e}", exc_info=True)
+            self.progress_queue.put(('log', f"❌ Fehler: {e}"))
+
+        finally:
+            # Re-enable buttons
+            self.progress_queue.put(('enable_buttons', None))
+
     def _stop_transcription(self):
         """Stop transcription"""
         self.is_processing = False
@@ -472,126 +641,115 @@ class SemanticVoiceTranscriberGUI:
     def _process_transcriptions(self, settings: Dict[str, Any]):
         """Process transcriptions (runs in background thread)"""
         try:
-            total_files = 0
+            audio_files = settings['audio_files']
+            total_files = len(audio_files)
             processed_files = 0
 
-            # Count total files
-            for speaker in settings['speakers']:
-                speaker_dir = settings['input_dir'] / speaker
-                audio_files = list(speaker_dir.glob("*.opus")) + list(speaker_dir.glob("*.wav"))
-                total_files += len(audio_files)
+            self.progress_queue.put(('status', f"Verarbeite {total_files} Datei(en)..."))
 
-            self.progress_queue.put(('status', f"Verarbeite {total_files} Dateien..."))
-
-            # Process each speaker
-            for speaker in settings['speakers']:
+            # Process each audio file
+            for audio_file in audio_files:
                 if not self.is_processing:
                     break
 
-                speaker_dir = settings['input_dir'] / speaker
-                audio_files = list(speaker_dir.glob("*.opus")) + list(speaker_dir.glob("*.wav"))
+                self.progress_queue.put(('log', f"\n🎤 {audio_file.name} ({audio_file.stat().st_size / 1024 / 1024:.1f} MB)"))
 
-                self.progress_queue.put(('log', f"\n📁 Verarbeite Sprecher: {speaker}"))
+                try:
+                    # Intelligent Pipeline: Analyze quality first
+                    use_intelligent = settings.get('use_intelligent_pipeline', False)
+                    optimal_model = settings['model']
+                    quality_score = None
 
-                for audio_file in audio_files:
-                    if not self.is_processing:
-                        break
+                    if use_intelligent:
+                        self.progress_queue.put(('log', f"    🔍 Analysiere Audio-Qualität..."))
+                        quality_metrics = self.quality_analyzer.analyze_audio_file(str(audio_file))
+                        quality_score = quality_metrics["quality_score"]
 
-                    self.progress_queue.put(('log', f"  🎤 {audio_file.name}"))
+                        self.progress_queue.put(('log',
+                            f"    📊 Qualität: {quality_score:.2f} | "
+                            f"SNR: {quality_metrics['snr_db']:.1f}dB | "
+                            f"Clipping: {quality_metrics['clipping_ratio']:.2%}"
+                        ))
 
-                    try:
-                        # Intelligent Pipeline: Analyze quality first
-                        use_intelligent = settings.get('use_intelligent_pipeline', False)
-                        optimal_model = settings['model']
-                        quality_score = None
-
-                        if use_intelligent:
-                            self.progress_queue.put(('log', f"    🔍 Analysiere Audio-Qualität..."))
-                            quality_metrics = self.quality_analyzer.analyze_audio_file(str(audio_file))
-                            quality_score = quality_metrics["quality_score"]
-
-                            self.progress_queue.put(('log',
-                                f"    📊 Qualität: {quality_score:.2f} | "
-                                f"SNR: {quality_metrics['snr_db']:.1f}dB | "
-                                f"Clipping: {quality_metrics['clipping_ratio']:.2%}"
-                            ))
-
-                            # Select optimal model based on quality
-                            if quality_score < 0.4:
-                                optimal_model = "large"
-                                self.progress_queue.put(('log', "    🎯 Niedrige Qualität → large Modell + aggressives Preprocessing"))
-                            elif quality_score < 0.6:
-                                optimal_model = "medium"
-                                self.progress_queue.put(('log', "    🎯 Mittlere Qualität → medium Modell + moderates Preprocessing"))
-                            elif quality_score < 0.8:
-                                optimal_model = "medium"
-                                self.progress_queue.put(('log', "    🎯 Gute Qualität → medium Modell ohne Preprocessing"))
-                            else:
-                                optimal_model = "small"
-                                self.progress_queue.put(('log', "    🎯 Sehr gute Qualität → small Modell (schneller)"))
-
-                        # Transcribe
-                        self.progress_queue.put(('log', f"    🎤 Transkribiere mit {optimal_model} Modell..."))
-
-                        result = v4.transcribe_with_whisper(
-                            str(audio_file),
-                            model_size=optimal_model,
-                            language=settings['language'],
-                            use_intelligent_pipeline=use_intelligent,
-                            quality_score=quality_score,
-                            quality_analyzer=self.quality_analyzer if use_intelligent else None,
-                            audio_preprocessor=self.audio_preprocessor if use_intelligent else None
-                        )
-
-                        # Analyze emotion if enabled
-                        emotion_data = None
-                        if settings['enable_emotion']:
-                            analyzer = v4.EmotionalAnalyzer(
-                                confidence_threshold=settings['confidence_threshold']
-                            )
-                            emotion_data = analyzer.analyze_emotion(
-                                result['text'],
-                                audio_path=str(audio_file)
-                            )
-
-                        # Mark low confidence
-                        marked_text = v4.mark_low_confidence_segments(result)
-
-                        # Save transcript
-                        output_filename = f"{audio_file.stem}_transkript.md"
-                        output_path = settings['output_dir'] / output_filename
-
-                        self._save_transcript(
-                            output_path,
-                            audio_file,
-                            speaker,
-                            marked_text,
-                            result,
-                            emotion_data
-                        )
-
-                        # Update memory if enabled
-                        if settings['enable_memory'] and emotion_data:
-                            from build_memory_from_transcripts import update_speaker_memory
-                            update_speaker_memory(
-                                speaker,
-                                {'text': result['text'], 'emotion': emotion_data},
-                                settings['memory_dir']
-                            )
-
-                        processed_files += 1
-                        progress = (processed_files / total_files) * 100
-                        self.progress_queue.put(('progress', progress))
-
-                        # Check confidence
-                        overall_conf = result['confidence_scores']['overall_confidence']
-                        if overall_conf < settings['confidence_threshold']:
-                            self.progress_queue.put(('log', f"    ⚠️ Niedrige Confidence: {overall_conf:.2f}"))
+                        # Select optimal model based on quality
+                        if quality_score < 0.4:
+                            optimal_model = "large"
+                            self.progress_queue.put(('log', "    🎯 Niedrige Qualität → large Modell + aggressives Preprocessing"))
+                        elif quality_score < 0.6:
+                            optimal_model = "medium"
+                            self.progress_queue.put(('log', "    🎯 Mittlere Qualität → medium Modell + moderates Preprocessing"))
+                        elif quality_score < 0.8:
+                            optimal_model = "medium"
+                            self.progress_queue.put(('log', "    🎯 Gute Qualität → medium Modell ohne Preprocessing"))
                         else:
-                            self.progress_queue.put(('log', f"    ✓ Confidence: {overall_conf:.2f}"))
+                            optimal_model = "small"
+                            self.progress_queue.put(('log', "    🎯 Sehr gute Qualität → small Modell (schneller)"))
 
-                    except Exception as e:
-                        self.progress_queue.put(('log', f"    ❌ Fehler: {e}"))
+                    # Transcribe
+                    self.progress_queue.put(('log', f"    🎤 Transkribiere mit {optimal_model} Modell..."))
+
+                    result = v4.transcribe_with_whisper(
+                        str(audio_file),
+                        model_size=optimal_model,
+                        language=settings['language'],
+                        use_intelligent_pipeline=use_intelligent,
+                        quality_score=quality_score,
+                        quality_analyzer=self.quality_analyzer if use_intelligent else None,
+                        audio_preprocessor=self.audio_preprocessor if use_intelligent else None,
+                        extract_prosody=settings.get('enable_prosody', False)
+                    )
+
+                    # Analyze emotion if enabled
+                    emotion_data = None
+                    if settings['enable_emotion']:
+                        analyzer = v4.EmotionalAnalyzer(
+                            confidence_threshold=settings['confidence_threshold']
+                        )
+                        emotion_data = analyzer.analyze_emotion(
+                            result['text'],
+                            audio_path=str(audio_file)
+                        )
+
+                    # Mark low confidence
+                    marked_text = v4.mark_low_confidence_segments(result)
+
+                    # Save transcript
+                    # Extract speaker from folder structure or use filename
+                    speaker = audio_file.parent.name if audio_file.parent.name != Path(self.input_dir_var.get()).name else "Unknown"
+                    output_filename = f"{audio_file.stem}_transkript.md"
+                    output_path = settings['output_dir'] / output_filename
+
+                    self._save_transcript(
+                        output_path,
+                        audio_file,
+                        speaker,
+                        marked_text,
+                        result,
+                        emotion_data
+                    )
+
+                    # Update memory if enabled
+                    if settings['enable_memory'] and emotion_data:
+                        from build_memory_from_transcripts import update_speaker_memory
+                        update_speaker_memory(
+                            speaker,
+                            {'text': result['text'], 'emotion': emotion_data},
+                            settings['memory_dir']
+                        )
+
+                    processed_files += 1
+                    progress = (processed_files / total_files) * 100
+                    self.progress_queue.put(('progress', progress))
+
+                    # Check confidence
+                    overall_conf = result['confidence_scores']['overall_confidence']
+                    if overall_conf < settings['confidence_threshold']:
+                        self.progress_queue.put(('log', f"    ⚠️ Niedrige Confidence: {overall_conf:.2f}"))
+                    else:
+                        self.progress_queue.put(('log', f"    ✓ Confidence: {overall_conf:.2f}"))
+
+                except Exception as e:
+                    self.progress_queue.put(('log', f"    ❌ Fehler: {e}"))
 
             # Done
             if self.is_processing:
@@ -615,6 +773,48 @@ class SemanticVoiceTranscriberGUI:
                         result: Dict[str, Any],
                         emotion_data: Optional[Dict[str, Any]]):
         """Save transcript in therapeutic format"""
+
+        # Check if prosody features are available
+        has_prosody = (
+            'prosody_features' in result and
+            result['prosody_features'] and
+            len(result['prosody_features']) > 0
+        )
+
+        if has_prosody:
+            # Use new OutputFormatter for annotated Markdown + JSON sidecar
+            try:
+                # Remove .md extension from output_path for base path
+                base_output_path = output_path.with_suffix('')
+
+                files = self.output_formatter.format_transcript(
+                    result,
+                    audio_file.name,
+                    base_output_path,
+                    include_prosody_markers=True
+                )
+
+                logger.info(f"✅ Saved annotated transcript with prosody:")
+                logger.info(f"   - Markdown: {files['markdown']}")
+                logger.info(f"   - JSON: {files['json']}")
+
+            except Exception as e:
+                logger.error(f"Error using OutputFormatter: {e}")
+                logger.info("Falling back to legacy format...")
+                self._save_transcript_legacy(output_path, audio_file, speaker, text, result, emotion_data)
+
+        else:
+            # Use legacy format (backward compatibility)
+            self._save_transcript_legacy(output_path, audio_file, speaker, text, result, emotion_data)
+
+    def _save_transcript_legacy(self,
+                        output_path: Path,
+                        audio_file: Path,
+                        speaker: str,
+                        text: str,
+                        result: Dict[str, Any],
+                        emotion_data: Optional[Dict[str, Any]]):
+        """Legacy transcript format (pre-prosody)"""
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(f"# Therapeutisches Transkript\n\n")
             f.write(f"**Sprecher:** {speaker}\n")
@@ -666,6 +866,7 @@ class SemanticVoiceTranscriberGUI:
                 elif msg_type == 'enable_buttons':
                     self.start_button.config(state=tk.NORMAL)
                     self.test_button.config(state=tk.NORMAL)
+                    self.prosody_test_button.config(state=tk.NORMAL)
 
         except queue.Empty:
             pass
