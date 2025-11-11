@@ -120,7 +120,9 @@ class SpeakerDiarizer:
         self,
         audio_path: Path,
         min_duration_on: float = 0.0,
-        min_duration_off: float = 0.0
+        min_duration_off: float = 0.0,
+        onset: float = 0.5,
+        offset: float = 0.5
     ) -> List[Dict[str, Any]]:
         """
         Detect overlapped speech regions (multiple speakers talking simultaneously)
@@ -129,6 +131,8 @@ class SpeakerDiarizer:
             audio_path: Path to audio file
             min_duration_on: Remove overlapped speech regions shorter than this (seconds)
             min_duration_off: Fill non-overlapped speech regions shorter than this (seconds)
+            onset: Threshold for detecting speech onset (0.0-1.0)
+            offset: Threshold for detecting speech offset (0.0-1.0)
 
         Returns:
             List of overlap segments with format:
@@ -147,10 +151,11 @@ class SpeakerDiarizer:
         logger.info(f"Running overlapped speech detection on {audio_path.name}...")
 
         # Configure hyperparameters for overlap detection
-        # pyannote/segmentation-3.0 has labels including 'OVERLAP'
+        # pyannote/segmentation-3.0 uses powerset encoding where overlaps
+        # are indicated by labels with '+' (e.g., "SPEAKER_00+SPEAKER_01")
         HYPER_PARAMETERS = {
-            "onset": 0.5,
-            "offset": 0.5,
+            "onset": onset,
+            "offset": offset,
             "min_duration_on": min_duration_on,
             "min_duration_off": min_duration_off
         }
@@ -164,11 +169,13 @@ class SpeakerDiarizer:
             raise
 
         # Convert pyannote format to our format
-        # Extract only the OVERLAP label regions
+        # Extract only overlapped speech regions
         overlaps = []
         for segment, _, label in osd_annotation.itertracks(yield_label=True):
-            # Filter for overlap-related labels (e.g., 'OVERLAP')
-            if 'OVERLAP' in str(label).upper() or label == 'overlap':
+            label_str = str(label)
+            # Powerset encoding uses '+' between speaker IDs to indicate overlap
+            # e.g., "SPEAKER_00+SPEAKER_01" means both speakers are talking
+            if '+' in label_str:
                 overlaps.append({
                     'start': segment.start,
                     'end': segment.end,
