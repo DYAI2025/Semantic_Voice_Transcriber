@@ -25018,3 +25018,17 @@ found unknown escape character '\x00'
 2025-07-07 00:47:43,899 - INFO - Bereits verarbeitet: WhatsApp Audio 2024-06-26 at 14.17.05.opus
 2025-07-07 00:47:43,899 - INFO - Bereits verarbeitet: WhatsApp Audio 2024-06-26 at 14.17.05 (1).opus
 2025-07-07 00:47:43,899 - INFO - Verarbeitung abgeschlossen. 0 neue Dateien verarbeitet.
+2025-11-10 20:14:34,106 - INFO - Lade Whisper-Modell: base
+2025-11-10 20:14:34,106 - INFO - Transkribiere: test.opus
+2025-11-10 20:14:48,545 - INFO - Lade Whisper-Modell: base
+2025-11-10 20:14:48,546 - INFO - Transkribiere: test.opus
+2025-11-10 20:15:36,607 - INFO - Lade Whisper-Modell: base
+2025-11-10 20:15:36,608 - INFO - Transkribiere: test.opus
+2025-11-10 20:17:07,124 - INFO - Lade Whisper-Modell: base
+2025-11-10 20:17:07,124 - INFO - Transkribiere: test.opus
+2025-11-10 20:30:50,264 - INFO - Lade Whisper-Modell: tiny
+2025-11-10 20:30:51,052 - INFO - Transkribiere: /tmp/tmpvpcg1wb6/Eingang/test_speaker/test_audio.wav
+2025-11-10 20:31:26,098 - INFO - Lade Whisper-Modell: tiny
+2025-11-10 20:31:26,629 - INFO - Transkribiere: /tmp/tmpjtcatn_o/Eingang/test_speaker/test_audio.wav
+2025-11-10 20:32:53,763 - INFO - Lade Whisper-Modell: tiny
+2025-11-10 20:32:54,368 - INFO - Transkribiere: /tmp/tmppr8oe_0f/Eingang/test_speaker/test_audio.wav
