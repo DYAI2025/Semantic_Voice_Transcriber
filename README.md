@@ -1,281 +1,181 @@
-# WhisperSprecherMatcher 🎤
+# Semantic Voice Transcriber (SVT)
 
-Ein intelligentes System zur automatischen Transkription von WhatsApp-Audionachrichten mit Sprechererkennung und Memory-System Integration.
+**Therapeutisches Transkriptionssystem mit Prosodieanalyse für emotionale Wendepunkt-Erkennung**
 
-## 🎤 Semantic Voice Transcriber (SVT)
+## 🎯 Überblick
 
-**Professional-grade transcription with intelligent quality optimization**
+SVT ist ein intelligentes Audio-Transkriptionssystem, das speziell für therapeutische Anwendungen entwickelt wurde. Es kombiniert hochqualitative Spracherkennung (OpenAI Whisper) mit fortgeschrittener Prosodieanalyse, um emotionale Marker in therapeutischen Gesprächen zu erkennen und zu markieren.
+
+## ✨ Hauptfunktionen
+
+### Phase 1: Prosodieextraktion (✅ Abgeschlossen)
+
+- **🎵 Prosodische Merkmale ("Big 4")**
+  - **Tempo**: Wörter pro Minute (WPM) mit Abweichungserkennung
+  - **Tonhöhe (Pitch)**: F0-Analyse in Hz mit Parselmouth/Praat
+  - **Energie**: RMS und dB-Werte
+  - **Pausen**: Automatische Pausenerkennung (>1s)
+
+- **📊 Baseline-Berechnung**
+  - Globale Baseline pro Audio-Datei
+  - Prozentuale Abweichungserkennung
+  - Adaptive Marker-Trigger
+
+- **📝 Ausgabeformate**
+  - **Annotiertes Markdown**: Für Therapeuten lesbar mit inline Markern
+  - **JSON Sidecar**: Strukturierte Daten für Systemverarbeitung
+
+### Beispiel-Ausgabe
+
+\`\`\`markdown
+**[00:05 - 00:07]** So, wir haben ja nicht so viel Zeit. \`[TEMPO↑]\`
+  *Tempo: 226.4 WPM (+20.6%) | Tonhöhe: 226.0 Hz (+13.2%) | Energie: 0.0836 (+5.5%)*
+
+**[00:07 - 00:08]** Wolli, wir müssen sprechen. \`[TEMPO↑]\`
+  *Tempo: 272.7 WPM (+45.3%) | Tonhöhe: 211.2 Hz (+5.8%)*
+
+**[00:19 - 00:21]** Wolli, we need to talk. \`[PITCH↓]\` \`[ENERGY↓]\` \`[PAUSE]\`
+  *Tempo: 182.9 WPM (-2.5%) | Tonhöhe: 168.7 Hz (-15.5%) | Energie: 0.0497 (-37.3%)*
+\`\`\`
+
+### Marker-Schwellwerte
+
+- \`[TEMPO↑/↓]\`: ±20% Abweichung von Baseline
+- \`[PITCH↑/↓]\`: ±15% Abweichung von Baseline
+- \`[ENERGY↑/↓]\`: ±25% Abweichung von Baseline
+- \`[PAUSE]\`: Pause >1000ms
+
+## 🚀 Installation
+
+### Voraussetzungen
+
+\`\`\`bash
+# Python 3.12+
+sudo apt install python3.12 python3-pip
+
+# System-Abhängigkeiten
+sudo apt install ffmpeg portaudio19-dev
+\`\`\`
+
+### Python-Pakete
+
+\`\`\`bash
+pip install --break-system-packages openai-whisper librosa praat-parselmouth \\
+    soundfile pyyaml numpy textblob nltk
+\`\`\`
+
+### TextBlob Setup (lokal)
+
+\`\`\`bash
+# Bereits im Repo enthalten unter TextBlob/
+# NLTK Daten werden beim ersten Start automatisch heruntergeladen
+\`\`\`
+
+## 📖 Verwendung
+
+### GUI starten
+
+\`\`\`bash
+python3 svt.py
+\`\`\`
+
+### Hauptfunktionen in der GUI
+
+1. **🚀 Transkription starten**
+   - Wähle Audio-Dateien aus (m4a, opus, wav, mp3)
+   - Aktiviere gewünschte Features (Emotions-Analyse, Prosody, Memory)
+   - Starte Batch-Transkription
+
+2. **🧪 Quick Test**
+   - Testet erste Audio-Datei komplett
+   - Zeigt Qualitätsanalyse und Transkript
+
+3. **🎵 Prosody Test (30s)**
+   - Extrahiert erste 30 Sekunden
+   - Vollständige Prosodieanalyse
+   - Generiert annotiertes Markdown + JSON
 
 ### Features
-- ✅ High-quality transcription with confidence scoring
-- 🎭 Emotion analysis (text + audio)
-- 🎵 Prosody extraction (pitch, tempo, energy)
-- 🧠 Learning speaker profiles
-- ⚠️ Quality warnings for low-confidence segments
-- 🖥️ Professional GUI with one-click workflow
-- 🤖 **NEW: Intelligent Pipeline** - Auto quality analysis & adaptive preprocessing
 
-### Quick Start
-```bash
-# Launch SVT GUI
-python3 svt.py
+- ✅ **Intelligent Pipeline**: Automatische Qualitätsanalyse und Modellwahl
+- ✅ **Prosody-Extraktion**: Voice-Marker 2.0 mit Big 4 Features
+- ✅ **Emotions-Analyse**: TextBlob Sentiment + Marker-System
+- ✅ **Memory-Profile**: Sprechererkennung und -profile
 
-# Or use one-click launcher
-./start_svt.sh
-```
+## 📁 Projektstruktur
 
-### Intelligent Pipeline
+\`\`\`
+Semantic_Voice_Transcriber/
+├── svt.py                          # Haupt-GUI
+├── auto_transcriber_v4_emotion.py  # Transkription + Emotion
+├── prosody_extractor.py            # Prosodieextraktion (Phase 1)
+├── output_formatter.py             # Markdown + JSON Formatter
+├── audio_quality_analyzer.py       # Qualitätsanalyse
+├── audio_preprocessor.py           # Audio-Vorverarbeitung
+├── test_prosody_pipeline.py        # Pipeline-Test
+├── Eingang/                        # Audio-Eingabe
+│   └── Patient/                    # Unterordner für Sprecher
+├── Transkripte_LLM/                # Transkript-Ausgabe
+│   ├── *.md                        # Annotierte Markdown
+│   └── *.prosody.json              # JSON Sidecar
+├── Memory/                         # Sprecher-Profile
+├── VP_ATO/                         # Atomic Voice Markers
+├── Marker_LD3.5_SSoTh/             # 4-Tier Marker-System
+└── TextBlob/                       # Lokales TextBlob
+\`\`\`
 
-SVT includes an intelligent pipeline that automatically optimizes transcription quality:
+## 🎯 Roadmap
 
-- **Auto Quality Analysis**: Measures SNR, clipping, silence ratio
-- **Adaptive Model Selection**: Chooses optimal Whisper model based on quality
-- **Smart Preprocessing**: Applies noise reduction, normalization only when needed
+### Phase 2: ATO-Marker-Integration (In Planung)
 
-Quality-based model selection:
-- Quality < 0.4 → `large` model + aggressive preprocessing
-- Quality 0.4-0.6 → `medium` model + moderate preprocessing
-- Quality 0.6-0.8 → `medium` model, light preprocessing
-- Quality > 0.8 → `small` model (faster, no preprocessing needed)
+- [ ] VP_ATO/*.yaml Marker mit Prosodieabweichungen verknüpfen
+- [ ] Echtzeit-Marker-Trigger beim Transkribieren
+- [ ] ATO → SEM → CLU → MEMA Hierarchie aufbauen
+- [ ] Wendepunkt-Erkennung für Therapeuten
 
-📖 **Documentation**:
-- [Intelligent Pipeline Guide](docs/INTELLIGENT_PIPELINE.md)
-- [Therapeutic Transcription Guide](docs/THERAPEUTIC_TRANSCRIPTION_GUIDE.md)
+### Phase 3: Streaming & Real-Time
 
----
+- [ ] Live-Transkription mit Prosody
+- [ ] Echtzeit-Marker-Anzeige
+- [ ] WebSocket-Interface für externe Tools
 
-## 🚀 Features
+## 🔧 Technische Details
 
-- **Automatische Audio-Transkription** mit OpenAI Whisper
-- **Intelligente Sprechererkennung** basierend auf Sprachmustern und Kontext
-- **Memory-System** das Sprecher-Profile aufbaut und erweitert
-- **Multi-Format Support** für Audio-Dateien (.opus, .wav, .mp3, .m4a, .ogg)
-- **Automatische Verarbeitung** neuer Audio-Dateien
-- **Lokaler Fallback** wenn Google Drive nicht verfügbar ist
+### Whisper-Modelle
 
-## 📋 Voraussetzungen
+- **tiny**: 39M Parameter, schnell, weniger genau
+- **base**: 74M Parameter, guter Kompromiss
+- **small**: 244M Parameter (Standard für Tests)
+- **medium**: 769M Parameter, sehr genau
+- **large**: 1550M Parameter, beste Qualität
 
-- **Python 3.8+**
-- **FFmpeg** (für Audio-Konvertierung)
-- **Mindestens 4GB RAM** (für Whisper-Modelle)
+### Prosodieextraktion
 
-### FFmpeg Installation
+- **Parselmouth**: Praat-basierte Tonhöhenextraktion mit Jitter/Shimmer
+- **Librosa**: Audio-Feature-Extraktion (Energie, Tempo)
+- **Segmentierung**: Whisper-Segmente (3-10s, semantisch sinnvoll)
+- **Baseline**: Globaler Mittelwert pro Audio-Datei
 
-**macOS:**
-```bash
-brew install ffmpeg
-```
+## 🤝 Mitarbeit
 
-**Ubuntu/Debian:**
-```bash
-sudo apt install ffmpeg
-```
-
-**Windows:**
-- Lade FFmpeg von https://ffmpeg.org/ herunter
-- Füge FFmpeg zum PATH hinzu
-
-## 🛠️ Installation
-
-### Schritt 1: Repository klonen/downloaden
-```bash
-cd /Users/benjaminpoersch/claude
-```
-
-### Schritt 2: Automatisches Setup
-```bash
-cd whisper_speaker_matcher
-python3 setup_environment.py
-```
-
-Das Setup-Skript:
-- ✅ Prüft Python-Version
-- 📦 Installiert alle Python-Abhängigkeiten
-- 📁 Erstellt Verzeichnisstruktur
-- 🧪 Testet die Installation
-- 🚀 Erstellt Launcher-Skript
-
-### Schritt 3: Manuelle Installation (falls Setup fehlschlägt)
-```bash
-pip3 install -r requirements.txt
-```
-
-## 🎯 Nutzung
-
-### Option 1: Launcher verwenden
-```bash
-cd whisper_speaker_matcher
-./start.sh
-```
-
-### Option 2: Direkte Ausführung
-
-**Audio transkribieren:**
-```bash
-python3 auto_transcriber.py
-```
-
-**Memory aus Transkriptionen aufbauen:**
-```bash
-python3 build_memory_from_transcripts.py
-```
-
-## 📁 Verzeichnisstruktur
-
-```
-whisper_speaker_matcher/
-├── Eingang/                    # Audio-Dateien hier ablegen
-│   ├── ben/                   # Sprecher-spezifische Ordner
-│   ├── zoe/
-│   └── *.opus, *.wav, etc.    # Audio-Dateien
-├── Memory/                     # Sprecher-Profile (YAML)
-│   ├── ben.yaml
-│   ├── zoe.yaml
-│   └── schroeti.yaml
-├── auto_transcriber.py         # Haupt-Transkriptions-Skript
-├── build_memory_from_transcripts.py  # Memory-Builder
-└── logs/                       # Log-Dateien
-```
-
-## 🧠 Memory-System
-
-Das System erstellt für jeden Sprecher ein YAML-Profil mit:
-
-- **Sprachcharakteristika** (Füllwörter, Satzlänge, etc.)
-- **Themen-Präferenzen** (Technology, Business, Personal, etc.)
-- **Sentiment-Analyse** (Positive/Negative Ausdrücke)
-- **Interaktions-Historie** (Letzte 50 Transkriptionen)
-- **Automatische Charakterisierung** (expressiv, präzise, technisch_orientiert)
-
-### Beispiel Memory-Profil:
-```yaml
-name: Ben
-last_updated: '2025-01-12T15:30:00'
-total_interactions: 42
-statistics:
-  avg_sentence_length: 12.5
-  most_common_words:
-    also: 15
-    genau: 12
-    interessant: 8
-  sentiment:
-    positive: 25
-    negative: 3
-    ratio: 0.89
-topics:
-  technology: 45
-  business: 23
-  personal: 12
-characteristics:
-  - technisch_orientiert
-  - bedächtig
-  - präzise
-```
-
-## 🔧 Sprechererkennung
-
-Das System verwendet mehrere Methoden zur Sprechererkennung:
-
-1. **Dateiname-Analyse** - Erkennt Sprecher aus Dateinamen
-2. **Keyword-Matching** - Analysiert charakteristische Wörter/Phrasen
-3. **Kontext-Analyse** - Nutzt Selbsterwähnungen und Kontext
-4. **Memory-basierte Vorhersagen** - Lernt aus vergangenen Transkriptionen
-
-## 📊 Ausgabeformat
-
-Verarbeitete Transkriptionen werden gespeichert als:
-```
-YYYY-MM-DD_sprecher_originaldatei.txt
-```
-
-Inhalt:
-```
-Sprecher: ben
-Datei: WhatsApp Audio 2025-01-12 at 15.30.45.opus
-Datum: 2025-01-12 15:30:45
-Transkription:
-Also, das ist wirklich interessant. Ich denke, wir sollten...
-```
-
-## 🛠️ Fehlerbehebung
-
-### Whisper-Installation Probleme
-```bash
-# Neuinstallation
-pip3 uninstall openai-whisper
-pip3 install openai-whisper
-
-# Oder mit Conda
-conda install openai-whisper -c conda-forge
-```
-
-### FFmpeg nicht gefunden
-```bash
-# Prüfe Installation
-ffmpeg -version
-
-# macOS: Homebrew Pfad hinzufügen
-export PATH="/opt/homebrew/bin:$PATH"
-```
-
-### Google Drive Sync-Probleme
-Das System erstellt automatisch einen lokalen Fallback wenn Google Drive nicht verfügbar ist:
-```
-./whisper_speaker_matcher/
-├── Eingang/
-└── Memory/
-```
-
-### Logging
-Alle Aktivitäten werden geloggt in:
-- `transcription.log` (im Ausführungsverzeichnis)
-- Console-Ausgabe mit Timestamps
-
-## 🔄 Automatisierung
-
-Für kontinuierliche Verarbeitung kann das System mit Cron oder launchd automatisiert werden:
-
-### macOS launchd Beispiel:
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.user.whisper-transcriber</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/usr/bin/python3</string>
-        <string>/path/to/auto_transcriber.py</string>
-    </array>
-    <key>WatchPaths</key>
-    <array>
-        <string>/path/to/Eingang</string>
-    </array>
-</dict>
-</plist>
-```
-
-## 📝 Logs und Monitoring
-
-Das System erstellt detaillierte Logs:
-- ✅ Erfolgreich verarbeitete Dateien
-- ⚠️ Warnungen (FFmpeg nicht gefunden, etc.)
-- ❌ Fehler mit Dateiname und Grund
-- 📊 Statistiken (Anzahl verarbeiteter Dateien, erkannte Sprecher)
-
-## 🤝 Support
-
-Bei Problemen:
-1. Prüfe die Log-Dateien
-2. Stelle sicher, dass alle Abhängigkeiten installiert sind
-3. Teste mit einem kleinen Audio-Sample
-4. Prüfe Dateiberechtigungen im Eingang-Ordner
+Dieses Projekt wurde entwickelt für therapeutische Anwendungen mit Fokus auf:
+- Emotionale Wendepunkt-Erkennung
+- Prosodiebasierte Marker-Systeme
+- DYAI-Framework Integration (LD3.x, ATO/SEM/CLU/MEMA)
 
 ## 📄 Lizenz
 
-Dieses Projekt ist für persönlichen Gebrauch entwickelt.
+Proprietär - DYAI 2025
 
-## 🎉 Viel Erfolg!
+## 🙏 Credits
 
-Das WhisperSprecherMatcher-System wird deine WhatsApp-Audionachrichten intelligent transkribieren und dabei lernen, wer spricht. Je mehr du es nutzt, desto besser wird die Sprechererkennung! 
+- **OpenAI Whisper**: Speech-to-Text
+- **Parselmouth**: Praat Python Interface
+- **Librosa**: Audio Analysis
+- **TextBlob**: Sentiment Analysis
+- **Claude Code**: Development Assistant
+
+---
+
+**Status**: Phase 1 Complete ✅  
+**Nächster Schritt**: ATO-Marker-Integration (Phase 2)
