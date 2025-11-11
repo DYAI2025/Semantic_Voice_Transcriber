@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Therapeutic Transcription
+Comment=Starte Therapeutic Transcription GUI
+Exec=/home/dyai/Dokumente/DYAI_home/DEV/TOOLS/TransSemantic/Super_semantic_whisper/start_therapeutic_gui.sh
+Icon=audio-x-generic
+Terminal=false
+Categories=AudioVideo;Audio;
+Path=/home/dyai/Dokumente/DYAI_home/DEV/TOOLS/TransSemantic/Super_semantic_whisper
