@@ -201,6 +201,13 @@ class SemanticVoiceTranscriberGUI:
         )
         self.stop_button.pack(side=tk.LEFT, padx=5)
 
+        self.test_button = ttk.Button(
+            control_frame,
+            text="🧪 Quick Test (erste Datei)",
+            command=self._run_quick_test
+        )
+        self.test_button.pack(side=tk.LEFT, padx=5)
+
         # Progress frame
         progress_frame = ttk.LabelFrame(self.root, text="Fortschritt", padding="10")
         progress_frame.grid(row=6, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=10, pady=5)
@@ -318,6 +325,144 @@ class SemanticVoiceTranscriberGUI:
             daemon=True
         )
         self.processing_thread.start()
+
+    def _run_quick_test(self):
+        """Run quick test transcription on first audio file"""
+        input_dir = Path(self.input_dir_var.get())
+
+        if not input_dir.exists():
+            messagebox.showerror("Fehler", "Eingabe-Ordner existiert nicht")
+            return
+
+        # Find first audio file
+        audio_files = (
+            list(input_dir.glob("*.m4a")) +
+            list(input_dir.glob("*.opus")) +
+            list(input_dir.glob("*.wav")) +
+            list(input_dir.glob("*.mp3"))
+        )
+
+        if not audio_files:
+            messagebox.showwarning("Keine Dateien", "Keine Audio-Dateien im Eingabe-Ordner gefunden")
+            return
+
+        audio_file = audio_files[0]
+
+        # Disable buttons during test
+        self.test_button.config(state=tk.DISABLED)
+        self.start_button.config(state=tk.DISABLED)
+
+        self._log(f"\n{'='*60}")
+        self._log("🧪 QUICK TEST TRANSKRIPTION")
+        self._log(f"{'='*60}")
+        self._log(f"📂 Datei: {audio_file.name}")
+        self._log(f"📊 Größe: {audio_file.stat().st_size / 1024 / 1024:.1f} MB\n")
+
+        # Start test in background thread
+        test_thread = threading.Thread(
+            target=self._run_quick_test_worker,
+            args=(audio_file,),
+            daemon=True
+        )
+        test_thread.start()
+
+    def _run_quick_test_worker(self, audio_file: Path):
+        """Worker thread for quick test transcription"""
+        import time
+
+        try:
+            # Get settings
+            use_intelligent = self.intelligent_pipeline_var.get()
+            manual_model = self.model_var.get()
+            language = self.language_var.get()
+
+            if use_intelligent:
+                self.progress_queue.put(('log', "🤖 Intelligente Pipeline aktiviert"))
+                self.progress_queue.put(('log', "🔍 Analysiere Audio-Qualität..."))
+
+                start_time = time.time()
+                quality_metrics = self.quality_analyzer.analyze_audio_file(str(audio_file))
+                analysis_time = time.time() - start_time
+                quality_score = quality_metrics["quality_score"]
+
+                self.progress_queue.put(('log', f"✅ Qualitäts-Analyse fertig ({analysis_time:.2f}s)"))
+                self.progress_queue.put(('log', f"   📊 Qualität: {quality_score:.2f}"))
+                self.progress_queue.put(('log', f"   📡 SNR: {quality_metrics['snr_db']:.1f} dB"))
+                self.progress_queue.put(('log', f"   ⚡ Clipping: {quality_metrics['clipping_ratio']:.2%}"))
+                self.progress_queue.put(('log', f"   🔇 Silence: {quality_metrics['silence_ratio']:.2%}"))
+                self.progress_queue.put(('log', f"   ⏱️  Dauer: {quality_metrics['duration']:.1f}s\n"))
+
+                # Model selection
+                if quality_score < 0.4:
+                    optimal_model = "large"
+                    self.progress_queue.put(('log', "🎯 Niedrige Qualität → large Modell + aggressives Preprocessing"))
+                elif quality_score < 0.6:
+                    optimal_model = "medium"
+                    self.progress_queue.put(('log', "🎯 Mittlere Qualität → medium Modell + moderates Preprocessing"))
+                elif quality_score < 0.8:
+                    optimal_model = "medium"
+                    self.progress_queue.put(('log', "🎯 Gute Qualität → medium Modell + leichtes Preprocessing"))
+                else:
+                    optimal_model = "small"
+                    self.progress_queue.put(('log', "🎯 Sehr gute Qualität → small Modell (schneller)"))
+            else:
+                self.progress_queue.put(('log', f"⚙️  Manuelle Einstellungen: {manual_model} Modell"))
+                optimal_model = manual_model
+                quality_score = None
+
+            self.progress_queue.put(('log', f"\n🎤 Transkribiere mit {optimal_model} Modell..."))
+            self.progress_queue.put(('log', "⏳ Dies kann einige Minuten dauern...\n"))
+
+            start_time = time.time()
+            result = v4.transcribe_with_whisper(
+                str(audio_file),
+                model_size=optimal_model,
+                language=language,
+                use_intelligent_pipeline=use_intelligent,
+                quality_score=quality_score,
+                quality_analyzer=self.quality_analyzer if use_intelligent else None,
+                audio_preprocessor=self.audio_preprocessor if use_intelligent else None
+            )
+            transcription_time = time.time() - start_time
+
+            self.progress_queue.put(('log', f"✅ Transkription fertig!"))
+            self.progress_queue.put(('log', f"⏱️  Zeit: {transcription_time:.1f}s ({transcription_time/60:.1f} min)"))
+            self.progress_queue.put(('log', f"📝 Text-Länge: {len(result['text'])} Zeichen"))
+            self.progress_queue.put(('log', f"📊 Segmente: {len(result.get('segments', []))}\n"))
+
+            # Show first 500 characters
+            text_preview = result['text'][:500]
+            self.progress_queue.put(('log', "📄 Erste 500 Zeichen:"))
+            self.progress_queue.put(('log', "-" * 50))
+            self.progress_queue.put(('log', text_preview))
+            if len(result['text']) > 500:
+                self.progress_queue.put(('log', "..."))
+            self.progress_queue.put(('log', "-" * 50))
+
+            # Save to file
+            output_dir = Path(self.output_dir_var.get())
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_file = output_dir / f"quick_test_{audio_file.stem}.txt"
+            output_file.write_text(result['text'], encoding='utf-8')
+
+            self.progress_queue.put(('log', f"\n💾 Gespeichert: {output_file}"))
+
+            if use_intelligent and quality_score is not None:
+                audio_duration = quality_metrics['duration']
+                rtf = (transcription_time + analysis_time) / audio_duration
+                self.progress_queue.put(('log', f"📊 Real-Time Factor: {rtf:.2f}x"))
+
+            self.progress_queue.put(('log', f"\n{'='*60}"))
+            self.progress_queue.put(('log', "✅ QUICK TEST ABGESCHLOSSEN"))
+            self.progress_queue.put(('log', f"{'='*60}\n"))
+
+        except Exception as e:
+            logger.error(f"Quick test error: {e}")
+            self.progress_queue.put(('log', f"❌ Fehler: {e}"))
+
+        finally:
+            # Re-enable buttons
+            self.progress_queue.put(('enable_buttons', None))
 
     def _stop_transcription(self):
         """Stop transcription"""
@@ -518,6 +663,9 @@ class SemanticVoiceTranscriberGUI:
                     self.start_button.config(state=tk.NORMAL)
                     self.stop_button.config(state=tk.DISABLED)
                     self.is_processing = False
+                elif msg_type == 'enable_buttons':
+                    self.start_button.config(state=tk.NORMAL)
+                    self.test_button.config(state=tk.NORMAL)
 
         except queue.Empty:
             pass
