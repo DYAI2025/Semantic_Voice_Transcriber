@@ -43,6 +43,13 @@ except ImportError:
     print("⚠️ Prosody Extractor nicht gefunden. Prosodieanalyse deaktiviert.")
 
 try:
+    from speaker_diarizer import SpeakerDiarizer
+    DIARIZATION_AVAILABLE = True
+except ImportError:
+    DIARIZATION_AVAILABLE = False
+    print("⚠️ Speaker Diarizer nicht gefunden. Sprechererkennung deaktiviert.")
+
+try:
     from textblob import TextBlob
     TEXTBLOB_AVAILABLE = True
 except ImportError:
@@ -791,7 +798,10 @@ def transcribe_with_whisper(
     quality_score: Optional[float] = None,
     quality_analyzer: Optional[Any] = None,
     audio_preprocessor: Optional[Any] = None,
-    extract_prosody: bool = False
+    extract_prosody: bool = False,
+    enable_diarization: bool = False,
+    hf_token: Optional[str] = None,
+    num_speakers: Optional[int] = None
 ) -> Dict[str, Any]:
     """
     Transkribiert Audio mit Whisper und extrahiert Confidence Scores
@@ -805,9 +815,12 @@ def transcribe_with_whisper(
         quality_analyzer: AudioQualityAnalyzer instance
         audio_preprocessor: AudioPreprocessor instance
         extract_prosody: Extract prosodic features (tempo, pitch, energy, pauses)
+        enable_diarization: Enable automatic speaker diarization (Speaker A, B, C, ...)
+        hf_token: Hugging Face token for pyannote.audio (required for diarization)
+        num_speakers: Fixed number of speakers (None for auto-detect)
 
     Returns:
-        Dict mit text, segments, confidence_scores, und optional prosody_features/prosody_baseline
+        Dict mit text, segments, confidence_scores, prosody_features/baseline, und speaker_labels
     """
     try:
         import whisper
@@ -883,12 +896,52 @@ def transcribe_with_whisper(
             except Exception as e:
                 logger.error(f"Fehler bei Prosodieextraktion: {e}")
 
+        # SPEAKER DIARIZATION (Phase 2b)
+        speaker_segments = []
+        aligned_segments = result.get('segments', [])
+
+        if enable_diarization and DIARIZATION_AVAILABLE:
+            try:
+                logger.info("🎤 Starte Sprechererkennung...")
+                diarizer = SpeakerDiarizer(
+                    use_auth_token=hf_token,
+                    min_speakers=1,
+                    max_speakers=10
+                )
+
+                # Run diarization
+                speaker_segments = diarizer.diarize(
+                    Path(audio_path),
+                    num_speakers=num_speakers
+                )
+
+                # Align with transcription segments
+                aligned_segments = diarizer.align_with_transcription(
+                    speaker_segments,
+                    result.get('segments', [])
+                )
+
+                # Get speaker statistics
+                speaker_stats = SpeakerDiarizer.get_speaker_statistics(speaker_segments)
+
+                logger.info(f"✅ Sprechererkennung abgeschlossen: {len(speaker_stats)} Sprecher gefunden")
+                for speaker, stats in speaker_stats.items():
+                    logger.info(
+                        f"  - {speaker}: {stats['total_duration']:.1f}s "
+                        f"({stats['percentage']:.1f}%) - {stats['num_segments']} Segmente"
+                    )
+
+            except Exception as e:
+                logger.error(f"Fehler bei Sprechererkennung: {e}")
+                logger.warning("Fortfahren ohne Sprechererkennung...")
+
         return {
             'text': result['text'],
-            'segments': result.get('segments', []),
+            'segments': aligned_segments,  # Use aligned segments with speaker labels
             'confidence_scores': confidence_scores,
             'prosody_features': prosody_features,
-            'prosody_baseline': prosody_baseline
+            'prosody_baseline': prosody_baseline,
+            'speaker_segments': speaker_segments  # Raw diarization output
         }
 
     except Exception as e:
@@ -902,7 +955,8 @@ def transcribe_with_whisper(
                 'low_confidence_segments': []
             },
             'prosody_features': [],
-            'prosody_baseline': None
+            'prosody_baseline': None,
+            'speaker_segments': []
         }
 
 def _extract_confidence_scores(whisper_result: Dict[str, Any],

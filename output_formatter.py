@@ -191,7 +191,6 @@ class OutputFormatter:
         segments = transcription_result.get('segments', [])
         prosody_features = transcription_result.get('prosody_features', [])
         confidence_scores = transcription_result.get('confidence_scores', {})
-        speaker_labels = transcription_result.get('speaker_labels', None)
 
         csv_path = output_path.with_suffix('.csv')
 
@@ -221,7 +220,7 @@ class OutputFormatter:
             for i, segment in enumerate(segments):
                 row = {
                     'index': i,
-                    'speaker': speaker_labels[i] if speaker_labels and i < len(speaker_labels) else '',
+                    'speaker': segment.get('speaker', ''),  # Get speaker from segment
                     'start_time': segment.get('start', 0.0),
                     'end_time': segment.get('end', 0.0),
                     'duration': segment.get('end', 0.0) - segment.get('start', 0.0),
@@ -295,6 +294,7 @@ class OutputFormatter:
             start = segment.get('start', 0.0)
             end = segment.get('end', 0.0)
             text = segment.get('text', '').strip()
+            speaker = segment.get('speaker', None)  # Get speaker label if available
 
             # Get prosody for this segment
             prosody = None
@@ -304,8 +304,11 @@ class OutputFormatter:
             # Format timestamp
             timestamp = self._format_timestamp(start, end)
 
-            # Build segment line
-            segment_line = f"**[{timestamp}]** {text}"
+            # Build segment line with speaker label
+            if speaker:
+                segment_line = f"**[{timestamp}] {speaker}:** {text}"
+            else:
+                segment_line = f"**[{timestamp}]** {text}"
 
             # Add prosody markers if available
             if include_prosody_markers and prosody:
@@ -359,6 +362,7 @@ class OutputFormatter:
             "segments": [
                 {
                     "index": i,
+                    "speaker": seg.get('speaker', None),  # Speaker label
                     "start": seg.get('start', 0.0),
                     "end": seg.get('end', 0.0),
                     "text": seg.get('text', '').strip(),

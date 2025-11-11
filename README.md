@@ -100,7 +100,9 @@ python3 svt.py
 - ✅ **Intelligent Pipeline**: Automatische Qualitätsanalyse und Modellwahl
 - ✅ **Prosody-Extraktion**: Voice-Marker 2.0 mit Big 4 Features
 - ✅ **Emotions-Analyse**: TextBlob Sentiment + Marker-System
-- ✅ **Memory-Profile**: Sprechererkennung und -profile
+- ✅ **Speaker Diarization**: Automatische Sprechererkennung (Speaker A, B, C)
+- ✅ **Multi-Format Export**: Markdown, JSON, HTML, PDF, CSV
+- ✅ **Professional Layout**: Farbcodierte Sprecher und emotionale Wendepunkte
 
 ## 📁 Projektstruktur
 
@@ -126,12 +128,31 @@ Semantic_Voice_Transcriber/
 
 ## 🎯 Roadmap
 
-### Phase 2: ATO-Marker-Integration (In Planung)
+### Phase 2a: Professional Layout & Export (✅ Abgeschlossen)
+
+- [x] HTML-Export mit farbcodierten Sprechern
+- [x] PDF-Export via WeasyPrint
+- [x] CSV-Export für Datenanalyse
+- [x] Emotionale Wendepunkt-Hervorhebung (orange)
+- [x] Farbige Prosody-Marker in allen Formaten
+
+### Phase 2b: Speaker Diarization (✅ Abgeschlossen)
+
+- [x] Automatische Sprechererkennung mit pyannote.audio
+- [x] Speaker A, B, C Labels ohne Namenszuordnung
+- [x] Integration in Transkriptionspipeline
+- [x] Speaker-Labels in allen Ausgabeformaten (MD, JSON, HTML, PDF, CSV)
+- [x] Farbcodierte Sprecher in HTML/PDF (6 Farben)
+
+**Siehe:** [SPEAKER_DIARIZATION.md](SPEAKER_DIARIZATION.md) für Details & HF Token Setup
+
+### Phase 2c: ATO-Marker-Integration (In Planung)
 
 - [ ] VP_ATO/*.yaml Marker mit Prosodieabweichungen verknüpfen
 - [ ] Echtzeit-Marker-Trigger beim Transkribieren
 - [ ] ATO → SEM → CLU → MEMA Hierarchie aufbauen
 - [ ] Wendepunkt-Erkennung für Therapeuten
+- [ ] GUI-Integration für Speaker Diarization
 
 ### Phase 3: Streaming & Real-Time
 
@@ -177,5 +198,5 @@ Proprietär - DYAI 2025
 
 ---
 
-**Status**: Phase 1 Complete ✅  
-**Nächster Schritt**: ATO-Marker-Integration (Phase 2)
+**Status**: Phase 2b Complete ✅
+**Nächster Schritt**: GUI-Integration & ATO-Marker-Integration (Phase 2c)
