@@ -203,6 +203,8 @@ class OutputFormatter:
                 'duration',
                 'text',
                 'confidence',
+                'has_overlap',
+                'overlap_duration_s',
                 'tempo_wpm',
                 'tempo_deviation_pct',
                 'pitch_mean_hz',
@@ -226,7 +228,9 @@ class OutputFormatter:
                     'duration': segment.get('end', 0.0) - segment.get('start', 0.0),
                     'text': segment.get('text', '').strip(),
                     'confidence': confidence_scores.get('segments', [])[i].get('confidence', 0.0)
-                    if i < len(confidence_scores.get('segments', [])) else 0.0
+                    if i < len(confidence_scores.get('segments', [])) else 0.0,
+                    'has_overlap': segment.get('has_overlap', False),
+                    'overlap_duration_s': segment.get('overlap_duration', 0.0)
                 }
 
                 # Add prosody data if available
@@ -295,6 +299,7 @@ class OutputFormatter:
             end = segment.get('end', 0.0)
             text = segment.get('text', '').strip()
             speaker = segment.get('speaker', None)  # Get speaker label if available
+            has_overlap = segment.get('has_overlap', False)  # Get overlap status
 
             # Get prosody for this segment
             prosody = None
@@ -315,6 +320,11 @@ class OutputFormatter:
                 markers = self._generate_prosody_markers(prosody)
                 if markers:
                     segment_line += f" {markers}"
+
+            # Add overlap marker if detected
+            if has_overlap:
+                overlap_duration = segment.get('overlap_duration', 0.0)
+                segment_line += f" `[ÜBERLAPPUNG {overlap_duration:.1f}s]`"
 
             lines.append(segment_line)
 
@@ -337,6 +347,7 @@ class OutputFormatter:
             lines.append("- `[ENERGY↓]` = Leise (>25% unter Baseline)")
             lines.append("- `[ENERGY↑]` = Laut (>25% über Baseline)")
             lines.append("- `[PAUSE]` = Signifikante Pause (>1s)")
+            lines.append("- `[ÜBERLAPPUNG]` = Mehrere Sprecher gleichzeitig")
 
         return "\n".join(lines)
 
@@ -368,7 +379,9 @@ class OutputFormatter:
                     "text": seg.get('text', '').strip(),
                     "confidence": confidence_scores.get('segments', [])[i].get('confidence', 0.0)
                     if i < len(confidence_scores.get('segments', [])) else 0.0,
-                    "prosody": prosody_features[i] if i < len(prosody_features) else None
+                    "prosody": prosody_features[i] if i < len(prosody_features) else None,
+                    "has_overlap": seg.get('has_overlap', False),
+                    "overlap_duration": seg.get('overlap_duration', 0.0)
                 }
                 for i, seg in enumerate(segments)
             ]
