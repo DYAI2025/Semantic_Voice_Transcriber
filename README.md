@@ -146,13 +146,23 @@ Semantic_Voice_Transcriber/
 
 **Siehe:** [SPEAKER_DIARIZATION.md](SPEAKER_DIARIZATION.md) für Details & HF Token Setup
 
-### Phase 2c: ATO-Marker-Integration (In Planung)
+### Phase 2c: Overlapped Speech Detection (✅ Abgeschlossen)
+
+- [x] Automatische Erkennung überlappender Sprache mit pyannote.audio
+- [x] OSD-Marker in allen Ausgabeformaten (`[ÜBERLAPPUNG Xs]`)
+- [x] Visualisierung in HTML/PDF (pink border + badge)
+- [x] Segment-Flagging (has_overlap, overlap_duration)
+- [x] Therapeutische Anwendungen (Interruptions-Analyse, Turn-Taking Dynamik)
+
+**Siehe:** [docs/OSD_GUIDE.md](docs/OSD_GUIDE.md) für Details & therapeutische Anwendungen
+
+### Phase 2d: ATO-Marker-Integration (In Planung)
 
 - [ ] VP_ATO/*.yaml Marker mit Prosodieabweichungen verknüpfen
 - [ ] Echtzeit-Marker-Trigger beim Transkribieren
 - [ ] ATO → SEM → CLU → MEMA Hierarchie aufbauen
 - [ ] Wendepunkt-Erkennung für Therapeuten
-- [ ] GUI-Integration für Speaker Diarization
+- [ ] GUI-Integration für Speaker Diarization & OSD
 
 ### Phase 3: Streaming & Real-Time
 
@@ -198,5 +208,5 @@ Proprietär - DYAI 2025
 
 ---
 
-**Status**: Phase 2b Complete ✅
-**Nächster Schritt**: GUI-Integration & ATO-Marker-Integration (Phase 2c)
+**Status**: Phase 2c Complete ✅
+**Nächster Schritt**: GUI-Integration & ATO-Marker-Integration (Phase 2d)

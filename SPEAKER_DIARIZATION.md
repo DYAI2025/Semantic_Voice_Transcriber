@@ -166,6 +166,43 @@ Speaker A: 45.2s (60.3%) - 12 Segmente
 Speaker B: 29.8s (39.7%) - 8 Segmente
 ```
 
+## 🔊 Overlapped Speech Detection
+
+Speaker Diarization kann mit Overlapped Speech Detection (OSD) kombiniert werden, um Momente zu erkennen, in denen mehrere Sprecher gleichzeitig sprechen:
+
+```python
+from auto_transcriber_v4_emotion import transcribe_with_whisper
+import os
+
+result = transcribe_with_whisper(
+    audio_path="session.m4a",
+    model_size='small',
+    extract_prosody=True,
+    enable_diarization=True,        # Sprecher A, B, C
+    enable_overlap_detection=True,  # Überlappungen
+    osd_min_duration=0.5,
+    hf_token=os.getenv('HF_TOKEN')
+)
+
+# Statistiken
+num_speakers = len(set(s['speaker'] for s in result['segments']))
+num_overlaps = len(result['overlapped_speech'])
+overlap_segments = [s for s in result['segments'] if s.get('has_overlap')]
+
+print(f"Sprecher: {num_speakers}")
+print(f"Überlappungen: {num_overlaps}")
+print(f"Segmente mit Overlap: {len(overlap_segments)}")
+```
+
+**Ausgabe:**
+```
+Sprecher: 2
+Überlappungen: 8
+Segmente mit Overlap: 12
+```
+
+**Siehe:** [docs/OSD_GUIDE.md](docs/OSD_GUIDE.md) für vollständige Dokumentation und therapeutische Anwendungen.
+
 ## 🔧 Technische Details
 
 ### Verwendete Modelle
@@ -281,14 +318,21 @@ for format_type, path in files.items():
 
 ## 🎯 Roadmap
 
-### Phase 2b (Current) ✅
+### Phase 2b: Speaker Diarization ✅
 - [x] Automatische Sprechererkennung (Speaker A, B, C)
 - [x] Integration in Transkriptionspipeline
 - [x] Speaker-Labels in allen Ausgabeformaten
 - [x] Farbcodierte Sprecher in HTML/PDF
 
-### Phase 2c (Geplant)
-- [ ] GUI-Integration (Checkbox + Token-Feld)
+### Phase 2c: Overlapped Speech Detection ✅
+- [x] Automatische Erkennung überlappender Sprache
+- [x] OSD-Marker in allen Ausgabeformaten
+- [x] Visualisierung in HTML/PDF (pink border + badge)
+- [x] Segment-Flagging (has_overlap, overlap_duration)
+- [x] Therapeutische Anwendungen (Interruptions-Analyse)
+
+### Phase 2d: GUI & Erweiterte Features (Geplant)
+- [ ] GUI-Integration (Checkbox + Token-Feld für Diarization/OSD)
 - [ ] Token-Speicherung in Config-Datei
 - [ ] Speaker-Namen manuell zuweisen (A → "Therapeut", B → "Patient")
 - [ ] Speaker-Embeddings für konsistente Namen über Sessions hinweg
