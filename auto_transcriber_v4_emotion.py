@@ -801,7 +801,9 @@ def transcribe_with_whisper(
     extract_prosody: bool = False,
     enable_diarization: bool = False,
     hf_token: Optional[str] = None,
-    num_speakers: Optional[int] = None
+    num_speakers: Optional[int] = None,
+    enable_overlap_detection: bool = False,
+    osd_min_duration: float = 0.5
 ) -> Dict[str, Any]:
     """
     Transkribiert Audio mit Whisper und extrahiert Confidence Scores
@@ -816,11 +818,14 @@ def transcribe_with_whisper(
         audio_preprocessor: AudioPreprocessor instance
         extract_prosody: Extract prosodic features (tempo, pitch, energy, pauses)
         enable_diarization: Enable automatic speaker diarization (Speaker A, B, C, ...)
-        hf_token: Hugging Face token for pyannote.audio (required for diarization)
+        hf_token: Hugging Face token for pyannote.audio (required for diarization/OSD)
         num_speakers: Fixed number of speakers (None for auto-detect)
+        enable_overlap_detection: Enable overlapped speech detection
+        osd_min_duration: Minimum duration (seconds) for overlap regions
 
     Returns:
-        Dict mit text, segments, confidence_scores, prosody_features/baseline, und speaker_labels
+        Dict mit text, segments, confidence_scores, prosody_features/baseline,
+        speaker_labels, und overlapped_speech
     """
     try:
         import whisper
@@ -935,13 +940,48 @@ def transcribe_with_whisper(
                 logger.error(f"Fehler bei Sprechererkennung: {e}")
                 logger.warning("Fortfahren ohne Sprechererkennung...")
 
+        # OVERLAPPED SPEECH DETECTION (Phase 2c)
+        overlapped_speech = []
+
+        if enable_overlap_detection and DIARIZATION_AVAILABLE:
+            try:
+                logger.info("🔊 Starte Overlapped Speech Detection...")
+                diarizer = SpeakerDiarizer(
+                    use_auth_token=hf_token,
+                    min_speakers=1,
+                    max_speakers=10
+                )
+
+                # Run OSD
+                overlapped_speech = diarizer.detect_overlapped_speech(
+                    Path(audio_path),
+                    min_duration_on=osd_min_duration,
+                    min_duration_off=0.3  # Fill gaps shorter than 300ms
+                )
+
+                # Mark segments that have overlaps
+                aligned_segments = _mark_overlapped_segments(
+                    aligned_segments,
+                    overlapped_speech
+                )
+
+                logger.info(
+                    f"✅ OSD abgeschlossen: {len(overlapped_speech)} "
+                    f"Überlappungsbereiche gefunden"
+                )
+
+            except Exception as e:
+                logger.error(f"Fehler bei Overlapped Speech Detection: {e}")
+                logger.warning("Fortfahren ohne OSD...")
+
         return {
             'text': result['text'],
             'segments': aligned_segments,  # Use aligned segments with speaker labels
             'confidence_scores': confidence_scores,
             'prosody_features': prosody_features,
             'prosody_baseline': prosody_baseline,
-            'speaker_segments': speaker_segments  # Raw diarization output
+            'speaker_segments': speaker_segments,  # Raw diarization output
+            'overlapped_speech': overlapped_speech  # OSD regions
         }
 
     except Exception as e:
@@ -956,7 +996,8 @@ def transcribe_with_whisper(
             },
             'prosody_features': [],
             'prosody_baseline': None,
-            'speaker_segments': []
+            'speaker_segments': [],
+            'overlapped_speech': []
         }
 
 def _extract_confidence_scores(whisper_result: Dict[str, Any],
@@ -1012,6 +1053,46 @@ def _extract_confidence_scores(whisper_result: Dict[str, Any],
         'low_confidence_threshold': low_confidence_threshold,
         'total_segments': len(segments)
     }
+
+def _mark_overlapped_segments(
+    segments: List[Dict[str, Any]],
+    overlaps: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    Mark transcription segments that contain overlapped speech
+
+    Args:
+        segments: Whisper transcription segments
+        overlaps: OSD overlap segments
+
+    Returns:
+        Segments with added 'has_overlap' and 'overlap_duration' fields
+    """
+    for seg in segments:
+        seg_start = seg.get('start', 0.0)
+        seg_end = seg.get('end', 0.0)
+
+        # Check overlap with OSD regions
+        total_overlap = 0.0
+        has_overlap = False
+
+        for overlap in overlaps:
+            ovl_start = overlap['start']
+            ovl_end = overlap['end']
+
+            # Calculate intersection
+            intersection_start = max(seg_start, ovl_start)
+            intersection_end = min(seg_end, ovl_end)
+            intersection = max(0, intersection_end - intersection_start)
+
+            if intersection > 0:
+                has_overlap = True
+                total_overlap += intersection
+
+        seg['has_overlap'] = has_overlap
+        seg['overlap_duration'] = total_overlap
+
+    return segments
 
 def mark_low_confidence_segments(transcription_result: Dict[str, Any]) -> str:
     """
