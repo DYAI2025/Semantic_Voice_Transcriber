@@ -788,7 +788,15 @@ Die Sprachanalyse zeigt {emotion_analysis.get('dominant_emotion', 'neutrale')} e
         
         logger.info(f"Verarbeitung abgeschlossen. {processed_count} neue Dateien verarbeitet.")
 
-def transcribe_with_whisper(audio_path: str, model_size: str = 'base', language: str = 'de') -> Dict[str, Any]:
+def transcribe_with_whisper(
+    audio_path: str,
+    model_size: str = 'base',
+    language: str = 'de',
+    use_intelligent_pipeline: bool = False,
+    quality_score: Optional[float] = None,
+    quality_analyzer: Optional[Any] = None,
+    audio_preprocessor: Optional[Any] = None
+) -> Dict[str, Any]:
     """
     Transkribiert Audio mit Whisper und extrahiert Confidence Scores
 
@@ -796,23 +804,58 @@ def transcribe_with_whisper(audio_path: str, model_size: str = 'base', language:
         audio_path: Pfad zur Audio-Datei
         model_size: Whisper-Modell (tiny, base, small, medium, large)
         language: Sprache (de, en, etc.)
+        use_intelligent_pipeline: Enable quality-based preprocessing
+        quality_score: Pre-calculated quality score (0-1)
+        quality_analyzer: AudioQualityAnalyzer instance
+        audio_preprocessor: AudioPreprocessor instance
 
     Returns:
         Dict mit text, segments, und confidence_scores
     """
     try:
         import whisper
+        import librosa
+        import soundfile as sf
+        import tempfile
+        from pathlib import Path
+
+        # Apply intelligent preprocessing if enabled
+        audio_file_to_transcribe = audio_path
+        temp_file_created = False
+
+        if use_intelligent_pipeline and quality_score is not None and audio_preprocessor is not None:
+            logger.info(f"Applying intelligent preprocessing (quality: {quality_score:.2f})")
+
+            # Load audio
+            audio, sample_rate = librosa.load(audio_path, sr=16000, mono=True)
+
+            # Preprocess based on quality score
+            audio = audio_preprocessor.preprocess_adaptive(audio, sample_rate, quality_score)
+
+            # Save preprocessed audio to temporary file
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+                sf.write(tmp_path, audio, sample_rate)
+                audio_file_to_transcribe = tmp_path
+                temp_file_created = True
 
         logger.info(f"Lade Whisper-Modell: {model_size}")
         model = whisper.load_model(model_size)
 
         logger.info(f"Transkribiere: {audio_path}")
         result = model.transcribe(
-            audio_path,
+            audio_file_to_transcribe,
             language=language,
             verbose=False,
             word_timestamps=True  # Enable word-level timestamps
         )
+
+        # Clean up temp file if created
+        if temp_file_created:
+            try:
+                Path(audio_file_to_transcribe).unlink(missing_ok=True)
+            except Exception as e:
+                logger.warning(f"Could not delete temp file: {e}")
 
         # EXTRACT CONFIDENCE SCORES
         confidence_scores = _extract_confidence_scores(result)

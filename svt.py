@@ -14,6 +14,8 @@ import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
 import auto_transcriber_v4_emotion as v4
+from audio_quality_analyzer import AudioQualityAnalyzer
+from audio_preprocessor import AudioPreprocessor
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -37,6 +39,10 @@ class SemanticVoiceTranscriberGUI:
         self.input_dir = Path("Eingang")
         self.output_dir = Path("Transkripte_LLM")
         self.memory_dir = Path("Memory")
+
+        # Intelligent pipeline components
+        self.quality_analyzer = AudioQualityAnalyzer()
+        self.audio_preprocessor = AudioPreprocessor()
 
         self._create_widgets()
         self._check_progress_queue()
@@ -121,6 +127,22 @@ class SemanticVoiceTranscriberGUI:
         )
         confidence_spin.grid(row=2, column=1, sticky=tk.W, pady=5, padx=5)
         ttk.Label(quality_frame, text="(niedrigere Werte = mehr Warnungen)").grid(row=2, column=2, sticky=tk.W, pady=5)
+
+        # Intelligent Pipeline toggle
+        ttk.Label(quality_frame, text="Intelligente Pipeline:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        self.intelligent_pipeline_var = tk.BooleanVar(value=True)
+        intelligent_checkbox = ttk.Checkbutton(
+            quality_frame,
+            text="Auto-Qualitätsanalyse & Preprocessing aktivieren",
+            variable=self.intelligent_pipeline_var
+        )
+        intelligent_checkbox.grid(row=3, column=1, columnspan=2, sticky=tk.W, pady=5, padx=5)
+
+        ttk.Label(
+            quality_frame,
+            text="(Analysiert Audio-Qualität und wählt optimale Einstellungen)",
+            font=("Helvetica", 9, "italic")
+        ).grid(row=4, column=1, columnspan=2, sticky=tk.W, padx=5)
 
         # Feature toggles frame
         features_frame = ttk.LabelFrame(self.root, text="Features", padding="10")
@@ -285,7 +307,8 @@ class SemanticVoiceTranscriberGUI:
             'confidence_threshold': self.confidence_var.get(),
             'enable_emotion': self.emotion_var.get(),
             'enable_prosody': self.prosody_var.get(),
-            'enable_memory': self.memory_var.get()
+            'enable_memory': self.memory_var.get(),
+            'use_intelligent_pipeline': self.intelligent_pipeline_var.get()
         }
 
         # Start processing thread
@@ -332,11 +355,47 @@ class SemanticVoiceTranscriberGUI:
                     self.progress_queue.put(('log', f"  🎤 {audio_file.name}"))
 
                     try:
+                        # Intelligent Pipeline: Analyze quality first
+                        use_intelligent = settings.get('use_intelligent_pipeline', False)
+                        optimal_model = settings['model']
+                        quality_score = None
+
+                        if use_intelligent:
+                            self.progress_queue.put(('log', f"    🔍 Analysiere Audio-Qualität..."))
+                            quality_metrics = self.quality_analyzer.analyze_audio_file(str(audio_file))
+                            quality_score = quality_metrics["quality_score"]
+
+                            self.progress_queue.put(('log',
+                                f"    📊 Qualität: {quality_score:.2f} | "
+                                f"SNR: {quality_metrics['snr_db']:.1f}dB | "
+                                f"Clipping: {quality_metrics['clipping_ratio']:.2%}"
+                            ))
+
+                            # Select optimal model based on quality
+                            if quality_score < 0.4:
+                                optimal_model = "large"
+                                self.progress_queue.put(('log', "    🎯 Niedrige Qualität → large Modell + aggressives Preprocessing"))
+                            elif quality_score < 0.6:
+                                optimal_model = "medium"
+                                self.progress_queue.put(('log', "    🎯 Mittlere Qualität → medium Modell + moderates Preprocessing"))
+                            elif quality_score < 0.8:
+                                optimal_model = "medium"
+                                self.progress_queue.put(('log', "    🎯 Gute Qualität → medium Modell ohne Preprocessing"))
+                            else:
+                                optimal_model = "small"
+                                self.progress_queue.put(('log', "    🎯 Sehr gute Qualität → small Modell (schneller)"))
+
                         # Transcribe
+                        self.progress_queue.put(('log', f"    🎤 Transkribiere mit {optimal_model} Modell..."))
+
                         result = v4.transcribe_with_whisper(
                             str(audio_file),
-                            model_size=settings['model'],
-                            language=settings['language']
+                            model_size=optimal_model,
+                            language=settings['language'],
+                            use_intelligent_pipeline=use_intelligent,
+                            quality_score=quality_score,
+                            quality_analyzer=self.quality_analyzer if use_intelligent else None,
+                            audio_preprocessor=self.audio_preprocessor if use_intelligent else None
                         )
 
                         # Analyze emotion if enabled
