@@ -2,9 +2,9 @@
 
 Ein intelligentes System zur automatischen Transkription von WhatsApp-Audionachrichten mit Sprechererkennung und Memory-System Integration.
 
-## 🏥 Therapeutic Transcription System (NEW)
+## 🎤 Semantic Voice Transcriber (SVT)
 
-**Professional-grade transcription for therapeutic use**
+**Professional-grade transcription with intelligent quality optimization**
 
 ### Features
 - ✅ High-quality transcription with confidence scoring
@@ -13,14 +13,34 @@ Ein intelligentes System zur automatischen Transkription von WhatsApp-Audionachr
 - 🧠 Learning speaker profiles
 - ⚠️ Quality warnings for low-confidence segments
 - 🖥️ Professional GUI with one-click workflow
+- 🤖 **NEW: Intelligent Pipeline** - Auto quality analysis & adaptive preprocessing
 
 ### Quick Start
 ```bash
-# Launch therapeutic GUI
-python3 therapeutic_transcriber_gui.py
+# Launch SVT GUI
+python3 svt.py
+
+# Or use one-click launcher
+./start_svt.sh
 ```
 
-📖 **Full documentation**: See [docs/THERAPEUTIC_TRANSCRIPTION_GUIDE.md](docs/THERAPEUTIC_TRANSCRIPTION_GUIDE.md)
+### Intelligent Pipeline
+
+SVT includes an intelligent pipeline that automatically optimizes transcription quality:
+
+- **Auto Quality Analysis**: Measures SNR, clipping, silence ratio
+- **Adaptive Model Selection**: Chooses optimal Whisper model based on quality
+- **Smart Preprocessing**: Applies noise reduction, normalization only when needed
+
+Quality-based model selection:
+- Quality < 0.4 → `large` model + aggressive preprocessing
+- Quality 0.4-0.6 → `medium` model + moderate preprocessing
+- Quality 0.6-0.8 → `medium` model, light preprocessing
+- Quality > 0.8 → `small` model (faster, no preprocessing needed)
+
+📖 **Documentation**:
+- [Intelligent Pipeline Guide](docs/INTELLIGENT_PIPELINE.md)
+- [Therapeutic Transcription Guide](docs/THERAPEUTIC_TRANSCRIPTION_GUIDE.md)
 
 ---
 
