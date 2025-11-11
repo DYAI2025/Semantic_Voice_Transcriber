@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Audio Quality Analyzer - Analyzes audio characteristics for intelligent preprocessing
+"""
+import numpy as np
+import librosa
+from pathlib import Path
+from typing import Dict, Any
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class AudioQualityAnalyzer:
+    """Analyzes audio quality metrics to determine optimal transcription settings"""
+
+    def __init__(self):
+        """Initialize the analyzer"""
+        pass
+
+    def _calculate_snr(self, audio: np.ndarray, sample_rate: int) -> float:
+        """
+        Calculate Signal-to-Noise Ratio (SNR) in dB
+
+        Uses spectral analysis to separate signal from noise components
+
+        Args:
+            audio: Audio signal as numpy array
+            sample_rate: Sample rate in Hz
+
+        Returns:
+            SNR in decibels (dB)
+        """
+        # Use spectral analysis to estimate signal and noise
+        # Apply short-time Fourier transform
+        stft = librosa.stft(audio, n_fft=2048, hop_length=512)
+        magnitude = np.abs(stft)
+
+        # Signal: top 75th percentile of magnitudes (strong components)
+        # Noise: bottom 25th percentile (weak components)
+        signal_threshold = np.percentile(magnitude, 75)
+        noise_threshold = np.percentile(magnitude, 25)
+
+        signal_power = np.mean(magnitude[magnitude > signal_threshold] ** 2)
+        noise_power = np.mean(magnitude[magnitude < noise_threshold] ** 2)
+
+        # Avoid division by zero
+        if noise_power == 0:
+            return 60.0  # Perfect signal
+
+        # SNR in dB: 10 * log10(signal_power / noise_power)
+        snr_db = 10 * np.log10(signal_power / noise_power)
+
+        return float(snr_db)
