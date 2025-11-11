@@ -72,3 +72,27 @@ class AudioQualityAnalyzer:
         clipping_ratio = clipped_samples / total_samples if total_samples > 0 else 0.0
 
         return float(clipping_ratio)
+
+    def _detect_silence(self, audio: np.ndarray, threshold_db: float = -40) -> float:
+        """
+        Detect silence ratio in audio
+
+        Args:
+            audio: Audio signal as numpy array
+            threshold_db: Silence threshold in dB (default: -40 dB)
+
+        Returns:
+            Ratio of silent samples (0.0 to 1.0)
+        """
+        # Convert to dB scale
+        # Add small epsilon to avoid log(0)
+        epsilon = 1e-10
+        audio_db = 20 * np.log10(np.abs(audio) + epsilon)
+
+        # Count samples below silence threshold
+        silent_samples = np.sum(audio_db < threshold_db)
+        total_samples = len(audio)
+
+        silence_ratio = silent_samples / total_samples if total_samples > 0 else 0.0
+
+        return float(silence_ratio)
