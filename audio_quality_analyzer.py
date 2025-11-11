@@ -53,3 +53,22 @@ class AudioQualityAnalyzer:
         snr_db = 10 * np.log10(signal_power / noise_power)
 
         return float(snr_db)
+
+    def _detect_clipping(self, audio: np.ndarray, threshold: float = 0.99) -> float:
+        """
+        Detect audio clipping (samples at maximum amplitude)
+
+        Args:
+            audio: Audio signal as numpy array
+            threshold: Amplitude threshold for clipping detection (default: 0.99)
+
+        Returns:
+            Ratio of clipped samples (0.0 to 1.0)
+        """
+        # Count samples near maximum amplitude
+        clipped_samples = np.sum(np.abs(audio) >= threshold)
+        total_samples = len(audio)
+
+        clipping_ratio = clipped_samples / total_samples if total_samples > 0 else 0.0
+
+        return float(clipping_ratio)

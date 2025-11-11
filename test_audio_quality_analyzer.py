@@ -39,3 +39,27 @@ def test_calculate_snr_noisy_audio():
 
     # Noisy signal should have low SNR (<20 dB)
     assert snr < 20.0, f"Expected SNR < 20 dB for noisy signal, got {snr:.2f}"
+
+
+def test_detect_clipping_clean_audio():
+    """Test clipping detection with audio in normal range"""
+    # Audio in range [-0.8, 0.8] - no clipping
+    audio = np.sin(2 * np.pi * 440 * np.linspace(0, 1, 16000)) * 0.8
+
+    analyzer = AudioQualityAnalyzer()
+    clipping_ratio = analyzer._detect_clipping(audio)
+
+    # Should detect no clipping (< 0.01)
+    assert clipping_ratio < 0.01, f"Expected clipping ratio < 0.01, got {clipping_ratio:.4f}"
+
+
+def test_detect_clipping_clipped_audio():
+    """Test clipping detection with clipped audio"""
+    # Create clipped audio (values at ±1.0)
+    audio = np.clip(np.sin(2 * np.pi * 440 * np.linspace(0, 1, 16000)) * 1.5, -1.0, 1.0)
+
+    analyzer = AudioQualityAnalyzer()
+    clipping_ratio = analyzer._detect_clipping(audio)
+
+    # Should detect significant clipping (> 0.05)
+    assert clipping_ratio > 0.05, f"Expected clipping ratio > 0.05, got {clipping_ratio:.4f}"
