@@ -9,9 +9,17 @@ Creates:
 """
 
 import json
+import csv
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+
+try:
+    from html_formatter import HTMLFormatter, WEASYPRINT_AVAILABLE
+    HTML_FORMATTER_AVAILABLE = True
+except ImportError:
+    HTML_FORMATTER_AVAILABLE = False
+    WEASYPRINT_AVAILABLE = False
 
 
 class OutputFormatter:
@@ -97,6 +105,155 @@ class OutputFormatter:
             'markdown': markdown_path,
             'json': json_path
         }
+
+    def format_all(
+        self,
+        transcription_result: Dict[str, Any],
+        audio_filename: str,
+        output_path: Path,
+        include_prosody_markers: bool = True,
+        generate_html: bool = True,
+        generate_pdf: bool = True,
+        generate_csv: bool = True
+    ) -> Dict[str, Optional[Path]]:
+        """
+        Generate ALL output formats: Markdown, JSON, HTML, PDF
+
+        Args:
+            transcription_result: Result from transcribe_with_whisper
+            audio_filename: Name of the audio file
+            output_path: Base output path (without extension)
+            include_prosody_markers: Whether to include prosody markers
+            generate_html: Whether to generate HTML
+            generate_pdf: Whether to generate PDF
+
+        Returns:
+            Dict with paths: {'markdown': Path, 'json': Path, 'html': Path, 'pdf': Path}
+        """
+        # Generate Markdown + JSON
+        files = self.format_transcript(
+            transcription_result,
+            audio_filename,
+            output_path,
+            include_prosody_markers
+        )
+
+        # Generate HTML + PDF if requested
+        if generate_html and HTML_FORMATTER_AVAILABLE:
+            html_formatter = HTMLFormatter()
+
+            # Generate HTML
+            html_path = html_formatter.generate_html(
+                transcription_result,
+                audio_filename,
+                output_path
+            )
+            files['html'] = html_path
+
+            # Generate PDF
+            if generate_pdf and WEASYPRINT_AVAILABLE:
+                pdf_path = html_formatter.generate_pdf(
+                    transcription_result,
+                    audio_filename,
+                    output_path
+                )
+                files['pdf'] = pdf_path
+            else:
+                files['pdf'] = None
+        else:
+            files['html'] = None
+            files['pdf'] = None
+
+        # Generate CSV if requested
+        if generate_csv:
+            csv_path = self.generate_csv(transcription_result, output_path)
+            files['csv'] = csv_path
+        else:
+            files['csv'] = None
+
+        return files
+
+    def generate_csv(
+        self,
+        transcription_result: Dict[str, Any],
+        output_path: Path
+    ) -> Path:
+        """
+        Generate CSV export for data analysis
+
+        Args:
+            transcription_result: Result from transcribe_with_whisper
+            output_path: Base output path (without extension)
+
+        Returns:
+            Path to CSV file
+        """
+        segments = transcription_result.get('segments', [])
+        prosody_features = transcription_result.get('prosody_features', [])
+        confidence_scores = transcription_result.get('confidence_scores', {})
+        speaker_labels = transcription_result.get('speaker_labels', None)
+
+        csv_path = output_path.with_suffix('.csv')
+
+        with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = [
+                'index',
+                'speaker',
+                'start_time',
+                'end_time',
+                'duration',
+                'text',
+                'confidence',
+                'tempo_wpm',
+                'tempo_deviation_pct',
+                'pitch_mean_hz',
+                'pitch_deviation_pct',
+                'energy_rms',
+                'energy_deviation_pct',
+                'pause_before_ms',
+                'jitter_local',
+                'shimmer_local'
+            ]
+
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            for i, segment in enumerate(segments):
+                row = {
+                    'index': i,
+                    'speaker': speaker_labels[i] if speaker_labels and i < len(speaker_labels) else '',
+                    'start_time': segment.get('start', 0.0),
+                    'end_time': segment.get('end', 0.0),
+                    'duration': segment.get('end', 0.0) - segment.get('start', 0.0),
+                    'text': segment.get('text', '').strip(),
+                    'confidence': confidence_scores.get('segments', [])[i].get('confidence', 0.0)
+                    if i < len(confidence_scores.get('segments', [])) else 0.0
+                }
+
+                # Add prosody data if available
+                if i < len(prosody_features):
+                    prosody = prosody_features[i]
+                    row.update({
+                        'tempo_wpm': prosody.get('tempo_wpm', ''),
+                        'tempo_deviation_pct': prosody.get('tempo_deviation_pct', ''),
+                        'pitch_mean_hz': prosody.get('pitch_mean_hz', ''),
+                        'pitch_deviation_pct': prosody.get('pitch_deviation_pct', ''),
+                        'energy_rms': prosody.get('energy_rms', ''),
+                        'energy_deviation_pct': prosody.get('energy_deviation_pct', ''),
+                        'pause_before_ms': prosody.get('pause_before_ms', ''),
+                        'jitter_local': prosody.get('jitter_local', ''),
+                        'shimmer_local': prosody.get('shimmer_local', '')
+                    })
+                else:
+                    # Fill with empty values
+                    for field in ['tempo_wpm', 'tempo_deviation_pct', 'pitch_mean_hz',
+                                  'pitch_deviation_pct', 'energy_rms', 'energy_deviation_pct',
+                                  'pause_before_ms', 'jitter_local', 'shimmer_local']:
+                        row[field] = ''
+
+                writer.writerow(row)
+
+        return csv_path
 
     def _generate_markdown(
         self,
