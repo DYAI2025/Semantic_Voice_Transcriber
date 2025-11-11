@@ -88,3 +88,39 @@ def test_detect_silence_active_speech():
 
     # Should detect low silence ratio (< 0.3)
     assert silence_ratio < 0.3, f"Expected silence ratio < 0.3, got {silence_ratio:.4f}"
+
+
+def test_calculate_quality_score_high_quality():
+    """Test quality score calculation for high-quality audio"""
+    # High SNR, no clipping, minimal silence
+    sample_rate = 16000
+    t = np.linspace(0, 1, sample_rate)
+    audio = np.sin(2 * np.pi * 440 * t) * 0.7  # Clean tone at good level
+
+    analyzer = AudioQualityAnalyzer()
+    score = analyzer.calculate_quality_score(audio, sample_rate)
+
+    # High quality should score > 0.7
+    assert score > 0.7, f"Expected quality score > 0.7, got {score:.4f}"
+    assert 0.0 <= score <= 1.0, f"Quality score must be in [0, 1], got {score:.4f}"
+
+
+def test_calculate_quality_score_low_quality():
+    """Test quality score calculation for low-quality audio"""
+    # Low SNR, some clipping, lots of silence
+    sample_rate = 16000
+    duration = 1.0
+    t = np.linspace(0, duration, int(sample_rate * duration))
+
+    # Noisy, clipped, with silent sections
+    signal = np.sin(2 * np.pi * 440 * t)
+    noise = np.random.normal(0, 0.4, signal.shape)
+    audio = np.clip(signal + noise, -1.0, 1.0)
+    audio[:3200] = 0.0  # 20% silence at start
+
+    analyzer = AudioQualityAnalyzer()
+    score = analyzer.calculate_quality_score(audio, sample_rate)
+
+    # Low quality should score < 0.5
+    assert score < 0.5, f"Expected quality score < 0.5, got {score:.4f}"
+    assert 0.0 <= score <= 1.0, f"Quality score must be in [0, 1], got {score:.4f}"

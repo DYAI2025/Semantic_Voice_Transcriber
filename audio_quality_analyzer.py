@@ -96,3 +96,52 @@ class AudioQualityAnalyzer:
         silence_ratio = silent_samples / total_samples if total_samples > 0 else 0.0
 
         return float(silence_ratio)
+
+    def calculate_quality_score(self, audio: np.ndarray, sample_rate: int) -> float:
+        """
+        Calculate overall audio quality score (0.0 to 1.0)
+
+        Combines SNR, clipping detection, and silence detection into single metric
+
+        Args:
+            audio: Audio signal as numpy array
+            sample_rate: Sample rate in Hz
+
+        Returns:
+            Quality score from 0.0 (poor) to 1.0 (excellent)
+        """
+        # Calculate individual metrics
+        snr = self._calculate_snr(audio, sample_rate)
+        clipping_ratio = self._detect_clipping(audio)
+        silence_ratio = self._detect_silence(audio)
+
+        # Normalize SNR to 0-1 scale
+        # Typical SNR range: 0-60 dB
+        # Good quality: >30 dB, Poor quality: <15 dB
+        snr_score = np.clip(snr / 60.0, 0.0, 1.0)
+
+        # Clipping penalty (inverse - less clipping = better)
+        clipping_score = 1.0 - np.clip(clipping_ratio * 10, 0.0, 1.0)
+
+        # Silence penalty (some silence is OK, too much is bad)
+        # Optimal: 10-30% silence, Penalize: >50% silence
+        if silence_ratio < 0.5:
+            silence_score = 1.0
+        else:
+            silence_score = 1.0 - (silence_ratio - 0.5) * 2
+        silence_score = np.clip(silence_score, 0.0, 1.0)
+
+        # Weighted combination
+        # SNR is most important (50%), clipping (30%), silence (20%)
+        quality_score = (
+            0.5 * snr_score +
+            0.3 * clipping_score +
+            0.2 * silence_score
+        )
+
+        logger.info(f"Quality metrics - SNR: {snr:.1f}dB ({snr_score:.2f}), "
+                    f"Clipping: {clipping_ratio:.3f} ({clipping_score:.2f}), "
+                    f"Silence: {silence_ratio:.3f} ({silence_score:.2f}), "
+                    f"Overall: {quality_score:.2f}")
+
+        return float(quality_score)
