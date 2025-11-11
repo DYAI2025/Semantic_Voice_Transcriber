@@ -49,6 +49,7 @@ class HTMLFormatter:
         "ENERGY↑": {"color": "#388E3C", "bg": "#E8F5E9", "label": "Laut"},
         "ENERGY↓": {"color": "#5D4037", "bg": "#EFEBE9", "label": "Leise"},
         "PAUSE": {"color": "#455A64", "bg": "#ECEFF1", "label": "Pause"},
+        "ÜBERLAPPUNG": {"color": "#E91E63", "bg": "#FCE4EC", "label": "Überlappung"},
     }
 
     def __init__(self):
@@ -405,6 +406,25 @@ class HTMLFormatter:
             letter-spacing: 0.5px;
         }
 
+        /* Overlapped Speech */
+        .overlap-segment {
+            border-left: 4px solid #E91E63 !important;
+            background: linear-gradient(90deg,
+                rgba(233, 30, 99, 0.05) 0%,
+                rgba(233, 30, 99, 0.02) 100%);
+        }
+
+        .overlap-badge {
+            display: inline-block;
+            background: #E91E63;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
         /* Footer */
         .footer {
             margin-top: 40px;
@@ -539,6 +559,8 @@ class HTMLFormatter:
             start = segment.get('start', 0.0)
             end = segment.get('end', 0.0)
             text = segment.get('text', '').strip()
+            has_overlap = segment.get('has_overlap', False)
+            overlap_duration = segment.get('overlap_duration', 0.0)
 
             # Get speaker
             speaker = "Sprecher"
@@ -556,8 +578,16 @@ class HTMLFormatter:
             is_turning_point = self._is_emotional_turning_point(prosody)
             turning_point_class = " turning-point" if is_turning_point else ""
 
+            # Check for overlap
+            overlap_class = " overlap-segment" if has_overlap else ""
+
             # Format timestamp
             timestamp = self._format_timestamp(start, end)
+
+            # Generate overlap badge
+            overlap_badge = ""
+            if has_overlap:
+                overlap_badge = f'<span class="overlap-badge">⚠ Überlappung {overlap_duration:.1f}s</span>'
 
             # Generate prosody markers
             markers_html = ""
@@ -567,10 +597,11 @@ class HTMLFormatter:
                 prosody_details = self._generate_prosody_details(prosody)
 
             segment_html = f"""
-            <div class="segment{turning_point_class}" style="background: {speaker_color['bg']}; border-left-color: {speaker_color['border']};">
+            <div class="segment{turning_point_class}{overlap_class}" style="background: {speaker_color['bg']}; border-left-color: {speaker_color['border']};">
                 <div class="segment-header">
                     <span class="segment-speaker" style="color: {speaker_color['border']};">{speaker}</span>
                     <span class="segment-time">{timestamp}</span>
+                    {overlap_badge}
                 </div>
                 <div class="segment-text">{text}</div>
                 {markers_html}
