@@ -145,3 +145,42 @@ class AudioQualityAnalyzer:
                     f"Overall: {quality_score:.2f}")
 
         return float(quality_score)
+
+    def analyze_audio_file(self, audio_path: str) -> Dict[str, Any]:
+        """
+        Analyze audio file and return quality metrics
+
+        Args:
+            audio_path: Path to audio file
+
+        Returns:
+            Dictionary containing:
+                - quality_score: Overall quality (0.0-1.0)
+                - snr_db: Signal-to-noise ratio in dB
+                - clipping_ratio: Ratio of clipped samples
+                - silence_ratio: Ratio of silent samples
+                - sample_rate: Audio sample rate
+                - duration: Audio duration in seconds
+        """
+        # Load audio file
+        audio, sample_rate = librosa.load(audio_path, sr=None, mono=True)
+        duration = len(audio) / sample_rate
+
+        # Calculate metrics
+        quality_score = self.calculate_quality_score(audio, sample_rate)
+        snr = self._calculate_snr(audio, sample_rate)
+        clipping_ratio = self._detect_clipping(audio)
+        silence_ratio = self._detect_silence(audio)
+
+        result = {
+            "quality_score": quality_score,
+            "snr_db": snr,
+            "clipping_ratio": clipping_ratio,
+            "silence_ratio": silence_ratio,
+            "sample_rate": sample_rate,
+            "duration": duration
+        }
+
+        logger.info(f"Analyzed {Path(audio_path).name}: Quality={quality_score:.2f}")
+
+        return result

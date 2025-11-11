@@ -124,3 +124,35 @@ def test_calculate_quality_score_low_quality():
     # Low quality should score < 0.5
     assert score < 0.5, f"Expected quality score < 0.5, got {score:.4f}"
     assert 0.0 <= score <= 1.0, f"Quality score must be in [0, 1], got {score:.4f}"
+
+
+def test_analyze_audio_file(tmp_path):
+    """Test full audio file analysis"""
+    import soundfile as sf
+
+    # Create temporary audio file
+    sample_rate = 16000
+    duration = 2.0
+    t = np.linspace(0, duration, int(sample_rate * duration))
+    audio = np.sin(2 * np.pi * 440 * t) * 0.6
+
+    audio_file = tmp_path / "test_audio.wav"
+    sf.write(audio_file, audio, sample_rate)
+
+    analyzer = AudioQualityAnalyzer()
+    result = analyzer.analyze_audio_file(str(audio_file))
+
+    # Check result structure
+    assert isinstance(result, dict)
+    assert "quality_score" in result
+    assert "snr_db" in result
+    assert "clipping_ratio" in result
+    assert "silence_ratio" in result
+    assert "sample_rate" in result
+    assert "duration" in result
+
+    # Check value ranges
+    assert 0.0 <= result["quality_score"] <= 1.0
+    assert result["snr_db"] > 0
+    assert result["sample_rate"] == sample_rate
+    assert abs(result["duration"] - duration) < 0.1  # Allow small tolerance
