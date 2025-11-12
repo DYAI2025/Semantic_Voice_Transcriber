@@ -452,12 +452,12 @@ class WhisperSpeakerMatcherV4:
             self.base_path = Path("/Users/benjaminpoersch/Library/CloudStorage/GoogleDrive-benjamin.poersch@diyrigent.de/Meine Ablage/MyMind/WhisperSprecherMatcher")
         else:
             self.base_path = Path(base_path)
-            
+
         self.eingang_path = self.base_path / "Eingang"
         self.memory_path = self.base_path / "Memory"
         self.output_path = self.base_path / "Transkripte_LLM"
         self.output_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Fallback für lokale Entwicklung
         if not self.base_path.exists():
             logger.warning(f"Google Drive Pfad nicht verfügbar: {self.base_path}")
@@ -466,10 +466,20 @@ class WhisperSpeakerMatcherV4:
             self.memory_path = self.base_path / "Memory"
             self.output_path = self.base_path / "Transkripte_LLM"
             self._create_local_structure()
-        
+
         self.use_faster_whisper = use_faster_whisper
         self.speakers = self._load_speaker_profiles()
         self.emotion_analyzer = EmotionalAnalyzer()
+
+        # Add new layer flags
+        self.enable_turning_points = False
+        self.enable_dual_markers = False
+        self.enable_enhanced_speakers = False
+
+        # Initialize layer components
+        self.turning_points_layer = None
+        self.dual_marker_system = None
+        self.speaker_visualizer = None
         
     def _create_local_structure(self):
         """Erstelle lokale Verzeichnisstruktur wenn Google Drive nicht verfügbar"""
