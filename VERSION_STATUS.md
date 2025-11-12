@@ -229,7 +229,6 @@
       file: "transkript.md"
       topics: [technology, business]
   ```
-
 #### ✅ MemoryBuilder (build_memory_from_transcripts.py)
 - **Status**: Vollständig funktionsfähig ✅
 - **Features**:
