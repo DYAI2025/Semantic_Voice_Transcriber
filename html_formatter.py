@@ -741,6 +741,30 @@ class HTMLFormatter:
 """
 
 
+def create_correlation_badge(marker_name: str, confidence: float) -> str:
+    """Create HTML badge showing correlation confidence."""
+    # Color based on confidence level
+    if confidence >= 0.8:
+        color = "#28a745"  # Green - high confidence
+    elif confidence >= 0.6:
+        color = "#ffc107"  # Yellow - medium confidence
+    else:
+        color = "#dc3545"  # Red - low confidence
+
+    return f'''
+    <span style="
+        background-color: {color};
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.85em;
+        margin: 0 2px;
+    ">
+        {marker_name} {confidence:.0%}
+    </span>
+    '''
+
+
 # Standalone test
 if __name__ == "__main__":
     # Create mock data

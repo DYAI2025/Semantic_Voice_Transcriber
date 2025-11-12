@@ -456,6 +456,21 @@ class OutputFormatter:
         return f"{seconds_to_mmss(start)} - {seconds_to_mmss(end)}"
 
 
+def format_ato_markers(markers: List[str], confidence: Dict[str, float] = None) -> str:
+    """Format ATO markers with optional confidence scores."""
+    if not markers:
+        return ""
+
+    if confidence:
+        formatted = []
+        for marker in markers:
+            conf = confidence.get(marker, 0)
+            formatted.append(f"{marker} ({conf:.0%})")
+        return " | ".join(formatted)
+    else:
+        return " | ".join(markers)
+
+
 # Standalone test
 if __name__ == "__main__":
     # Example usage
