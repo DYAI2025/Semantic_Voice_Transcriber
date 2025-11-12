@@ -10,3 +10,12 @@ torch>=1.9.0
 transformers>=4.20.0
 pillow>=11.0.0
 pytesseract>=0.3.10
+
+# New dependencies for enhanced TransSemantic features
+pyannote.audio>=2.1.0       # Speaker diarization
+matplotlib>=3.5.0           # Visualizations
+seaborn>=0.12.0            # Enhanced visualizations
+praat-parselmouth>=0.4.0   # Prosody analysis (HNR, jitter, shimmer)
+scipy>=1.9.0               # Signal processing
+scikit-learn>=1.1.0        # ML features for clustering
+textblob>=0.17.0           # Text sentiment analysis

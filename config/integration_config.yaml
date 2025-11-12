@@ -1,0 +1,53 @@
+# Integration configuration for enhanced TransSemantic system
+
+layers:
+  base_transcription: true      # Always enabled (Layer 1)
+  turning_points: false          # Off by default (Layer 2)
+  enhanced_speakers: true        # On by default (Layer 3)
+
+display:
+  marker_mode: dual             # simple, advanced, dual, therapeutic
+  speaker_colors: true          # Color-code different speakers
+  turning_point_highlights: true # Highlight turning points
+  confidence_threshold: 0.7     # Min confidence to display
+
+performance:
+  quality_preset: balanced      # fast, balanced, thorough
+  parallel_processing: true     # Run layers in parallel where possible
+  cache_embeddings: true        # Cache sentence embeddings for CoSD
+  batch_size: 32               # Batch size for embedding computation
+
+thresholds:
+  # Prosody thresholds (percentage deviation from baseline)
+  tempo_threshold: 20.0
+  pitch_threshold: 15.0
+  energy_threshold: 25.0
+  pause_threshold_ms: 1000
+
+  # Turning points thresholds
+  turning_point_confidence: 0.7
+  cosd_peak_threshold: 0.6
+  heat_transition_warming: 0.4
+  heat_transition_hot: 0.7
+
+  # Speaker diarization
+  speaker_confidence: 0.85
+  overlap_min_duration: 0.5
+
+marker_catalog:
+  use_extended: true            # Use extended marker set
+  custom_markers_path: null     # Path to custom markers YAML
+
+output:
+  formats:
+    - markdown                  # Always produce markdown
+    - json                      # Structured data
+    - html                      # Optional HTML export
+  include_metadata: true
+  include_confidence: true
+  include_visualizations: false # Graphs and charts
+
+logging:
+  level: INFO                   # DEBUG, INFO, WARNING, ERROR
+  file: "transcription_enhanced.log"
+  console: true

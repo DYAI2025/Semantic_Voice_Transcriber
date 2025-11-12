@@ -66,6 +66,7 @@ class SpeakerDiarizer:
 
         # Pipeline will be loaded on first use
         self.pipeline = None
+        self.osd_pipeline = None
 
     def _load_pipeline(self):
         """Load pyannote.audio pipeline (lazy loading)"""
@@ -92,6 +93,101 @@ class SpeakerDiarizer:
                 "4. Pass token via use_auth_token parameter"
             )
             raise
+
+    def _load_osd_pipeline(self):
+        """Load pyannote.audio Overlapped Speech Detection pipeline (lazy loading)"""
+        if self.osd_pipeline is not None:
+            return
+
+        try:
+            from pyannote.audio.pipelines import MultiLabelSegmentation
+
+            logger.info("Loading pyannote Overlapped Speech Detection pipeline...")
+
+            # Load segmentation model for overlap detection
+            # Using pyannote/segmentation-3.0 which can detect overlapped speech
+            self.osd_pipeline = MultiLabelSegmentation(
+                segmentation="pyannote/segmentation-3.0",
+                token=self.use_auth_token
+            )
+
+            logger.info("OSD pipeline loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load OSD pipeline: {e}")
+            raise
+
+    def detect_overlapped_speech(
+        self,
+        audio_path: Path,
+        min_duration_on: float = 0.0,
+        min_duration_off: float = 0.0,
+        onset: float = 0.5,
+        offset: float = 0.5
+    ) -> List[Dict[str, Any]]:
+        """
+        Detect overlapped speech regions (multiple speakers talking simultaneously)
+
+        Args:
+            audio_path: Path to audio file
+            min_duration_on: Remove overlapped speech regions shorter than this (seconds)
+            min_duration_off: Fill non-overlapped speech regions shorter than this (seconds)
+            onset: Threshold for detecting speech onset (0.0-1.0)
+            offset: Threshold for detecting speech offset (0.0-1.0)
+
+        Returns:
+            List of overlap segments with format:
+            [
+                {
+                    'start': 12.5,
+                    'end': 14.2,
+                    'duration': 1.7,
+                    'overlap_type': 'simultaneous_speech'
+                },
+                ...
+            ]
+        """
+        self._load_osd_pipeline()
+
+        logger.info(f"Running overlapped speech detection on {audio_path.name}...")
+
+        # Configure hyperparameters for overlap detection
+        # pyannote/segmentation-3.0 uses powerset encoding where overlaps
+        # are indicated by labels with '+' (e.g., "SPEAKER_00+SPEAKER_01")
+        HYPER_PARAMETERS = {
+            "onset": onset,
+            "offset": offset,
+            "min_duration_on": min_duration_on,
+            "min_duration_off": min_duration_off
+        }
+        self.osd_pipeline.instantiate(HYPER_PARAMETERS)
+
+        # Run OSD
+        try:
+            osd_annotation = self.osd_pipeline(str(audio_path))
+        except Exception as e:
+            logger.error(f"OSD failed: {e}")
+            raise
+
+        # Convert pyannote format to our format
+        # Extract only overlapped speech regions
+        overlaps = []
+        for segment, _, label in osd_annotation.itertracks(yield_label=True):
+            label_str = str(label)
+            # Powerset encoding uses '+' between speaker IDs to indicate overlap
+            # e.g., "SPEAKER_00+SPEAKER_01" means both speakers are talking
+            if '+' in label_str:
+                overlaps.append({
+                    'start': segment.start,
+                    'end': segment.end,
+                    'duration': segment.end - segment.start,
+                    'overlap_type': 'simultaneous_speech'
+                })
+
+        logger.info(
+            f"OSD complete: Found {len(overlaps)} overlapped speech regions"
+        )
+
+        return overlaps
 
     def diarize(
         self,

@@ -1,0 +1,38 @@
+transcript_id: "sample_001"
+speaker: "test_speaker"
+segments:
+  - start_time: 0.0
+    end_time: 5.0
+    text: "Um, well, I'm not really sure about this..."
+    prosody:
+      pitch_deviation: 0.25
+      tempo_deviation: -0.15
+      energy_deviation: -0.10
+      pause_frequency: 3.0
+      pitch_variability: 0.40
+    markers:
+      - ATO_ANXIETY_HESITATION
+
+  - start_time: 5.0
+    end_time: 10.0
+    text: "Actually, let me think about it differently"
+    prosody:
+      pitch_deviation: 0.10
+      tempo_deviation: 0.05
+      energy_deviation: 0.15
+      pause_frequency: 0.5
+      pitch_variability: 0.20
+    markers: []
+
+  - start_time: 10.0
+    end_time: 15.0
+    text: "I... I don't know if that's right"
+    prosody:
+      pitch_deviation: 0.30
+      tempo_deviation: -0.20
+      energy_deviation: -0.15
+      pause_frequency: 2.5
+      pitch_variability: 0.45
+    markers:
+      - ATO_ANXIETY_HESITATION
+      - ATO_EPISTEMIC_HEDGE

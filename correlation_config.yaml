@@ -1,0 +1,25 @@
+correlation_settings:
+  min_confidence_threshold: 0.5
+  feature_window_size: 5.0  # seconds
+  update_frequency: "after_each_transcript"
+  max_model_size_mb: 10
+
+feature_weights:
+  pitch_deviation: 1.0
+  tempo_deviation: 1.2
+  energy_deviation: 0.8
+  pause_frequency: 1.5
+  pitch_variability: 1.3
+
+marker_groups:
+  anxiety_related:
+    - ATO_ANXIETY_HESITATION
+    - ATO_FEAR
+    - ATO_DEFENSIVENESS_SHIFT_MARKER
+  tempo_related:
+    - ATO_TEMPO_FAST
+    - ATO_TEMPO_SLOW
+  emotion_related:
+    - ATO_EMO_HIGH_VALENCE_MARKER
+    - ATO_EMO_LOW_VALENCE_MARKER
+    - ATO_DISGUST
