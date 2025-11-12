@@ -71,7 +71,7 @@ class CorrelationTrainer:
                     if corr.marker_name not in all_correlations:
                         all_correlations[corr.marker_name] = []
                     all_correlations[corr.marker_name].append(corr)
-            except Exception as e:
+            except (yaml.YAMLError, OSError) as e:
                 print(f"Error training from {yaml_file}: {e}")
                 continue
 
