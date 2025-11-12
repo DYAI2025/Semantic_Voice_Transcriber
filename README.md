@@ -1484,7 +1484,7 @@ tail -f transcription_v4_emotion.log
 
 ---
 
-**Dokumentiert**: 2025-11-12
+**Dokumentiert**: 2024-06-12
 **Version**: 2.0
 **Zeilen Code**: 9.767
 **Test Coverage**: 12 Test-Suites
