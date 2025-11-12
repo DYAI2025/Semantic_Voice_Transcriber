@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
 from output_formatter import OutputFormatter
-import json
 
 
 def test_markdown_includes_overlap_marker():
