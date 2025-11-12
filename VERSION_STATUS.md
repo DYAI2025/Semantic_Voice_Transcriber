@@ -1,7 +1,7 @@
 # Version Status & Roadmap
 # Semantic Voice Transcriber (SVT)
 
-**Dokumentiert**: 2025-11-12
+**Dokumentiert**: 2025-11-01
 **Aktuelle Version**: 2.0
 **Status**: Phase 2b Complete ✅
 
