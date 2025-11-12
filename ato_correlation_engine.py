@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from dataclasses import dataclass
 from ato_correlation_types import (
     ProsodyFeatureVector,
