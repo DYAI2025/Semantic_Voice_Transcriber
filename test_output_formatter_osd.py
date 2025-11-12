@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import pytest
 from pathlib import Path
 from output_formatter import OutputFormatter
 import json
