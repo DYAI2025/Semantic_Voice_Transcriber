@@ -335,6 +335,46 @@ class ProsodyExtractor:
                 deviation = features.energy_rms - baseline.energy_rms_mean
                 features.energy_deviation_pct = (deviation / baseline.energy_rms_mean) * 100.0
 
+    def extract_hnr(self, audio, sample_rate):
+        """Extract Harmonics-to-Noise Ratio"""
+        sound = parselmouth.Sound(audio, sampling_frequency=sample_rate)
+        harmonicity = sound.to_harmonicity()
+        hnr_values = harmonicity.values[harmonicity.values != -200]
+
+        if len(hnr_values) > 0:
+            return {
+                'hnr_mean': float(np.mean(hnr_values)),
+                'hnr_std': float(np.std(hnr_values))
+            }
+        return {'hnr_mean': 0.0, 'hnr_std': 0.0}
+
+    def extract_voice_quality(self, audio, sample_rate):
+        """Extract jitter and shimmer"""
+        try:
+            sound = parselmouth.Sound(audio, sampling_frequency=sample_rate)
+            pitch = sound.to_pitch()
+            point_process = parselmouth.praat.call(sound, "To PointProcess (periodic, cc)", 75, 600)
+
+            # Calculate jitter
+            jitter_local = parselmouth.praat.call(point_process,
+                                                  "Get jitter (local)", 0, 0, 0.0001, 0.02, 1.3)
+
+            # Calculate shimmer - needs Sound and PointProcess
+            shimmer_local = parselmouth.praat.call([sound, point_process],
+                                                   "Get shimmer (local)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+
+            return {
+                'jitter_local': float(jitter_local) if jitter_local else 0.0,
+                'shimmer_local': float(shimmer_local) if shimmer_local else 0.0
+            }
+        except Exception as e:
+            # Return default values if extraction fails
+            logger.warning(f"Voice quality extraction failed: {e}")
+            return {
+                'jitter_local': 0.0,
+                'shimmer_local': 0.0
+            }
+
 
 # Standalone test
 if __name__ == "__main__":

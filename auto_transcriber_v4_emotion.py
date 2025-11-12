@@ -56,6 +56,16 @@ except ImportError:
     TEXTBLOB_AVAILABLE = False
     print("⚠️ TextBlob nicht installiert. Sentiment-Analyse limitiert.")
 
+# Import ATO correlation components
+try:
+    from ato_correlation_engine import CorrelationEngine
+    from ato_correlation_types import ProsodyFeatureVector
+    from ato_correlation_config import CorrelationConfig
+    CORRELATION_AVAILABLE = True
+except ImportError:
+    CORRELATION_AVAILABLE = False
+    print("⚠️ ATO Correlation Engine nicht gefunden. Korrelationsanalyse deaktiviert.")
+
 # Logging Setup
 logging.basicConfig(
     level=logging.INFO,
@@ -394,18 +404,60 @@ class EmotionalAnalyzer:
             'confidence': confidence
         }
 
+# ATO Correlation functions
+def apply_ato_correlations(segment: dict, engine: CorrelationEngine) -> dict:
+    """Apply ATO correlations to a transcript segment."""
+    if "prosody_features" not in segment:
+        return segment
+
+    prosody = segment["prosody_features"]
+    features = ProsodyFeatureVector(
+        pitch_deviation=prosody.get("pitch_deviation", 0),
+        tempo_deviation=prosody.get("tempo_deviation", 0),
+        energy_deviation=prosody.get("energy_deviation", 0),
+        pause_frequency=prosody.get("pause_frequency", 0),
+        pitch_variability=prosody.get("pitch_variability", 0)
+    )
+
+    predictions = engine.predict_markers(features, threshold=0.5)
+
+    segment["ato_markers"] = [p.marker_name for p in predictions]
+    segment["correlation_confidence"] = {
+        p.marker_name: p.confidence for p in predictions
+    }
+
+    return segment
+
+def generate_correlation_explanation(prediction) -> str:
+    """Generate human-readable explanation for marker prediction."""
+    explanation = f"{prediction.marker_name} (confidence: {prediction.confidence:.0%})"
+
+    if prediction.contributing_features:
+        top_features = sorted(
+            prediction.contributing_features.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:2]
+
+        feature_str = ", ".join([
+            f"{feat}: {score:.2f}" for feat, score in top_features
+        ])
+        explanation += f" - Primary indicators: {feature_str}"
+
+    return explanation
+
 class WhisperSpeakerMatcherV4:
     def __init__(self, base_path=None, use_faster_whisper=True):
         if base_path is None:
             self.base_path = Path("/Users/benjaminpoersch/Library/CloudStorage/GoogleDrive-benjamin.poersch@diyrigent.de/Meine Ablage/MyMind/WhisperSprecherMatcher")
         else:
             self.base_path = Path(base_path)
-            
+
         self.eingang_path = self.base_path / "Eingang"
         self.memory_path = self.base_path / "Memory"
         self.output_path = self.base_path / "Transkripte_LLM"
         self.output_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Fallback für lokale Entwicklung
         if not self.base_path.exists():
             logger.warning(f"Google Drive Pfad nicht verfügbar: {self.base_path}")
@@ -414,10 +466,20 @@ class WhisperSpeakerMatcherV4:
             self.memory_path = self.base_path / "Memory"
             self.output_path = self.base_path / "Transkripte_LLM"
             self._create_local_structure()
-        
+
         self.use_faster_whisper = use_faster_whisper
         self.speakers = self._load_speaker_profiles()
         self.emotion_analyzer = EmotionalAnalyzer()
+
+        # Add new layer flags
+        self.enable_turning_points = False
+        self.enable_dual_markers = False
+        self.enable_enhanced_speakers = False
+
+        # Initialize layer components
+        self.turning_points_layer = None
+        self.dual_marker_system = None
+        self.speaker_visualizer = None
         
     def _create_local_structure(self):
         """Erstelle lokale Verzeichnisstruktur wenn Google Drive nicht verfügbar"""
@@ -801,7 +863,9 @@ def transcribe_with_whisper(
     extract_prosody: bool = False,
     enable_diarization: bool = False,
     hf_token: Optional[str] = None,
-    num_speakers: Optional[int] = None
+    num_speakers: Optional[int] = None,
+    enable_overlap_detection: bool = False,
+    osd_min_duration: float = 0.5
 ) -> Dict[str, Any]:
     """
     Transkribiert Audio mit Whisper und extrahiert Confidence Scores
@@ -816,11 +880,14 @@ def transcribe_with_whisper(
         audio_preprocessor: AudioPreprocessor instance
         extract_prosody: Extract prosodic features (tempo, pitch, energy, pauses)
         enable_diarization: Enable automatic speaker diarization (Speaker A, B, C, ...)
-        hf_token: Hugging Face token for pyannote.audio (required for diarization)
+        hf_token: Hugging Face token for pyannote.audio (required for diarization/OSD)
         num_speakers: Fixed number of speakers (None for auto-detect)
+        enable_overlap_detection: Enable overlapped speech detection
+        osd_min_duration: Minimum duration (seconds) for overlap regions
 
     Returns:
-        Dict mit text, segments, confidence_scores, prosody_features/baseline, und speaker_labels
+        Dict mit text, segments, confidence_scores, prosody_features/baseline,
+        speaker_labels, und overlapped_speech
     """
     try:
         import whisper
@@ -935,13 +1002,48 @@ def transcribe_with_whisper(
                 logger.error(f"Fehler bei Sprechererkennung: {e}")
                 logger.warning("Fortfahren ohne Sprechererkennung...")
 
+        # OVERLAPPED SPEECH DETECTION (Phase 2c)
+        overlapped_speech = []
+
+        if enable_overlap_detection and DIARIZATION_AVAILABLE:
+            try:
+                logger.info("🔊 Starte Overlapped Speech Detection...")
+                diarizer = SpeakerDiarizer(
+                    use_auth_token=hf_token,
+                    min_speakers=1,
+                    max_speakers=10
+                )
+
+                # Run OSD
+                overlapped_speech = diarizer.detect_overlapped_speech(
+                    Path(audio_path),
+                    min_duration_on=osd_min_duration,
+                    min_duration_off=0.3  # Fill gaps shorter than 300ms
+                )
+
+                # Mark segments that have overlaps
+                aligned_segments = _mark_overlapped_segments(
+                    aligned_segments,
+                    overlapped_speech
+                )
+
+                logger.info(
+                    f"✅ OSD abgeschlossen: {len(overlapped_speech)} "
+                    f"Überlappungsbereiche gefunden"
+                )
+
+            except Exception as e:
+                logger.error(f"Fehler bei Overlapped Speech Detection: {e}")
+                logger.warning("Fortfahren ohne OSD...")
+
         return {
             'text': result['text'],
             'segments': aligned_segments,  # Use aligned segments with speaker labels
             'confidence_scores': confidence_scores,
             'prosody_features': prosody_features,
             'prosody_baseline': prosody_baseline,
-            'speaker_segments': speaker_segments  # Raw diarization output
+            'speaker_segments': speaker_segments,  # Raw diarization output
+            'overlapped_speech': overlapped_speech  # OSD regions
         }
 
     except Exception as e:
@@ -956,7 +1058,8 @@ def transcribe_with_whisper(
             },
             'prosody_features': [],
             'prosody_baseline': None,
-            'speaker_segments': []
+            'speaker_segments': [],
+            'overlapped_speech': []
         }
 
 def _extract_confidence_scores(whisper_result: Dict[str, Any],
@@ -1012,6 +1115,46 @@ def _extract_confidence_scores(whisper_result: Dict[str, Any],
         'low_confidence_threshold': low_confidence_threshold,
         'total_segments': len(segments)
     }
+
+def _mark_overlapped_segments(
+    segments: List[Dict[str, Any]],
+    overlaps: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    Mark transcription segments that contain overlapped speech
+
+    Args:
+        segments: Whisper transcription segments
+        overlaps: OSD overlap segments
+
+    Returns:
+        Segments with added 'has_overlap' and 'overlap_duration' fields
+    """
+    for seg in segments:
+        seg_start = seg.get('start', 0.0)
+        seg_end = seg.get('end', 0.0)
+
+        # Check overlap with OSD regions
+        total_overlap = 0.0
+        has_overlap = False
+
+        for overlap in overlaps:
+            ovl_start = overlap['start']
+            ovl_end = overlap['end']
+
+            # Calculate intersection
+            intersection_start = max(seg_start, ovl_start)
+            intersection_end = min(seg_end, ovl_end)
+            intersection = max(0, intersection_end - intersection_start)
+
+            if intersection > 0:
+                has_overlap = True
+                total_overlap += intersection
+
+        seg['has_overlap'] = has_overlap
+        seg['overlap_duration'] = total_overlap
+
+    return segments
 
 def mark_low_confidence_segments(transcription_result: Dict[str, Any]) -> str:
     """
