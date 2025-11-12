@@ -20,8 +20,11 @@ def save_correlations_to_memory(memory_file: Path, correlations: Dict[str, Any])
     memory_data["ato_correlations_updated"] = datetime.now().isoformat()
 
     # Save back to file
-    with open(memory_file, 'w') as f:
-        yaml.dump(memory_data, f, default_flow_style=False, sort_keys=False)
+    try:
+        with open(memory_file, 'w') as f:
+            yaml.dump(memory_data, f, default_flow_style=False, sort_keys=False)
+    except (IOError, OSError) as e:
+        print(f"Error: Could not write to memory file '{memory_file}'. {e}")
 
 def load_correlations_from_memory(memory_file: Path) -> Dict[str, Any]:
     """Load correlation data from speaker memory YAML file."""
