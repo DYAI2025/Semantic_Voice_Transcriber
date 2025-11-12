@@ -123,13 +123,13 @@ class MVPTranscriptionPipeline:
             # Default: single speaker
             default_speaker_id = "SPEAKER_00"
             for seg in segments:
-                seg['speaker'] = default_speaker_id
+                seg['speaker_id'] = default_speaker_id
             logger.info(f"   ✓ All segments assigned to {default_speaker_id}")
         else:
             # Use provided assignments
             for i, seg in enumerate(segments):
-                seg['speaker'] = speaker_assignments.get(i, "SPEAKER_00")
-            logger.info(f"   ✓ {len(set(s['speaker'] for s in segments))} speakers assigned")
+                seg['speaker_id'] = speaker_assignments.get(i, "SPEAKER_00")
+            logger.info(f"   ✓ {len(set(s['speaker_id'] for s in segments))} speakers assigned")
 
         # Step 3: Match/create speakers in database
         logger.info("Step 3/5: Managing speaker database...")
@@ -144,7 +144,7 @@ class MVPTranscriptionPipeline:
             )
 
             # Get unique speakers from segments
-            speaker_ids = set(seg['speaker'] for seg in segments)
+            speaker_ids = set(seg['speaker_id'] for seg in segments)
             speakers = {}
 
             for speaker_id in speaker_ids:
@@ -163,7 +163,7 @@ class MVPTranscriptionPipeline:
                 speakers[speaker_id] = speaker
 
                 # Calculate speaker stats for this session
-                speaker_segments = [s for s in segments if s['speaker'] == speaker_id]
+                speaker_segments = [s for s in segments if s['speaker_id'] == speaker_id]
                 speaker_duration = sum(s['end'] - s['start'] for s in speaker_segments)
 
                 # Add to session
@@ -173,6 +173,12 @@ class MVPTranscriptionPipeline:
                     duration_seconds=speaker_duration,
                     segment_count=len(speaker_segments)
                 )
+
+            # Add speaker names and colors to segments
+            for seg in segments:
+                speaker_id = seg['speaker_id']
+                seg['speaker_name'] = speakers[speaker_id]['name']
+                seg['color'] = speakers[speaker_id]['color']
 
             logger.info(f"   ✓ {len(speakers)} speaker profiles updated")
 
@@ -190,20 +196,15 @@ class MVPTranscriptionPipeline:
             'speakers': [
                 {
                     **speakers[sid],
-                    'segment_count': len([s for s in segments if s['speaker'] == sid]),
-                    'duration': sum(s['end'] - s['start'] for s in segments if s['speaker'] == sid)
+                    'segment_count': len([s for s in segments if s['speaker_id'] == sid]),
+                    'duration': sum(s['end'] - s['start'] for s in segments if s['speaker_id'] == sid)
                 }
                 for sid in speakers
             ]
         }
 
         # Generate Markdown
-        markdown_content = self.visualizer.format_markdown(
-            segments=segments,
-            speakers=speakers,
-            metadata=metadata
-        )
-
+        markdown_content = self.visualizer.format_markdown(segments)
         markdown_path = output_dir / f"{base_name}_transcript.md"
         markdown_path.write_text(markdown_content, encoding='utf-8')
         logger.info(f"   ✓ Markdown: {markdown_path}")
@@ -217,12 +218,7 @@ class MVPTranscriptionPipeline:
 
         # Generate HTML (optional)
         if generate_html:
-            html_content = self.visualizer.format_html(
-                segments=segments,
-                speakers=speakers,
-                metadata=metadata
-            )
-
+            html_content = self.visualizer.format_html(segments)
             html_path = output_dir / f"{base_name}_transcript.html"
             html_path.write_text(html_content, encoding='utf-8')
             logger.info(f"   ✓ HTML: {html_path}")
@@ -232,11 +228,30 @@ class MVPTranscriptionPipeline:
         if generate_pdf:
             logger.info("Step 5/5: Generating PDF report...")
 
+            # Prepare metadata for PDF generation
+            pdf_metadata = {
+                'date': datetime.now(),
+                'duration': transcription['metadata']['audio_duration'],
+                'speakers': [
+                    {
+                        'name': speakers[sid]['name'],
+                        'color': speakers[sid]['color'],
+                        'total_duration': sum(s['end'] - s['start'] for s in segments if s['speaker_id'] == sid),
+                        'segment_count': len([s for s in segments if s['speaker_id'] == sid])
+                    }
+                    for sid in speakers
+                ],
+                'quality': self._calculate_quality_score(segments),
+                'model': 'Whisper large-v3',
+                'turning_points_count': 0,  # TODO: Integrate turning points
+                'turning_points': []  # TODO: Integrate turning points
+            }
+
             pdf_path = output_dir / f"{base_name}_report.pdf"
 
             pdf_gen = ProfessionalPDFGenerator(str(pdf_path))
-            pdf_gen.add_metadata_page(metadata)
-            pdf_gen.add_transcript_page(segments, speakers)
+            pdf_gen.add_metadata_page(pdf_metadata)
+            pdf_gen.add_transcript_page(segments)
             pdf_gen.generate()
 
             logger.info(f"   ✓ PDF: {pdf_path}")

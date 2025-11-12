@@ -10,6 +10,7 @@ torch>=1.9.0
 transformers>=4.20.0
 pillow>=11.0.0
 pytesseract>=0.3.10
+reportlab>=4.0.0
 
 # New dependencies for enhanced TransSemantic features
 pyannote.audio>=2.1.0       # Speaker diarization
