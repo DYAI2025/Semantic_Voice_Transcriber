@@ -9,7 +9,6 @@ Usage:
 import argparse
 import sys
 from pathlib import Path
-import yaml
 
 from ato_correlation_engine import CorrelationEngine
 from ato_correlation_config import CorrelationConfig
