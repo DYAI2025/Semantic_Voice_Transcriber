@@ -752,7 +752,7 @@ Feature-Requests sind willkommen! Bitte gib an:
 
 ---
 
-**Dokumentiert**: 2025-11-12
+**Dokumentiert**: 2024-06-12
 **Nächstes Update**: Nach Phase 2c Completion
 **Maintainer**: DYAI 2025
 
