@@ -19,3 +19,4 @@ praat-parselmouth>=0.4.0   # Prosody analysis (HNR, jitter, shimmer)
 scipy>=1.9.0               # Signal processing
 scikit-learn>=1.1.0        # ML features for clustering
 textblob>=0.17.0           # Text sentiment analysis
+reportlab>=4.0.0  # PDF generation
