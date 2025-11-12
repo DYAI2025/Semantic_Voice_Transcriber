@@ -56,6 +56,16 @@ except ImportError:
     TEXTBLOB_AVAILABLE = False
     print("⚠️ TextBlob nicht installiert. Sentiment-Analyse limitiert.")
 
+# Import ATO correlation components
+try:
+    from ato_correlation_engine import CorrelationEngine
+    from ato_correlation_types import ProsodyFeatureVector
+    from ato_correlation_config import CorrelationConfig
+    CORRELATION_AVAILABLE = True
+except ImportError:
+    CORRELATION_AVAILABLE = False
+    print("⚠️ ATO Correlation Engine nicht gefunden. Korrelationsanalyse deaktiviert.")
+
 # Logging Setup
 logging.basicConfig(
     level=logging.INFO,
@@ -393,6 +403,48 @@ class EmotionalAnalyzer:
             'valence': text_valence,
             'confidence': confidence
         }
+
+# ATO Correlation functions
+def apply_ato_correlations(segment: dict, engine: CorrelationEngine) -> dict:
+    """Apply ATO correlations to a transcript segment."""
+    if "prosody_features" not in segment:
+        return segment
+
+    prosody = segment["prosody_features"]
+    features = ProsodyFeatureVector(
+        pitch_deviation=prosody.get("pitch_deviation", 0),
+        tempo_deviation=prosody.get("tempo_deviation", 0),
+        energy_deviation=prosody.get("energy_deviation", 0),
+        pause_frequency=prosody.get("pause_frequency", 0),
+        pitch_variability=prosody.get("pitch_variability", 0)
+    )
+
+    predictions = engine.predict_markers(features, threshold=0.5)
+
+    segment["ato_markers"] = [p.marker_name for p in predictions]
+    segment["correlation_confidence"] = {
+        p.marker_name: p.confidence for p in predictions
+    }
+
+    return segment
+
+def generate_correlation_explanation(prediction) -> str:
+    """Generate human-readable explanation for marker prediction."""
+    explanation = f"{prediction.marker_name} (confidence: {prediction.confidence:.0%})"
+
+    if prediction.contributing_features:
+        top_features = sorted(
+            prediction.contributing_features.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:2]
+
+        feature_str = ", ".join([
+            f"{feat}: {score:.2f}" for feat, score in top_features
+        ])
+        explanation += f" - Primary indicators: {feature_str}"
+
+    return explanation
 
 class WhisperSpeakerMatcherV4:
     def __init__(self, base_path=None, use_faster_whisper=True):
