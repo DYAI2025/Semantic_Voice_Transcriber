@@ -171,6 +171,28 @@ class SemanticVoiceTranscriberGUI:
             variable=self.memory_var
         ).grid(row=2, column=0, sticky=tk.W, pady=2)
 
+        # New layer features
+        self.turning_points_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            features_frame,
+            text="Wendepunkte-Erkennung (Turning Points)",
+            variable=self.turning_points_var
+        ).grid(row=3, column=0, sticky=tk.W, pady=2)
+
+        self.dual_markers_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            features_frame,
+            text="Duale Marker (Einfach + Erweitert)",
+            variable=self.dual_markers_var
+        ).grid(row=4, column=0, sticky=tk.W, pady=2)
+
+        self.enhanced_speakers_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            features_frame,
+            text="Erweiterte Sprecherdarstellung",
+            variable=self.enhanced_speakers_var
+        ).grid(row=5, column=0, sticky=tk.W, pady=2)
+
         # Audio file selection frame
         file_frame = ttk.LabelFrame(self.root, text="Audio-Dateien", padding="10")
         file_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
