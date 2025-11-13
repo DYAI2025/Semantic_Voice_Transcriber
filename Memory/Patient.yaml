@@ -1,0 +1,26 @@
+characteristics: []
+last_updated: '2025-11-11T16:40:34.200098'
+name: Patient
+prosody_patterns:
+  energy_profile:
+    energy_variability: 0.04800693318247795
+    mean_dynamic_range: 0.4710383713245392
+    mean_energy: 0.06276824325323105
+    sample_count: 3
+  pitch_profile:
+    mean_pitch: 247.05733550062067
+    pitch_variability: 110.37965980250443
+    sample_count: 3
+  tempo_profile:
+    mean_bpm: 119.68085106382979
+    mean_speech_rate: 3.258341725660792
+    sample_count: 3
+statistics:
+  avg_sentence_length: 8.513103448275862
+  most_common_words: {}
+  sentiment:
+    negative: 0
+    positive: 0
+    ratio: 0
+topics: {}
+total_interactions: 3

@@ -1,0 +1,30 @@
+id: SEM_DIDACTIC_ELABORATION
+version: '4.1'
+category: SEMANTIC
+description: Konzepte werden didaktisch aufbereitet und vermittelt
+composed_of:
+- ATO_CONCEPT_ELABORATION
+- ATO_THEORETICAL_FRAMING
+- ATO_DEFINITIONAL_WORK
+activation_logic: ANY 2 of 3
+window:
+  messages: 8
+examples:
+  positive:
+  - "Was ist Utilisation? Erickson beschreibt das als Nutzung dessen, was der Patient mitbringt. Das heißt konkret..."
+  - "Zum Beispiel zeigt sich Rapport durch Matching. In der Literatur wird das als synchrone Abstimmung definiert."
+  - "Wie definieren wir Trance? Milton Erickson hat das als natürlichen Zustand beschrieben. Genauer gesagt..."
+  - "Was bedeutet Reframing? Aus systemischer Sicht ist das eine Bedeutungsveränderung. Das heißt praktisch..."
+  - "Begrifflich ist Widerstand wichtig zu klären. Rogers hat das als Signal für Inkongruenz gesehen. Zum Beispiel..."
+  - "Was verstehen wir unter Metapher? In der hypnotherapeutischen Literatur wird das als indirekte Suggestion definiert."
+  - "Der Ansatz von Satir betont Ressourcen. Das bedeutet konkret: Wir suchen nach bereits vorhandenen Stärken."
+  - "Wie sollen wir Suggestion nennen? Erickson unterscheidet direkte und indirekte Formen. Präziser gesagt..."
+  - "Was heißt Dissoziation therapeutisch? Aus psychoanalytischer Sicht ist das eine Abwehrfunktion. Anders formuliert..."
+  - "Die Bedeutung von Pacing ist zentral. In der Forschung zeigt sich: Rhythmus schafft Vertrauen. Das heißt..."
+  negative:
+  - "Erickson war ein guter Therapeut." # Nicht konzeptuell/definitional
+  - "Zum Beispiel gestern..." # Nicht theoretisch fundiert
+therapeutic_value: MEDIUM-HIGH
+rationale: |
+  Indiziert Lehrkompetenz und theoretische Fundierung.
+  Wichtig in Ausbildung und Supervision.

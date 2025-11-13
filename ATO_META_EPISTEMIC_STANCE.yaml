@@ -1,0 +1,49 @@
+id: ATO_META_EPISTEMIC_STANCE
+version: '4.1'
+category: ATOMIC
+description: Epistemische Positionierung - zeigt reflektierte, nicht-dogmatische Haltung
+frame:
+  signal:
+  - speaker positions themselves epistemically
+  concept: reflective epistemic stance
+  pragmatics: meta-level positioning
+  narrative: reflective discourse
+pattern:
+- (?i)\b(ich|wir)\s+(denke|glaube|meine|finde|würde\s+sagen)\b
+- (?i)\bmeiner\s+(meinung|ansicht|erfahrung|einschätzung)\b
+- (?i)\baus\s+meiner\s+(sicht|perspektive)\b
+- (?i)\bin\s+meinen\s+augen\b
+- (?i)\bso\s+wie\s+ich\s+(es\s+)?seh(e|en)\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 1.2
+examples:
+  positive:
+  - "Ich denke, das Unbewusste ist nicht so einfach zu definieren"
+  - "Meiner Meinung nach sollte man das differenzierter sehen"
+  - "Aus meiner Sicht spielt da noch mehr eine Rolle"
+  - "Ich würde sagen, dass Widerstand hier auch als Ressource gesehen werden kann"
+  - "Meiner Erfahrung nach zeigt sich Übertragung oft subtiler als gedacht"
+  - "Aus meiner Perspektive ist die therapeutische Beziehung der Schlüssel"
+  - "In meinen Augen entwickelt sich echte Veränderung erst durch Vertrauen"
+  - "So wie ich es sehe, braucht Hypnose immer einen sicheren Rahmen"
+  - "Ich finde, Suggestionen wirken nur wenn sie zur Person passen"
+  - "Meiner Ansicht nach ist Utilisation mehr als nur Technik"
+  - "Ich glaube, dass jeder Patient seine eigene Heilungsgeschwindigkeit hat"
+  - "Aus meiner Sicht entstehen Symptome oft als kreative Lösungsversuche"
+  - "Meiner Einschätzung nach ist hier die Familiengeschichte relevant"
+  negative:
+  - "Das ist definitiv so" # Keine epistemische Relativierung
+  - "Es ist klar, dass..." # Zu assertiv
+tags:
+- atomic
+- meta_therapeutic
+- epistemic
+- supervision
+- rf_indicator
+therapeutic_value: HIGH
+rationale: |
+  Indiziert Grad der Reflexivität und nicht-dogmatische Haltung.
+  Wichtig für RF-Level-Bestimmung und Meta-Diskurse.
+  Unterscheidet reflektierte Supervision von rigider Belehrung.

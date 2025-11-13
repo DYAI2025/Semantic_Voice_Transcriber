@@ -1,0 +1,378 @@
+# VORGESCHLAGENE NEUE MARKER (aus Real-Session-Analyse)
+
+---
+
+## ATO_META_EPISTEMIC_STANCE.yaml
+
+```yaml
+id: ATO_META_EPISTEMIC_STANCE
+version: '4.1'
+category: ATOMIC
+description: Epistemische Positionierung - zeigt reflektierte, nicht-dogmatische Haltung
+frame:
+  signal:
+  - speaker positions themselves epistemically
+  concept: reflective epistemic stance
+  pragmatics: meta-level positioning
+  narrative: reflective discourse
+pattern:
+- (?i)\b(ich|wir)\s+(denke|glaube|meine|finde|würde\s+sagen)\b
+- (?i)\bmeiner\s+(meinung|ansicht|erfahrung|einschätzung)\b
+- (?i)\baus\s+meiner\s+(sicht|perspektive)\b
+- (?i)\bin\s+meinen\s+augen\b
+- (?i)\bso\s+wie\s+ich\s+(es\s+)?seh(e|en)\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 1.2
+examples:
+  positive:
+  - "Ich denke, das Unbewusste ist nicht so einfach zu definieren"
+  - "Meiner Meinung nach sollte man das differenzierter sehen"
+  - "Aus meiner Sicht spielt da noch mehr eine Rolle"
+  negative:
+  - "Das ist definitiv so" # Keine epistemische Relativierung
+  - "Es ist klar, dass..." # Zu assertiv
+tags:
+- atomic
+- meta_therapeutic
+- epistemic
+- supervision
+- rf_indicator
+therapeutic_value: HIGH
+rationale: |
+  Indiziert Grad der Reflexivität und nicht-dogmatische Haltung.
+  Wichtig für RF-Level-Bestimmung und Meta-Diskurse.
+  Unterscheidet reflektierte Supervision von rigider Belehrung.
+```
+
+---
+
+## ATO_COLLABORATIVE_FRAMING.yaml
+
+```yaml
+id: ATO_COLLABORATIVE_FRAMING
+version: '4.1'
+category: ATOMIC
+description: Einladung zur gemeinsamen Gestaltung/Ko-Konstruktion
+frame:
+  signal:
+  - invitation to collaborative work
+  concept: co-construction
+  pragmatics: process shaping together
+  narrative: collaborative engagement
+pattern:
+- (?i)(lass\s+uns|lasst\s+uns)\s+[a-z]+
+- (?i)(können|sollten|würden)\s+wir\s+[a-z]+\s+(sagen|schreiben|formulieren|entwickeln|gestalten)\b
+- (?i)\bwir\s+(könnten|würden|sollten)\s+[a-z]+\s+(zusammen|gemeinsam)\b
+- (?i)\b(gemeinsam|zusammen)\s+(entwickeln|erarbeiten|gestalten|überlegen)\b
+- (?i)\bwas\s+hältst\s+du\s+davon\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 1.3
+examples:
+  positive:
+  - "Lass uns mal schauen, wie wir das formulieren könnten"
+  - "Können wir das gemeinsam entwickeln?"
+  - "Sollten wir zusammen überlegen, wie..."
+  negative:
+  - "Wir haben das gemacht" # Past tense, nicht einladend
+  - "Wir müssen das so sehen" # Direktiv, nicht kollaborativ
+tags:
+- atomic
+- collaborative
+- process_marker
+- alliance_building
+- supervision
+therapeutic_value: HIGH
+rationale: |
+  Kern-Indikator für kollaborative therapeutische Haltung.
+  Unterscheidet kollaborative Supervision von hierarchischer Belehrung.
+  Kompositionsfähig mit WE_LANGUAGE zu SEM_COLLABORATIVE_ALLIANCE.
+differentiates_from:
+  ATO_WE_LANGUAGE: |
+    WE_LANGUAGE ist rein grammatisch ("wir haben", "unser").
+    COLLABORATIVE_FRAMING ist prozessual und einladend ("lass uns entwickeln").
+```
+
+---
+
+## ATO_DEFINITIONAL_WORK.yaml
+
+```yaml
+id: ATO_DEFINITIONAL_WORK
+version: '4.1'
+category: ATOMIC
+description: Begriffe klären, definieren, konzeptuell abgrenzen
+frame:
+  signal:
+  - definitional or clarification work
+  concept: conceptual precision
+  pragmatics: meaning negotiation
+  narrative: conceptual work
+pattern:
+- (?i)(was\s+ist|was\s+bedeutet|was\s+heißt)\s+[a-z]+
+- (?i)\bwie\s+definier[te]?[ns]?\s+(du|Sie|wir|man)\b
+- (?i)\bwas\s+versteh[te]?[ns]?\s+(du|Sie|wir|man)\s+unter\b
+- (?i)\b(definition|beschreibung|bedeutung)\s+(von|des|der)\b
+- (?i)\b(begrifflich|konzeptuell)\s+(klären|abgrenzen)\b
+- (?i)\bwie\s+soll(en)?\s+(wir|man)\s+das\s+(nennen|bezeichnen)\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 1.1
+examples:
+  positive:
+  - "Was ist denn das Unbewusste eigentlich?"
+  - "Wie definieren wir Ego-State?"
+  - "Was verstehen Sie unter Utilisation?"
+  - "Begrifflich müssen wir da klären..."
+  negative:
+  - "Was ist los?" # Nicht definitional
+  - "Was machst du?" # Nicht konzeptuell
+tags:
+- atomic
+- meta_cognitive
+- conceptual_work
+- supervision
+- training
+therapeutic_value: MEDIUM-HIGH
+rationale: |
+  Zeigt konzeptuelle Präzision und Tiefe.
+  Wichtig in Supervision und Ausbildung.
+  Unterscheidet oberflächliche von tiefer konzeptueller Auseinandersetzung.
+```
+
+---
+
+## ATO_CONCEPT_ELABORATION.yaml
+
+```yaml
+id: ATO_CONCEPT_ELABORATION
+version: '4.1'
+category: ATOMIC
+description: Konzepte ausführen, konkretisieren, beispielhaft machen
+frame:
+  signal:
+  - concept is being elaborated or exemplified
+  concept: didactic elaboration
+  pragmatics: making abstract concrete
+  narrative: teaching move
+pattern:
+- (?i)\b(zum\s+beispiel|beispielsweise|etwa|z\.?b\.?)\b
+- (?i)\b(das\s+heißt|das\s+bedeutet|mit\s+anderen\s+worten)\b
+- (?i)\b(genauer\s+gesagt|präziser|konkreter|spezifischer)\b
+- (?i)\b(um\s+das\s+zu\s+verdeutlichen|um\s+es\s+zu\s+konkretisieren)\b
+- (?i)\b(anders\s+formuliert|anders\s+ausgedrückt)\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 0.9
+examples:
+  positive:
+  - "Zum Beispiel, wenn ein Patient sagt..."
+  - "Das heißt konkret, dass wir..."
+  - "Mit anderen Worten, die Utilisation bedeutet..."
+  - "Um das zu verdeutlichen: Erickson hat..."
+  negative:
+  - "Zum Beispiel morgen" # Nicht konzeptuell
+tags:
+- atomic
+- didactic
+- elaboration
+- supervision
+- training
+therapeutic_value: MEDIUM
+rationale: |
+  Indiziert didaktische Kompetenz und Brückenbau zwischen Theorie/Praxis.
+  Wichtig in Ausbildungskontexten.
+  Zeigt Fähigkeit zur Konkretisierung abstrakter Konzepte.
+```
+
+---
+
+## ATO_EPISTEMIC_HEDGE.yaml
+
+```yaml
+id: ATO_EPISTEMIC_HEDGE
+version: '4.1'
+category: ATOMIC
+description: Epistemische Bescheidenheit - bewusste Zurückhaltung, nicht Unsicherheit
+frame:
+  signal:
+  - epistemic hedging
+  concept: epistemic modesty
+  pragmatics: non-dogmatic positioning
+  narrative: tentative stance
+pattern:
+- (?i)\b(vielleicht|möglicherweise|eventuell)\s+(ist|sind|kann|könnte|wäre)\b
+- (?i)\bkönnte\s+sein\b
+- (?i)\b(ich\s+bin|wir\s+sind)\s+nicht\s+sicher\b
+- (?i)\b(vermutlich|wahrscheinlich)\s+[a-z]+
+- (?i)\bso\s+ungefähr\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 0.8
+examples:
+  positive:
+  - "Vielleicht ist es so, dass..."
+  - "Könnte sein, dass hier auch..."
+  - "Vermutlich spielt da noch was anderes eine Rolle"
+  negative:
+  - "Vielleicht morgen" # Nicht epistemisch
+  - "Vielleicht du" # Grammatisch, nicht hedging
+tags:
+- atomic
+- epistemic
+- rf_indicator
+- non_dogmatic
+therapeutic_value: MEDIUM
+rationale: |
+  Unterscheidet epistemische Bescheidenheit (reflektiert) von Unsicherheit (unreflektiert).
+  Wichtig für RF-Level und therapeutische Haltung.
+  Zeigt nicht-dogmatische, explorative Haltung.
+differentiates_from:
+  ATO_HEDGING_CUE: |
+    Alte Version war zu generisch (matched auch "vielleicht morgen").
+    Neue Version nur bei epistemischem Kontext (+ Verb: ist/könnte/wäre).
+  ATO_UNCERTAINTY: |
+    UNCERTAINTY ist "ich weiß nicht", "keine Ahnung" (Wissensdefizit).
+    EPISTEMIC_HEDGE ist "vielleicht ist es..." (bewusste Relativierung).
+```
+
+---
+
+## ATO_THEORETICAL_FRAMING.yaml
+
+```yaml
+id: ATO_THEORETICAL_FRAMING
+version: '4.1'
+category: ATOMIC
+description: Theoretische Einordnung, Bezug auf Theoretiker/Schulen
+frame:
+  signal:
+  - theoretical framework referenced
+  concept: theoretical positioning
+  pragmatics: academic grounding
+  narrative: theory integration
+pattern:
+- (?i)\b(erickson|freud|rogers|satir|jung|adler|beck|linehan)\s+(hat|sagt|meint|schreibt|beschreibt)\b
+- (?i)\bin\s+der\s+(theorie|literatur|forschung)\b
+- (?i)\bder\s+(ansatz|die\s+methode|das\s+konzept)\s+(von|nach)\s+[A-Z][a-z]+\b
+- (?i)\b(psychoanalytisch|verhaltenstherapeutisch|systemisch|humanistisch|hypnotherapeutisch)\b
+- (?i)\baus\s+(psychoanalytischer|systemischer|verhaltenstherapeutischer)\s+sicht\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 1.0
+examples:
+  positive:
+  - "Erickson hat gesagt, dass..."
+  - "In der Literatur wird das so beschrieben..."
+  - "Der Ansatz von Rogers ist hier relevant"
+  - "Aus psychoanalytischer Sicht würde man..."
+  negative:
+  - "Erickson ging spazieren" # Nicht theoretisch
+tags:
+- atomic
+- theoretical
+- meta_therapeutic
+- supervision
+- academic
+therapeutic_value: MEDIUM
+rationale: |
+  Zeigt theoretische Fundierung und Einordnung.
+  Wichtig in Supervision und Ausbildung.
+  Unterscheidet fundierte von rein pragmatischer Diskussion.
+```
+
+---
+
+## VORGESCHLAGENE SEM-KOMPOSITIONEN
+
+### SEM_COLLABORATIVE_ALLIANCE
+
+```yaml
+id: SEM_COLLABORATIVE_ALLIANCE
+version: '4.1'
+category: SEMANTIC
+description: Kollaborative therapeutische Allianz wird aktiv hergestellt
+composed_of:
+- ATO_WE_LANGUAGE
+- ATO_COLLABORATIVE_FRAMING
+- ATO_VALIDATION_THERAPIST
+activation_logic: ANY 2 of 3
+window:
+  messages: 5
+therapeutic_value: HIGH
+rationale: |
+  Stärkerer Indikator für therapeutische Allianz als WE_LANGUAGE allein.
+  Zeigt aktive Ko-Konstruktion, nicht nur grammatische "wir"-Nutzung.
+```
+
+### SEM_EPISTEMICALLY_GROUNDED_DISCOURSE
+
+```yaml
+id: SEM_EPISTEMICALLY_GROUNDED_DISCOURSE
+version: '4.1'
+category: SEMANTIC
+description: Reflektierter, epistemisch fundierter Meta-Diskurs
+composed_of:
+- ATO_META_EPISTEMIC_STANCE
+- ATO_EPISTEMIC_HEDGE
+- ATO_DEFINITIONAL_WORK
+activation_logic: ANY 2 of 3
+window:
+  messages: 10
+therapeutic_value: HIGH
+rationale: |
+  Zeigt hohe RF-Level und nicht-dogmatische Haltung.
+  Wichtig für Supervision und Ausbildung.
+  Unterscheidet reflektierten von oberflächlichem Diskurs.
+```
+
+### SEM_DIDACTIC_ELABORATION
+
+```yaml
+id: SEM_DIDACTIC_ELABORATION
+version: '4.1'
+category: SEMANTIC
+description: Konzepte werden didaktisch aufbereitet und vermittelt
+composed_of:
+- ATO_CONCEPT_ELABORATION
+- ATO_THEORETICAL_FRAMING
+- ATO_DEFINITIONAL_WORK
+activation_logic: ANY 2 of 3
+window:
+  messages: 8
+therapeutic_value: MEDIUM-HIGH
+rationale: |
+  Indiziert Lehrkompetenz und theoretische Fundierung.
+  Wichtig in Ausbildung und Supervision.
+```
+
+---
+
+## DEPLOYMENT-PRIORITÄT
+
+### Phase 1 (SOFORT):
+1. `ATO_META_EPISTEMIC_STANCE` - 25 Matches erwartet
+2. `ATO_COLLABORATIVE_FRAMING` - 22 Matches erwartet
+
+**Impact:** +47 valuable signals, +2 SEMs möglich
+
+### Phase 2 (NEXT):
+3. `ATO_DEFINITIONAL_WORK` - 9 Matches erwartet
+4. `ATO_EPISTEMIC_HEDGE` - Ersetzt HEDGING_CUE präziser
+5. `ATO_CONCEPT_ELABORATION` - 5 Matches erwartet
+
+**Impact:** Semantische Tiefe deutlich erhöht
+
+### Phase 3 (PARALLEL):
+6. `ATO_THEORETICAL_FRAMING` - Domain-spezifisch
+7. Neue SEMs (COLLABORATIVE_ALLIANCE, etc.)
+8. Domain-Katalog `LD3.5_SUPERVISION/`
+
+**Impact:** Domain-Coverage für Meta-Diskurse
