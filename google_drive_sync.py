@@ -22,14 +22,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class GoogleDriveSync:
-    def __init__(self):
-        self.google_drive_path = Path("/Users/benjaminpoersch/Library/CloudStorage/GoogleDrive-benjamin.poersch@diyrigent.de/Meine Ablage/MyMind/WhisperSprecherMatcher")
+    def __init__(self, google_drive_path=None):
+        # Use environment variable or provided path (cross-platform)
+        if google_drive_path is None:
+            google_drive_path = os.environ.get('GOOGLE_DRIVE_PATH')
+
+        if google_drive_path:
+            self.google_drive_path = Path(google_drive_path)
+        else:
+            # No Google Drive path configured - sync will be disabled
+            self.google_drive_path = None
+            logger.warning("Google Drive path not configured. Set GOOGLE_DRIVE_PATH environment variable to enable sync.")
+
         self.local_path = Path("./whisper_speaker_matcher")
         self.sync_timeout = 10  # Sekunden
         
     def check_google_drive_availability(self):
         """Prüfe ob Google Drive verfügbar ist"""
         try:
+            # Check if Google Drive path is configured
+            if self.google_drive_path is None:
+                return False
+
             # Prüfe ob Pfad existiert und zugänglich ist
             if not self.google_drive_path.exists():
                 return False

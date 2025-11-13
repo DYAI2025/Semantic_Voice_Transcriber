@@ -2,12 +2,11 @@
 
 # Basis-Requirements
 openai-whisper>=20230918
-pathlib>=1.0.1
 pyyaml>=6.0
 numpy>=1.21.0
 packaging>=24.2,<25.0
 
-torch==2.9.0  # Pin to match torchvision 0.24.0 if installed
+torch>=2.0.0,<3.0.0
 
 # Emotionale Analyse
 librosa>=0.9.2
