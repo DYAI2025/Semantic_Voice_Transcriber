@@ -1,11 +1,318 @@
-# Python
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C extensions
+*.o
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+.Python
+requests.certs.pem
+requests.pem
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Thumbs.db:encryptable
+
+# Large data files
+*.wav
+*.mp3
+*.m4a
+*.opus
+*.flac
+*.ogg
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Audio transcription outputs
+Transkripte_LLM/**/*.wav
+Transkripte_LLM/**/*.mp3
+Transkripte_LLM/**/*.m4a
+Transkripte_LLM/**/*.opus
+Transkripte_LLM/**/*.flac
+Transkripte_LLM/**/*.ogg
+
+# Input audio files
+Eingang/**/*.wav
+Eingang/**/*.mp3
+Eingang/**/*.m4a
+Eingang/**/*.opus
+Eingang/**/*.flac
+Eingang/**/*.ogg
+
+# Large temporary files
+*.tmp
+*.temp
+*.log
+transcription_v4_emotion.log
+test_output.pdf
+test_integration.pdf
+super_semantic_output.json.backup
+
+# Database files
+*.db
+*.sqlite
+
+# Memory and output directories (if they contain large files)
+Memory/*.wav
+Output/**/*.mp3
+Output/**/*.m4a
+Output/**/*.opus
+
+# Virtual environments (already listed above, but emphasizing)
+.venv/
+svt_env/
+Parselmouth/
+
+# Local configuration files
+config/local.yml
+config/local.json
+*.local
+
+# Python cache
+.Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
 
-# Node
-node_modules/
-wordthread-ui/node_modules/
+# Large data/models
+**/models/**
+**/datasets/**
+**/data/**
+
+# Trunk configuration
+.trunk/
+
+# Nested git repositories
+TextBlob/
+pynote/
+
+# Large data and media files
+*.wav
+*.mp3
+*.m4a
+*.opus
+*.flac
+*.ogg
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.zip
+
+# Audio transcription outputs
+Transkripte_LLM/**/*.wav
+Transkripte_LLM/**/*.mp3
+Transkripte_LLM/**/*.m4a
+Transkripte_LLM/**/*.opus
+Transkripte_LLM/**/*.flac
+Transkripte_LLM/**/*.ogg
+Transkripte_LLM/**/*.zip
+Transkripte_LLM/old/
+
+# Input audio files
+Eingang/**/*.wav
+Eingang/**/*.mp3
+Eingang/**/*.m4a
+Eingang/**/*.opus
+Eingang/**/*.flac
+Eingang/**/*.ogg
+
+# Large temporary files
+*.tmp
+*.temp
 *.log
 
-# Misc
-.DS_Store
+# Database files
+*.db
+*.sqlite
+
+# Memory and output directories (if they contain large files)
+Memory/*.wav
+Memory/*.mp3
+Memory/*.m4a
+Memory/*.opus
+Memory/*.flac
+Memory/*.ogg
+Output/**/*.mp3
+Output/**/*.m4a
+Output/**/*.opus
+Output/**/*.wav
+Output/**/*.pdf
+Output/**/*.html
+Output/**/*.zip
+
+# Transcription outputs
+Transkripte_LLM/**/*.md
+Transkripte_LLM/**/*.json
+Transkripte_LLM/**/*.txt
+Transkripte_LLM/**/*.pdf
+Transkripte_LLM/**/*.html
+Transkripte_LLM/old/
+
+# Large model and data directories
+**/models/**
+**/datasets/**
+**/data/**
+**/Uploads/**
+**/Uploads/*
+
+# Virtual environments
+.venv/
+svt_env/
+Parselmouth/
+
+# Large directory trees
+LD3.4_ARCHE/
+LD3.4_BIAS/
+LD3.4_LOVE_LANGUAGES_CONTEXT_GATED/
+LD3.4_PRESENCE_BINDING/
+LD3.4_SCIENT/
+LD3.4_SELF_CONSIST/
+LD3.4_THERA/
+LD3.4.1_DRIFT/
+ALL_Marker_5.1/
+Marker_LD3*5_SSoTh/
+VP_ATO/
+huggingface/
+markers/
+
+# Large project directories
+FusionEngine_ProjectSpec.md/
+Turning_Points_in_Transcription/
+Turning_Points_in_Transcription/**

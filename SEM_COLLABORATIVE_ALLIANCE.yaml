@@ -1,0 +1,30 @@
+id: SEM_COLLABORATIVE_ALLIANCE
+version: '4.1'
+category: SEMANTIC
+description: Kollaborative therapeutische Allianz wird aktiv hergestellt
+composed_of:
+- ATO_WE_LANGUAGE
+- ATO_COLLABORATIVE_FRAMING
+- ATO_VALIDATION_THERAPIST
+activation_logic: ANY 2 of 3
+window:
+  messages: 5
+examples:
+  positive:
+  - "Lass uns gemeinsam schauen, was für dich stimmig ist. Ich verstehe, dass das nicht einfach ist."
+  - "Wir können das zusammen entwickeln. Das macht total Sinn, was du beschreibst."
+  - "Was hältst du davon, wenn wir das so angehen? Deine Bedenken sind völlig berechtigt."
+  - "Unsere Zusammenarbeit zeigt schon erste Erfolge. Lass uns das weiter vertiefen."
+  - "Wir sollten das gemeinsam reflektieren. Ich kann deine Zweifel gut nachvollziehen."
+  - "Können wir uns überlegen, wie der nächste Schritt aussieht? Das ist ein wichtiger Punkt, den du ansprichst."
+  - "Lass uns gemeinsam herausfinden, was wirksam ist. Deine Erfahrung ist hier wertvoll."
+  - "Wir könnten das zusammen durchspielen. Ich sehe, dass dir das wichtig ist."
+  - "Sollten wir eine Intervention gemeinsam gestalten? Das zeigt deine Kompetenz."
+  - "Unser Vorgehen hat sich bewährt. Was denkst du, wie wir das ausbauen können?"
+  negative:
+  - "Wir müssen das so machen." # Direktiv ohne Kollaboration
+  - "Das ist richtig, aber..." # Validation ohne echte Kollaboration
+therapeutic_value: HIGH
+rationale: |
+  Stärkerer Indikator für therapeutische Allianz als WE_LANGUAGE allein.
+  Zeigt aktive Ko-Konstruktion, nicht nur grammatische "wir"-Nutzung.

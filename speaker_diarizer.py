@@ -77,7 +77,7 @@ class SpeakerDiarizer:
             logger.info("Loading pyannote speaker-diarization-3.1 pipeline...")
             self.pipeline = Pipeline.from_pretrained(
                 "pyannote/speaker-diarization-3.1",
-                use_auth_token=self.use_auth_token
+                token=self.use_auth_token
             )
             self.pipeline.to(self.device)
             logger.info("Pipeline loaded successfully")

@@ -1,0 +1,26 @@
+characteristics: []
+last_updated: '2025-11-13T15:12:44.472662'
+name: Unknown
+prosody_patterns:
+  energy_profile:
+    energy_variability: 0.0047934409230947495
+    mean_dynamic_range: 0.3158363103866577
+    mean_energy: 0.0030215332517400384
+    sample_count: 2
+  pitch_profile:
+    mean_pitch: 203.4003974850827
+    pitch_variability: 105.72232145140424
+    sample_count: 2
+  tempo_profile:
+    mean_bpm: 126.42045454545455
+    mean_speech_rate: 0.8767875797029593
+    sample_count: 2
+statistics:
+  avg_sentence_length: 9.454209748892172
+  most_common_words: {}
+  sentiment:
+    negative: 0
+    positive: 0
+    ratio: 0
+topics: {}
+total_interactions: 2
