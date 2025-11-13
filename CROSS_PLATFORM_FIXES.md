@@ -364,5 +364,5 @@ Für vollständige Cross-Platform Unterstützung:
 
 ---
 
-**Letzte Aktualisierung:** 2025-11-13
+**Letzte Aktualisierung:** 2024-11-13
 **Status:** Production-ready für Windows, macOS, Linux
