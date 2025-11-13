@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVT - Therapie-Analyse-Ansicht</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #0f1419;
+            color: #e6edf3;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            height: 100vh;
+            gap: 1px;
+            background: #21262d;
+        }
+
+        /* HAUPTBEREICH: Timeline */
+        .timeline-panel {
+            background: #0d1117;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .timeline-header {
+            padding: 20px;
+            border-bottom: 1px solid #30363d;
+            margin-bottom: 20px;
+        }
+
+        .timeline-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .timeline-header .meta {
+            color: #8b949e;
+            font-size: 14px;
+        }
+
+        /* F-FÖRMIGE STRUKTUR: Timeline-Zeile */
+        .segment {
+            display: grid;
+            grid-template-columns: 100px 120px 1fr;
+            gap: 16px;
+            padding: 12px 0;
+            border-bottom: 1px solid #21262d;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .segment:hover {
+            background: #161b22;
+            cursor: pointer;
+        }
+
+        .segment.active {
+            background: #1c2128;
+            border-left: 3px solid #d946ef;
+            padding-left: 12px;
+        }
+
+        /* Zeit links (Klein, grau) */
+        .segment-time {
+            font-size: 13px;
+            color: #6e7681;
+            font-variant-numeric: tabular-nums;
+            font-family: 'SF Mono', Monaco, monospace;
+            padding-top: 2px;
+        }
+
+        /* Sprecher farbcodiert */
+        .segment-speaker {
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .segment-speaker.patient {
+            color: #f85149;
+        }
+
+        .segment-speaker.patient::before {
+            content: '🟥';
+            font-size: 12px;
+        }
+
+        .segment-speaker.therapeut {
+            color: #3b82f6;
+        }
+
+        .segment-speaker.therapeut::before {
+            content: '🟦';
+            font-size: 12px;
+        }
+
+        /* Text mit Inline-Marker-Icons */
+        .segment-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #e6edf3;
+        }
+
+        .segment-text .marker {
+            display: inline-block;
+            margin: 0 4px;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        .marker.tempo-up { background: #3b82f640; color: #3b82f6; }
+        .marker.tempo-down { background: #3b82f640; color: #3b82f6; }
+        .marker.pitch-up { background: #f59e0b40; color: #f59e0b; }
+        .marker.pitch-down { background: #f59e0b40; color: #f59e0b; }
+        .marker.energy-up { background: #10b98140; color: #10b981; }
+        .marker.energy-down { background: #ef444440; color: #ef4444; }
+        .marker.pause { background: #9ca3af40; color: #9ca3af; }
+
+        .segment-text .turning-point {
+            margin-left: 12px;
+            color: #d946ef;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        /* Prosody-Übersicht inline */
+        .segment-prosody {
+            font-size: 12px;
+            color: #6e7681;
+            margin-top: 4px;
+            font-family: 'SF Mono', Monaco, monospace;
+        }
+
+        /* RECHTE SEITE: Analyse-Panels */
+        .analysis-panel {
+            background: #0d1117;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-tabs {
+            display: flex;
+            border-bottom: 1px solid #30363d;
+            background: #161b22;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .panel-tab {
+            flex: 1;
+            padding: 12px 16px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .panel-tab:hover {
+            background: #1c2128;
+        }
+
+        .panel-tab.active {
+            border-bottom-color: #d946ef;
+            color: #d946ef;
+        }
+
+        .panel-content {
+            padding: 20px;
+            display: none;
+        }
+
+        .panel-content.active {
+            display: block;
+        }
+
+        /* Prosody Graph */
+        .prosody-canvas {
+            width: 100%;
+            height: 300px;
+            background: #161b22;
+            border-radius: 6px;
+            margin-top: 12px;
+        }
+
+        .prosody-legend {
+            display: flex;
+            gap: 16px;
+            margin-top: 12px;
+            font-size: 12px;
+        }
+
+        .prosody-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .prosody-legend-line {
+            width: 20px;
+            height: 2px;
+        }
+
+        .legend-pitch { background: #3b82f6; }
+        .legend-energy { background: #f59e0b; }
+        .legend-tempo { background: #9ca3af; border-top: 2px dashed #9ca3af; height: 0; }
+
+        /* Semantic Timeline */
+        .semantic-timeline {
+            margin-top: 20px;
+        }
+
+        .semantic-cluster {
+            padding: 12px;
+            background: #161b22;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border-left: 3px solid #3b82f6;
+        }
+
+        .semantic-cluster.highlight {
+            border-left-color: #d946ef;
+            background: #1c2128;
+        }
+
+        .cluster-markers {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .cluster-marker {
+            padding: 4px 8px;
+            background: #21262d;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* Turning Points View */
+        .turning-points-list {
+            margin-top: 20px;
+        }
+
+        .turning-point-item {
+            padding: 16px;
+            background: #161b22;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border-left: 4px solid #d946ef;
+        }
+
+        .turning-point-time {
+            font-size: 12px;
+            color: #6e7681;
+            font-family: 'SF Mono', Monaco, monospace;
+            margin-bottom: 4px;
+        }
+
+        .turning-point-reason {
+            font-size: 13px;
+            color: #e6edf3;
+            margin-top: 8px;
+        }
+
+        .turning-point-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .metric {
+            background: #0d1117;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .metric-label {
+            color: #6e7681;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            font-size: 14px;
+            color: #58a6ff;
+        }
+
+        /* Agency Drift Curve */
+        .drift-canvas {
+            width: 100%;
+            height: 200px;
+            background: #161b22;
+            border-radius: 6px;
+            margin-top: 12px;
+        }
+
+        /* Hover-Tooltip */
+        .segment-tooltip {
+            position: absolute;
+            background: #1c2128;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            min-width: 300px;
+        }
+
+        .segment-tooltip.show {
+            display: block;
+        }
+
+        .tooltip-graph {
+            width: 100%;
+            height: 120px;
+            background: #0d1117;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        /* File Loader */
+        .file-loader {
+            padding: 20px;
+            background: #161b22;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .file-loader input[type="file"] {
+            display: none;
+        }
+
+        .file-loader label {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #238636;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .file-loader label:hover {
+            background: #2ea043;
+        }
+
+        .file-info {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #8b949e;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+
+        .panel-section {
+            margin-bottom: 24px;
+        }
+
+        .panel-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- LINKS: Timeline -->
+        <div class="timeline-panel">
+            <div class="timeline-header">
+                <h1 id="session-title">Therapie-Session</h1>
+                <div class="meta">
+                    <span id="session-date">-</span> |
+                    <span id="segment-count">0 Segmente</span> |
+                    <span id="session-duration">00:00</span>
+                </div>
+            </div>
+
+            <div class="file-loader">
+                <label for="file-input">
+                    📂 Transkript laden (.md oder .json)
+                </label>
+                <input type="file" id="file-input" accept=".md,.json" />
+                <div class="file-info" id="file-info">
+                    Keine Datei geladen
+                </div>
+            </div>
+
+            <div id="timeline-content">
+                <!-- Timeline segments will be inserted here -->
+            </div>
+        </div>
+
+        <!-- RECHTS: Analyse-Panels -->
+        <div class="analysis-panel">
+            <div class="panel-tabs">
+                <div class="panel-tab active" data-panel="prosody">Prosody</div>
+                <div class="panel-tab" data-panel="semantic">Semantic</div>
+                <div class="panel-tab" data-panel="turning">Turning</div>
+                <div class="panel-tab" data-panel="drift">Drift</div>
+            </div>
+
+            <!-- Panel 1: Prosody Graph -->
+            <div class="panel-content active" id="panel-prosody">
+                <div class="panel-section">
+                    <h3>Prosody Over Time</h3>
+                    <canvas class="prosody-canvas" id="prosody-graph"></canvas>
+                    <div class="prosody-legend">
+                        <div class="prosody-legend-item">
+                            <div class="prosody-legend-line legend-pitch"></div>
+                            <span>Pitch (Hz)</span>
+                        </div>
+                        <div class="prosody-legend-item">
+                            <div class="prosody-legend-line legend-energy"></div>
+                            <span>Energie (dB)</span>
+                        </div>
+                        <div class="prosody-legend-item">
+                            <div class="prosody-legend-line legend-tempo"></div>
+                            <span>Tempo (WPM)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Semantic Timeline -->
+            <div class="panel-content" id="panel-semantic">
+                <div class="panel-section">
+                    <h3>Semantic Markers</h3>
+                    <div class="semantic-timeline" id="semantic-timeline">
+                        <p style="color: #6e7681; font-size: 13px;">Lade Transkript um Marker zu sehen</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Turning Points -->
+            <div class="panel-content" id="panel-turning">
+                <div class="panel-section">
+                    <h3>Turning Points</h3>
+                    <div class="turning-points-list" id="turning-points-list">
+                        <p style="color: #6e7681; font-size: 13px;">Keine Turning Points erkannt</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 4: Agency Drift -->
+            <div class="panel-content" id="panel-drift">
+                <div class="panel-section">
+                    <h3>Agency Drift Curve</h3>
+                    <canvas class="drift-canvas" id="drift-graph"></canvas>
+                    <p style="color: #6e7681; font-size: 13px; margin-top: 12px;">
+                        Aggregierte semantisch-prosodische Verlaufslinie
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip für Hover -->
+    <div class="segment-tooltip" id="segment-tooltip">
+        <div class="tooltip-title" id="tooltip-title"></div>
+        <canvas class="tooltip-graph" id="tooltip-graph"></canvas>
+        <div class="tooltip-details" id="tooltip-details"></div>
+    </div>
+
+    <script>
+        // Global State
+        let sessionData = {
+            segments: [],
+            baseline: {},
+            metadata: {}
+        };
+        let activePanel = 'prosody';
+
+        // Panel Tab Switching
+        document.querySelectorAll('.panel-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const panelName = tab.dataset.panel;
+
+                // Update tabs
+                document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Update panels
+                document.querySelectorAll('.panel-content').forEach(p => p.classList.remove('active'));
+                document.getElementById(`panel-${panelName}`).classList.add('active');
+
+                activePanel = panelName;
+            });
+        });
+
+        // File Loader
+        document.getElementById('file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+
+                if (file.name.endsWith('.md')) {
+                    parseMarkdown(content);
+                } else if (file.name.endsWith('.json')) {
+                    parseJSON(content);
+                }
+
+                document.getElementById('file-info').textContent =
+                    `✓ ${file.name} geladen (${(file.size / 1024).toFixed(1)} KB)`;
+
+                renderTimeline();
+                renderProsodyGraph();
+                renderSemanticTimeline();
+                renderTurningPoints();
+                renderDriftGraph();
+            };
+            reader.readAsText(file);
+        });
+
+        // Parse Markdown
+        function parseMarkdown(content) {
+            const lines = content.split('\n');
+            sessionData.segments = [];
+
+            let currentSegment = null;
+
+            lines.forEach(line => {
+                // Parse segment line: **[00:00 - 00:02]** Text `[MARKER]`
+                const segmentMatch = line.match(/\*\*\[(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})\]\*\*\s*(.+)/);
+                if (segmentMatch) {
+                    const [, startTime, endTime, textWithMarkers] = segmentMatch;
+
+                    // Extract markers
+                    const markers = [];
+                    const markerRegex = /`\[([^\]]+)\]`/g;
+                    let match;
+                    while ((match = markerRegex.exec(textWithMarkers)) !== null) {
+                        markers.push(match[1]);
+                    }
+
+                    // Clean text (remove markers)
+                    const text = textWithMarkers.replace(/`\[[^\]]+\]`/g, '').trim();
+
+                    currentSegment = {
+                        startTime,
+                        endTime,
+                        text,
+                        markers,
+                        speaker: detectSpeaker(text),
+                        prosody: {}
+                    };
+
+                    sessionData.segments.push(currentSegment);
+                }
+
+                // Parse prosody line
+                const prosodyMatch = line.match(/Tempo:\s*([\d.]+)\s*WPM.*Tonhöhe:\s*([\d.]+)\s*Hz.*Energie:\s*([\d.]+)/);
+                if (prosodyMatch && currentSegment) {
+                    currentSegment.prosody = {
+                        tempo: parseFloat(prosodyMatch[1]),
+                        pitch: parseFloat(prosodyMatch[2]),
+                        energy: parseFloat(prosodyMatch[3])
+                    };
+                }
+            });
+
+            // Update metadata
+            sessionData.metadata.title = lines[0].replace('#', '').trim();
+            sessionData.metadata.segments = sessionData.segments.length;
+
+            // Parse baseline
+            const baselineTempoMatch = content.match(/Tempo:\*\*\s*([\d.]+)\s*WPM/);
+            const baselinePitchMatch = content.match(/Tonhöhe:\*\*\s*([\d.]+)\s*Hz/);
+            const baselineEnergyMatch = content.match(/Energie:\*\*\s*([\d.]+)/);
+
+            if (baselineTempoMatch) sessionData.baseline.tempo = parseFloat(baselineTempoMatch[1]);
+            if (baselinePitchMatch) sessionData.baseline.pitch = parseFloat(baselinePitchMatch[1]);
+            if (baselineEnergyMatch) sessionData.baseline.energy = parseFloat(baselineEnergyMatch[1]);
+        }
+
+        // Parse JSON
+        function parseJSON(content) {
+            try {
+                const data = JSON.parse(content);
+                sessionData = data;
+
+                // Ensure segments have required fields
+                sessionData.segments = sessionData.segments.map(seg => ({
+                    ...seg,
+                    speaker: seg.speaker || detectSpeaker(seg.text || ''),
+                    markers: seg.markers || []
+                }));
+            } catch (e) {
+                alert('Fehler beim Parsen der JSON-Datei: ' + e.message);
+            }
+        }
+
+        // Detect Speaker from text/context
+        function detectSpeaker(text) {
+            // Heuristic: Questions usually from therapeut
+            if (text.includes('?')) return 'therapeut';
+            return 'patient';
+        }
+
+        // Render Timeline
+        function renderTimeline() {
+            const timeline = document.getElementById('timeline-content');
+            timeline.innerHTML = '';
+
+            // Update header
+            document.getElementById('session-title').textContent =
+                sessionData.metadata.title || 'Therapie-Session';
+            document.getElementById('segment-count').textContent =
+                `${sessionData.segments.length} Segmente`;
+
+            // Render segments
+            sessionData.segments.forEach((segment, index) => {
+                const div = document.createElement('div');
+                div.className = 'segment';
+                div.dataset.index = index;
+
+                // Format markers
+                const markerHTML = segment.markers.map(m => {
+                    const markerClass = m.toLowerCase().replace(/[↑↓]/g, '')
+                        .replace('tempo', m.includes('↑') ? 'tempo-up' : 'tempo-down')
+                        .replace('pitch', m.includes('↑') ? 'pitch-up' : 'pitch-down')
+                        .replace('energy', m.includes('↑') ? 'energy-up' : 'energy-down')
+                        .replace('pause', 'pause');
+
+                    return `<span class="marker ${markerClass}">${m}</span>`;
+                }).join('');
+
+                // Detect turning point (heuristic: large prosody changes)
+                const isTurningPoint = segment.markers.length >= 2;
+                const turningPointHTML = isTurningPoint ?
+                    '<span class="turning-point">↑Turning Point↑</span>' : '';
+
+                div.innerHTML = `
+                    <div class="segment-time">${segment.startTime}</div>
+                    <div class="segment-speaker ${segment.speaker}">
+                        ${segment.speaker}
+                    </div>
+                    <div>
+                        <div class="segment-text">
+                            ${segment.text} ${markerHTML} ${turningPointHTML}
+                        </div>
+                        ${segment.prosody.tempo ? `
+                            <div class="segment-prosody">
+                                Tempo: ${segment.prosody.tempo.toFixed(1)} WPM |
+                                Pitch: ${segment.prosody.pitch.toFixed(1)} Hz |
+                                Energie: ${segment.prosody.energy.toFixed(4)}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                // Click to highlight
+                div.addEventListener('click', () => {
+                    document.querySelectorAll('.segment').forEach(s => s.classList.remove('active'));
+                    div.classList.add('active');
+                });
+
+                // Hover tooltip
+                div.addEventListener('mouseenter', (e) => {
+                    showTooltip(segment, e);
+                });
+
+                div.addEventListener('mouseleave', () => {
+                    hideTooltip();
+                });
+
+                timeline.appendChild(div);
+            });
+        }
+
+        // Show Tooltip with Prosody Graph
+        function showTooltip(segment, event) {
+            const tooltip = document.getElementById('segment-tooltip');
+            const title = document.getElementById('tooltip-title');
+            const details = document.getElementById('tooltip-details');
+
+            title.textContent = `${segment.startTime} - ${segment.speaker.toUpperCase()}`;
+            details.innerHTML = `
+                <p style="font-size: 13px; margin-top: 8px;">${segment.text}</p>
+                <p style="font-size: 12px; color: #6e7681; margin-top: 8px;">
+                    Markers: ${segment.markers.join(', ') || 'keine'}
+                </p>
+            `;
+
+            // Position tooltip
+            tooltip.style.left = (event.pageX + 20) + 'px';
+            tooltip.style.top = (event.pageY - 100) + 'px';
+            tooltip.classList.add('show');
+
+            // Draw mini prosody graph
+            drawTooltipGraph(segment);
+        }
+
+        function hideTooltip() {
+            document.getElementById('segment-tooltip').classList.remove('show');
+        }
+
+        function drawTooltipGraph(segment) {
+            const canvas = document.getElementById('tooltip-graph');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = canvas.offsetWidth * 2;
+            const height = canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Simple bar chart for prosody
+            const w = width / 2 / 3;
+            const h = height / 2;
+
+            if (!segment.prosody.tempo) return;
+
+            const maxTempo = sessionData.baseline.tempo * 1.5 || 200;
+            const maxPitch = sessionData.baseline.pitch * 1.5 || 200;
+            const maxEnergy = sessionData.baseline.energy * 2 || 0.01;
+
+            // Pitch
+            ctx.fillStyle = '#3b82f6';
+            const pitchHeight = (segment.prosody.pitch / maxPitch) * h;
+            ctx.fillRect(10, h - pitchHeight, w - 20, pitchHeight);
+
+            // Energy
+            ctx.fillStyle = '#f59e0b';
+            const energyHeight = (segment.prosody.energy / maxEnergy) * h;
+            ctx.fillRect(w + 10, h - energyHeight, w - 20, energyHeight);
+
+            // Tempo
+            ctx.fillStyle = '#9ca3af';
+            const tempoHeight = (segment.prosody.tempo / maxTempo) * h;
+            ctx.fillRect(w * 2 + 10, h - tempoHeight, w - 20, tempoHeight);
+        }
+
+        // Render Prosody Graph
+        function renderProsodyGraph() {
+            const canvas = document.getElementById('prosody-graph');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+
+            const width = canvas.width / 2;
+            const height = canvas.height / 2;
+            const padding = 40;
+            const graphWidth = width - padding * 2;
+            const graphHeight = height - padding * 2;
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (sessionData.segments.length === 0) return;
+
+            // Extract data
+            const pitchData = sessionData.segments.map(s => s.prosody.pitch || 0);
+            const energyData = sessionData.segments.map(s => (s.prosody.energy || 0) * 1000); // Scale
+            const tempoData = sessionData.segments.map(s => s.prosody.tempo || 0);
+
+            const maxPitch = Math.max(...pitchData, 200);
+            const maxEnergy = Math.max(...energyData, 10);
+            const maxTempo = Math.max(...tempoData, 200);
+
+            // Draw grid
+            ctx.strokeStyle = '#30363d';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padding + (graphHeight / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+
+            // Draw Pitch (blue, solid)
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            pitchData.forEach((pitch, i) => {
+                const x = padding + (graphWidth / pitchData.length) * i;
+                const y = padding + graphHeight - (pitch / maxPitch) * graphHeight;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Draw Energy (orange, solid)
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            energyData.forEach((energy, i) => {
+                const x = padding + (graphWidth / energyData.length) * i;
+                const y = padding + graphHeight - (energy / maxEnergy) * graphHeight;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Draw Tempo (gray, dashed)
+            ctx.strokeStyle = '#9ca3af';
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            tempoData.forEach((tempo, i) => {
+                const x = padding + (graphWidth / tempoData.length) * i;
+                const y = padding + graphHeight - (tempo / maxTempo) * graphHeight;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Mark turning points
+            sessionData.segments.forEach((seg, i) => {
+                if (seg.markers.length >= 2) {
+                    const x = padding + (graphWidth / sessionData.segments.length) * i;
+                    ctx.strokeStyle = '#d946ef';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x, padding);
+                    ctx.lineTo(x, height - padding);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // Render Semantic Timeline
+        function renderSemanticTimeline() {
+            const timeline = document.getElementById('semantic-timeline');
+            timeline.innerHTML = '';
+
+            // Group segments by marker clusters
+            const clusters = [];
+            let currentCluster = null;
+
+            sessionData.segments.forEach((seg, i) => {
+                if (seg.markers.length > 0) {
+                    if (!currentCluster || i - currentCluster.endIndex > 5) {
+                        currentCluster = {
+                            startIndex: i,
+                            endIndex: i,
+                            markers: [...seg.markers],
+                            segments: [seg]
+                        };
+                        clusters.push(currentCluster);
+                    } else {
+                        currentCluster.endIndex = i;
+                        currentCluster.markers.push(...seg.markers);
+                        currentCluster.segments.push(seg);
+                    }
+                }
+            });
+
+            if (clusters.length === 0) {
+                timeline.innerHTML = '<p style="color: #6e7681; font-size: 13px;">Keine semantischen Cluster gefunden</p>';
+                return;
+            }
+
+            clusters.forEach(cluster => {
+                const div = document.createElement('div');
+                div.className = 'semantic-cluster';
+                if (cluster.markers.length >= 3) div.classList.add('highlight');
+
+                const uniqueMarkers = [...new Set(cluster.markers)];
+                const markersHTML = uniqueMarkers.map(m =>
+                    `<span class="cluster-marker">${m}</span>`
+                ).join('');
+
+                div.innerHTML = `
+                    <div style="font-size: 12px; color: #6e7681;">
+                        ${cluster.segments[0].startTime} - ${cluster.segments[cluster.segments.length - 1].endTime}
+                    </div>
+                    <div class="cluster-markers">
+                        ${markersHTML}
+                    </div>
+                `;
+
+                timeline.appendChild(div);
+            });
+        }
+
+        // Render Turning Points
+        function renderTurningPoints() {
+            const list = document.getElementById('turning-points-list');
+            list.innerHTML = '';
+
+            const turningPoints = sessionData.segments.filter(seg => seg.markers.length >= 2);
+
+            if (turningPoints.length === 0) {
+                list.innerHTML = '<p style="color: #6e7681; font-size: 13px;">Keine Turning Points erkannt</p>';
+                return;
+            }
+
+            turningPoints.forEach(tp => {
+                const div = document.createElement('div');
+                div.className = 'turning-point-item';
+
+                div.innerHTML = `
+                    <div class="turning-point-time">${tp.startTime} - ${tp.endTime}</div>
+                    <div style="font-weight: 600; color: #e6edf3;">${tp.speaker.toUpperCase()}</div>
+                    <div class="turning-point-reason">${tp.text}</div>
+                    <div class="turning-point-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Marker</div>
+                            <div class="metric-value">${tp.markers.length}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Tempo</div>
+                            <div class="metric-value">${tp.prosody.tempo?.toFixed(0) || '-'}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Pitch</div>
+                            <div class="metric-value">${tp.prosody.pitch?.toFixed(0) || '-'}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Energie</div>
+                            <div class="metric-value">${tp.prosody.energy?.toFixed(3) || '-'}</div>
+                        </div>
+                    </div>
+                `;
+
+                list.appendChild(div);
+            });
+        }
+
+        // Render Agency Drift Graph
+        function renderDriftGraph() {
+            const canvas = document.getElementById('drift-graph');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            ctx.scale(2, 2);
+
+            const width = canvas.width / 2;
+            const height = canvas.height / 2;
+            const padding = 30;
+            const graphWidth = width - padding * 2;
+            const graphHeight = height - padding * 2;
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (sessionData.segments.length === 0) return;
+
+            // Calculate drift (simplified: marker count + prosody variance)
+            const driftData = sessionData.segments.map(seg => {
+                const markerScore = seg.markers.length * 10;
+                const prosodyScore = seg.prosody.tempo ?
+                    Math.abs(seg.prosody.tempo - (sessionData.baseline.tempo || 150)) / 10 : 0;
+                return markerScore + prosodyScore;
+            });
+
+            const maxDrift = Math.max(...driftData, 50);
+
+            // Draw background gradient
+            const gradient = ctx.createLinearGradient(0, padding, 0, height - padding);
+            gradient.addColorStop(0, 'rgba(239, 68, 68, 0.2)');
+            gradient.addColorStop(0.5, 'rgba(251, 191, 36, 0.2)');
+            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.2)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(padding, padding, graphWidth, graphHeight);
+
+            // Draw drift line
+            ctx.strokeStyle = '#d946ef';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            driftData.forEach((drift, i) => {
+                const x = padding + (graphWidth / driftData.length) * i;
+                const y = padding + graphHeight - (drift / maxDrift) * graphHeight;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Fill area under curve
+            ctx.fillStyle = 'rgba(217, 70, 239, 0.2)';
+            ctx.beginPath();
+            ctx.moveTo(padding, height - padding);
+            driftData.forEach((drift, i) => {
+                const x = padding + (graphWidth / driftData.length) * i;
+                const y = padding + graphHeight - (drift / maxDrift) * graphHeight;
+                ctx.lineTo(x, y);
+            });
+            ctx.lineTo(width - padding, height - padding);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Auto-load demo data on startup (if available)
+        window.addEventListener('load', () => {
+            // Try to fetch a default file if it exists
+            const defaultFile = 'KAH - EGO STATE PS (4)_transkript.md';
+            fetch(`Transkripte_LLM/${defaultFile}`)
+                .then(r => r.text())
+                .then(content => {
+                    parseMarkdown(content);
+                    renderTimeline();
+                    renderProsodyGraph();
+                    renderSemanticTimeline();
+                    renderTurningPoints();
+                    renderDriftGraph();
+                    document.getElementById('file-info').textContent =
+                        `✓ ${defaultFile} automatisch geladen`;
+                })
+                .catch(() => {
+                    // Ignore - file not found is OK
+                });
+        });
+    </script>
+</body>
+</html>
