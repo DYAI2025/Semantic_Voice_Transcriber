@@ -10,6 +10,7 @@ Creates:
 
 import json
 import csv
+import tempfile
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime
@@ -521,7 +522,7 @@ if __name__ == "__main__":
         }
     }
 
-    output_path = Path('/tmp/test_transcript')
+    output_path = Path(tempfile.gettempdir()) / 'test_transcript'
     files = formatter.format_transcript(result, 'test.m4a', output_path)
 
     print(f"✅ Created files:")
