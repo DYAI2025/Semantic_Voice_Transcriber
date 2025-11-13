@@ -1,11 +1,13 @@
 openai-whisper>=20230314
 PyYAML>=6.0
+# pathlib2>=2.3.7  # Not needed for Python 3.4+, pathlib is in stdlib
 watchdog>=2.1.9
 requests>=2.28.0
 numpy>=1.21.0
 librosa>=0.9.0
 soundfile>=0.10.0
-torch>=2.0.0,<3.0.0
+torch>=2.0.0
+# torchvision is optional and should be compatible with torch 2.x
 packaging>=24.2,<25.0
 transformers>=4.20.0
 pillow>=11.1.0,<12.0.0

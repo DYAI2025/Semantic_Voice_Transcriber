@@ -1,17 +1,17 @@
 @echo off
-REM One-Click Starter für Semantic Voice Transcriber (SVT) - Windows
-REM Doppelklick auf diese Datei startet die GUI
+REM One-Click Starter for Semantic Voice Transcriber (SVT) - Windows
+REM Double-click this file to start the GUI
 
-REM Wechsle ins richtige Verzeichnis
+REM Change to script directory
 cd /d "%~dp0"
 
-REM Starte die GUI
+REM Start the GUI
 python svt.py
 
-REM Halte das Fenster offen wenn ein Fehler auftritt
+REM Keep window open if error occurs
 if %ERRORLEVEL% NEQ 0 (
     echo.
-    echo Fehler beim Starten der GUI
-    echo Drücke eine Taste zum Beenden...
+    echo Error starting GUI
+    echo Press any key to exit...
     pause >nul
 )
