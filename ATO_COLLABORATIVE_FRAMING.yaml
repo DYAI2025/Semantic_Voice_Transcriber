@@ -1,0 +1,53 @@
+id: ATO_COLLABORATIVE_FRAMING
+version: '4.1'
+category: ATOMIC
+description: Einladung zur gemeinsamen Gestaltung/Ko-Konstruktion
+frame:
+  signal:
+  - invitation to collaborative work
+  concept: co-construction
+  pragmatics: process shaping together
+  narrative: collaborative engagement
+pattern:
+- (?i)(lass\s+uns|lasst\s+uns)\s+[a-z]+
+- (?i)(können|sollten|würden)\s+wir\s+[a-z]+\s+(sagen|schreiben|formulieren|entwickeln|gestalten)\b
+- (?i)\bwir\s+(könnten|würden|sollten)\s+[a-z]+\s+(zusammen|gemeinsam)\b
+- (?i)\b(gemeinsam|zusammen)\s+(entwickeln|erarbeiten|gestalten|überlegen)\b
+- (?i)\bwas\s+hältst\s+du\s+davon\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 1.3
+examples:
+  positive:
+  - "Lass uns mal schauen, wie wir das formulieren könnten"
+  - "Können wir das gemeinsam entwickeln?"
+  - "Sollten wir zusammen überlegen, wie..."
+  - "Was hältst du davon, wenn wir das so angehen?"
+  - "Lass uns gemeinsam herausfinden, was hier wirksam wäre"
+  - "Wir könnten das zusammen durchspielen, oder?"
+  - "Sollten wir vielleicht gemeinsam eine Intervention gestalten?"
+  - "Können wir uns zusammen überlegen, wie der nächste Schritt aussieht?"
+  - "Lass uns mal gemeinsam reflektieren, was passiert ist"
+  - "Was würdest du sagen, wenn wir das so formulieren?"
+  - "Wir sollten das zusammen entwickeln, damit es zu dir passt"
+  - "Lass uns gemeinsam schauen, welche Ressourcen verfügbar sind"
+  - "Können wir zusammen überlegen, wie sich das anfühlt für dich?"
+  negative:
+  - "Wir haben das gemacht" # Past tense, nicht einladend
+  - "Wir müssen das so sehen" # Direktiv, nicht kollaborativ
+tags:
+- atomic
+- collaborative
+- process_marker
+- alliance_building
+- supervision
+therapeutic_value: HIGH
+rationale: |
+  Kern-Indikator für kollaborative therapeutische Haltung.
+  Unterscheidet kollaborative Supervision von hierarchischer Belehrung.
+  Kompositionsfähig mit WE_LANGUAGE zu SEM_COLLABORATIVE_ALLIANCE.
+differentiates_from:
+  ATO_WE_LANGUAGE: |
+    WE_LANGUAGE ist rein grammatisch ("wir haben", "unser").
+    COLLABORATIVE_FRAMING ist prozessual und einladend ("lass uns entwickeln").

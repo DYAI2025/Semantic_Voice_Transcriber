@@ -1,0 +1,48 @@
+id: ATO_CONCEPT_ELABORATION
+version: '4.1'
+category: ATOMIC
+description: Konzepte ausführen, konkretisieren, beispielhaft machen
+frame:
+  signal:
+  - concept is being elaborated or exemplified
+  concept: didactic elaboration
+  pragmatics: making abstract concrete
+  narrative: teaching move
+pattern:
+- (?i)\b(zum\s+beispiel|beispielsweise|etwa|z\.?b\.?)\b
+- (?i)\b(das\s+heißt|das\s+bedeutet|mit\s+anderen\s+worten)\b
+- (?i)\b(genauer\s+gesagt|präziser|konkreter|spezifischer)\b
+- (?i)\b(um\s+das\s+zu\s+verdeutlichen|um\s+es\s+zu\s+konkretisieren)\b
+- (?i)\b(anders\s+formuliert|anders\s+ausgedrückt)\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 0.9
+examples:
+  positive:
+  - "Zum Beispiel, wenn ein Patient sagt..."
+  - "Das heißt konkret, dass wir..."
+  - "Mit anderen Worten, die Utilisation bedeutet..."
+  - "Um das zu verdeutlichen: Erickson hat..."
+  - "Beispielsweise könnte eine Metapher so klingen:"
+  - "Genauer gesagt geht es um die Aktivierung unbewusster Ressourcen"
+  - "Das bedeutet in der Praxis, dass der Therapeut flexibel reagiert"
+  - "Um es zu konkretisieren: Der Patient zeigt bereits Trancephänomene"
+  - "Anders formuliert ist Widerstand ein Signal für unpassende Interventionen"
+  - "Präziser ausgedrückt nutzen wir die Sprache des Patienten"
+  - "Spezifischer bedeutet das: Wir folgen dem natürlichen Rhythmus"
+  - "Zum Beispiel nutzt Milton Erickson hier eine Konfusionstech nik"
+  - "Das heißt konkret: Wir verstärken was bereits da ist"
+  negative:
+  - "Zum Beispiel morgen" # Nicht konzeptuell
+tags:
+- atomic
+- didactic
+- elaboration
+- supervision
+- training
+therapeutic_value: MEDIUM
+rationale: |
+  Indiziert didaktische Kompetenz und Brückenbau zwischen Theorie/Praxis.
+  Wichtig in Ausbildungskontexten.
+  Zeigt Fähigkeit zur Konkretisierung abstrakter Konzepte.

@@ -1,0 +1,48 @@
+id: ATO_THEORETICAL_FRAMING
+version: '4.1'
+category: ATOMIC
+description: Theoretische Einordnung, Bezug auf Theoretiker/Schulen
+frame:
+  signal:
+  - theoretical framework referenced
+  concept: theoretical positioning
+  pragmatics: academic grounding
+  narrative: theory integration
+pattern:
+- (?i)\b(erickson|freud|rogers|satir|jung|adler|beck|linehan)\s+(hat|sagt|meint|schreibt|beschreibt)\b
+- (?i)\bin\s+der\s+(theorie|literatur|forschung)\b
+- (?i)\bder\s+(ansatz|die\s+methode|das\s+konzept)\s+(von|nach)\s+[A-Z][a-z]+\b
+- (?i)\b(psychoanalytisch|verhaltenstherapeutisch|systemisch|humanistisch|hypnotherapeutisch)\b
+- (?i)\baus\s+(psychoanalytischer|systemischer|verhaltenstherapeutischer)\s+sicht\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 1.0
+examples:
+  positive:
+  - "Erickson hat gesagt, dass..."
+  - "In der Literatur wird das so beschrieben..."
+  - "Der Ansatz von Rogers ist hier relevant"
+  - "Aus psychoanalytischer Sicht würde man..."
+  - "Milton Erickson beschreibt das als natürliches Phänomen"
+  - "In der Forschung zeigt sich deutlich, dass Rapport entscheidend ist"
+  - "Der hypnotherapeutische Ansatz betont die Ressourcenorientierung"
+  - "Aus systemischer Sicht ist das Symptom eine Lösungsstrategie"
+  - "Virginia Satir hat das Konzept der Familienrekonstruktion entwickelt"
+  - "In der humanistischen Therapie steht die Selbstaktualisierung im Fokus"
+  - "Beck beschreibt automatische Gedanken als zentrale Intervention"
+  - "Die Methode nach Rossi nutzt Ultradian-Rhythmen"
+  - "Aus verhaltenstherapeutischer Sicht wäre hier eine Exposition sinnvoll"
+  negative:
+  - "Erickson ging spazieren" # Nicht theoretisch
+tags:
+- atomic
+- theoretical
+- meta_therapeutic
+- supervision
+- academic
+therapeutic_value: MEDIUM
+rationale: |
+  Zeigt theoretische Fundierung und Einordnung.
+  Wichtig in Supervision und Ausbildung.
+  Unterscheidet fundierte von rein pragmatischer Diskussion.

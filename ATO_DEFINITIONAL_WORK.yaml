@@ -1,0 +1,51 @@
+id: ATO_DEFINITIONAL_WORK
+version: '4.1'
+category: ATOMIC
+description: Begriffe klären, definieren, konzeptuell abgrenzen
+frame:
+  signal:
+  - definitional or clarification work
+  concept: conceptual precision
+  pragmatics: meaning negotiation
+  narrative: conceptual work
+pattern:
+- (?i)(was\s+ist|was\s+bedeutet|was\s+heißt)\s+[a-z]+
+- (?i)\bwie\s+definier[te]?[ns]?\s+(du|Sie|wir|man)\b
+- (?i)\bwas\s+versteh[te]?[ns]?\s+(du|Sie|wir|man)\s+unter\b
+- (?i)\b(definition|beschreibung|bedeutung)\s+(von|des|der)\b
+- (?i)\b(begrifflich|konzeptuell)\s+(klären|abgrenzen)\b
+- (?i)\bwie\s+soll(en)?\s+(wir|man)\s+das\s+(nennen|bezeichnen)\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 1.1
+examples:
+  positive:
+  - "Was ist denn das Unbewusste eigentlich?"
+  - "Wie definieren wir Ego-State?"
+  - "Was verstehen Sie unter Utilisation?"
+  - "Begrifflich müssen wir da klären..."
+  - "Was bedeutet Rapport für Sie in der therapeutischen Arbeit?"
+  - "Wie definierst du Widerstand in diesem Kontext?"
+  - "Was verstehen wir unter therapeutischer Trance?"
+  - "Die Bedeutung von Dissoziation ist hier zentral"
+  - "Wie sollen wir Hypnotherapie von Entspannung abgrenzen?"
+  - "Was heißt eigentlich Reframing in der praktischen Anwendung?"
+  - "Begrifflich ist hier wichtig zwischen Symptom und Ressource zu unterscheiden"
+  - "Die Definition von Selbsthypnose variiert ja sehr"
+  - "Was verstehst du unter einer therapeutischen Metapher?"
+  - "Konzeptuell müssen wir Suggestion von Manipulation abgrenzen"
+  negative:
+  - "Was ist los?" # Nicht definitional
+  - "Was machst du?" # Nicht konzeptuell
+tags:
+- atomic
+- meta_cognitive
+- conceptual_work
+- supervision
+- training
+therapeutic_value: MEDIUM-HIGH
+rationale: |
+  Zeigt konzeptuelle Präzision und Tiefe.
+  Wichtig in Supervision und Ausbildung.
+  Unterscheidet oberflächliche von tiefer konzeptueller Auseinandersetzung.
