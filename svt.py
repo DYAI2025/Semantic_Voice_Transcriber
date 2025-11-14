@@ -92,7 +92,7 @@ class SemanticVoiceTranscriberGUI:
 
         # Whisper model selection
         ttk.Label(quality_frame, text="Whisper-Modell:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.model_var = tk.StringVar(value="medium")
+        self.model_var = tk.StringVar(value="small")  # Changed to small for memory efficiency
         model_combo = ttk.Combobox(
             quality_frame,
             textvariable=self.model_var,
@@ -146,6 +146,44 @@ class SemanticVoiceTranscriberGUI:
             font=("Helvetica", 9, "italic")
         ).grid(row=4, column=1, columnspan=2, sticky=tk.W, padx=5)
 
+        # Audio Processing settings frame
+        processing_frame = ttk.LabelFrame(self.root, text="Audio-Verarbeitung", padding="10")
+        processing_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+
+        # Audio chunking toggle
+        ttk.Label(processing_frame, text="Audio Chunking:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.use_chunking_var = tk.BooleanVar(value=True)
+        chunking_checkbox = ttk.Checkbutton(
+            processing_frame,
+            text="Speicher-effiziente Verarbeitung großer Dateien aktivieren",
+            variable=self.use_chunking_var
+        )
+        chunking_checkbox.grid(row=0, column=1, columnspan=2, sticky=tk.W, pady=5, padx=5)
+
+        ttk.Label(
+            processing_frame,
+            text="(Teilt große Dateien in kleinere Chunks zur Speicherersparnis)",
+            font=("Helvetica", 9, "italic")
+        ).grid(row=1, column=1, columnspan=2, sticky=tk.W, padx=5)
+
+        # Chunk duration
+        ttk.Label(processing_frame, text="Chunk-Dauer (Sekunden):").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.chunk_duration_var = tk.DoubleVar(value=120.0)  # 2 minutes default (memory-optimized for low RAM)
+        chunk_duration_spin = ttk.Spinbox(
+            processing_frame,
+            from_=60.0,  # 1 minute minimum
+            to=600.0,   # 10 minutes maximum
+            increment=30.0,
+            textvariable=self.chunk_duration_var,
+            width=15
+        )
+        chunk_duration_spin.grid(row=2, column=1, sticky=tk.W, pady=5, padx=5)
+        ttk.Label(processing_frame, text="(Standard: 180 = 3 Min, RAM-freundlich)").grid(row=2, column=2, sticky=tk.W, pady=5)
+
+        # Update row positions for the features frame
+        features_frame = ttk.LabelFrame(self.root, text="Features", padding="10")
+        features_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+
         # Feature toggles frame
         features_frame = ttk.LabelFrame(self.root, text="Features", padding="10")
         features_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
@@ -171,27 +209,34 @@ class SemanticVoiceTranscriberGUI:
             variable=self.memory_var
         ).grid(row=2, column=0, sticky=tk.W, pady=2)
 
+        self.diarization_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            features_frame,
+            text="Sprechertrennung (Speaker Diarization)",
+            variable=self.diarization_var
+        ).grid(row=3, column=0, sticky=tk.W, pady=2)
+
         # New layer features
         self.turning_points_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
             features_frame,
             text="Wendepunkte-Erkennung (Turning Points)",
             variable=self.turning_points_var
-        ).grid(row=3, column=0, sticky=tk.W, pady=2)
+        ).grid(row=4, column=0, sticky=tk.W, pady=2)
 
         self.dual_markers_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
             features_frame,
             text="Duale Marker (Einfach + Erweitert)",
             variable=self.dual_markers_var
-        ).grid(row=4, column=0, sticky=tk.W, pady=2)
+        ).grid(row=5, column=0, sticky=tk.W, pady=2)
 
         self.enhanced_speakers_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             features_frame,
             text="Erweiterte Sprecherdarstellung",
             variable=self.enhanced_speakers_var
-        ).grid(row=5, column=0, sticky=tk.W, pady=2)
+        ).grid(row=6, column=0, sticky=tk.W, pady=2)
 
         # Audio file selection frame
         file_frame = ttk.LabelFrame(self.root, text="Audio-Dateien", padding="10")
@@ -353,7 +398,14 @@ class SemanticVoiceTranscriberGUI:
             'enable_emotion': self.emotion_var.get(),
             'enable_prosody': self.prosody_var.get(),
             'enable_memory': self.memory_var.get(),
-            'use_intelligent_pipeline': self.intelligent_pipeline_var.get()
+            'enable_diarization': self.diarization_var.get(),
+            'enable_turning_points': self.turning_points_var.get(),
+            'enable_dual_markers': self.dual_markers_var.get(),
+            'enable_enhanced_speakers': self.enhanced_speakers_var.get(),
+            'use_intelligent_pipeline': self.intelligent_pipeline_var.get(),
+            'use_audio_chunking': self.use_chunking_var.get(),
+            'chunk_duration': self.chunk_duration_var.get(),
+            'overlap_duration': 5.0  # Fixed at 5 seconds for now
         }
 
         self._log(f"\n{'='*60}")
@@ -434,19 +486,14 @@ class SemanticVoiceTranscriberGUI:
                 self.progress_queue.put(('log', f"   🔇 Silence: {quality_metrics['silence_ratio']:.2%}"))
                 self.progress_queue.put(('log', f"   ⏱️  Dauer: {quality_metrics['duration']:.1f}s\n"))
 
-                # Model selection
-                if quality_score < 0.4:
-                    optimal_model = "large"
-                    self.progress_queue.put(('log', "🎯 Niedrige Qualität → large Modell + aggressives Preprocessing"))
-                elif quality_score < 0.6:
+                # Model selection (MEMORY-OPTIMIZED)
+                # Always use small model except for extremely poor quality
+                if quality_score < 0.3:
                     optimal_model = "medium"
-                    self.progress_queue.put(('log', "🎯 Mittlere Qualität → medium Modell + moderates Preprocessing"))
-                elif quality_score < 0.8:
-                    optimal_model = "medium"
-                    self.progress_queue.put(('log', "🎯 Gute Qualität → medium Modell + leichtes Preprocessing"))
+                    self.progress_queue.put(('log', "🎯 Sehr niedrige Qualität → medium Modell + aggressives Preprocessing"))
                 else:
                     optimal_model = "small"
-                    self.progress_queue.put(('log', "🎯 Sehr gute Qualität → small Modell (schneller)"))
+                    self.progress_queue.put(('log', "🎯 Small Modell (memory-optimized)"))
             else:
                 self.progress_queue.put(('log', f"⚙️  Manuelle Einstellungen: {manual_model} Modell"))
                 optimal_model = manual_model
@@ -464,7 +511,11 @@ class SemanticVoiceTranscriberGUI:
                 quality_score=quality_score,
                 quality_analyzer=self.quality_analyzer if use_intelligent else None,
                 audio_preprocessor=self.audio_preprocessor if use_intelligent else None,
-                extract_prosody=True  # Always extract for quick test
+                extract_prosody=True,  # Always extract for quick test
+                enable_diarization=self.diarization_var.get(),
+                use_audio_chunking=self.use_chunking_var.get(),
+                chunk_duration=self.chunk_duration_var.get(),
+                overlap_duration=5.0
             )
             transcription_time = time.time() - start_time
 
@@ -583,7 +634,11 @@ class SemanticVoiceTranscriberGUI:
                 model_size='small',
                 language='de',
                 use_intelligent_pipeline=False,
-                extract_prosody=True
+                extract_prosody=True,
+                enable_diarization=self.diarization_var.get(),
+                use_audio_chunking=self.use_chunking_var.get(),
+                chunk_duration=self.chunk_duration_var.get(),
+                overlap_duration=5.0
             )
             transcription_time = time.time() - start_time
 
@@ -693,19 +748,14 @@ class SemanticVoiceTranscriberGUI:
                             f"Clipping: {quality_metrics['clipping_ratio']:.2%}"
                         ))
 
-                        # Select optimal model based on quality
-                        if quality_score < 0.4:
-                            optimal_model = "large"
-                            self.progress_queue.put(('log', "    🎯 Niedrige Qualität → large Modell + aggressives Preprocessing"))
-                        elif quality_score < 0.6:
+                        # Select optimal model based on quality (MEMORY-OPTIMIZED)
+                        # Always use small model except for extremely poor quality
+                        if quality_score < 0.3:
                             optimal_model = "medium"
-                            self.progress_queue.put(('log', "    🎯 Mittlere Qualität → medium Modell + moderates Preprocessing"))
-                        elif quality_score < 0.8:
-                            optimal_model = "medium"
-                            self.progress_queue.put(('log', "    🎯 Gute Qualität → medium Modell ohne Preprocessing"))
+                            self.progress_queue.put(('log', "    🎯 Sehr niedrige Qualität → medium Modell + aggressives Preprocessing"))
                         else:
                             optimal_model = "small"
-                            self.progress_queue.put(('log', "    🎯 Sehr gute Qualität → small Modell (schneller)"))
+                            self.progress_queue.put(('log', "    🎯 Small Modell (memory-optimized)"))
 
                     # Transcribe
                     self.progress_queue.put(('log', f"    🎤 Transkribiere mit {optimal_model} Modell..."))
@@ -718,7 +768,11 @@ class SemanticVoiceTranscriberGUI:
                         quality_score=quality_score,
                         quality_analyzer=self.quality_analyzer if use_intelligent else None,
                         audio_preprocessor=self.audio_preprocessor if use_intelligent else None,
-                        extract_prosody=settings.get('enable_prosody', False)
+                        extract_prosody=settings.get('enable_prosody', False),
+                        enable_diarization=settings.get('enable_diarization', False),
+                        use_audio_chunking=settings.get('use_audio_chunking', True),
+                        chunk_duration=settings.get('chunk_duration', 300.0),
+                        overlap_duration=settings.get('overlap_duration', 5.0)
                     )
 
                     # Analyze emotion if enabled
@@ -804,21 +858,29 @@ class SemanticVoiceTranscriberGUI:
         )
 
         if has_prosody:
-            # Use new OutputFormatter for annotated Markdown + JSON sidecar
+            # Use new OutputFormatter for annotated Markdown + JSON sidecar + HTML + PDF
             try:
                 # Remove .md extension from output_path for base path
                 base_output_path = output_path.with_suffix('')
 
-                files = self.output_formatter.format_transcript(
+                # Generate ALL formats (Markdown, JSON, HTML, PDF)
+                files = self.output_formatter.format_all(
                     result,
                     audio_file.name,
                     base_output_path,
-                    include_prosody_markers=True
+                    include_prosody_markers=True,
+                    generate_html=True,
+                    generate_pdf=True,
+                    generate_csv=False
                 )
 
-                logger.info(f"✅ Saved annotated transcript with prosody:")
+                logger.info(f"✅ Saved annotated transcript with FusionDynamics features:")
                 logger.info(f"   - Markdown: {files['markdown']}")
                 logger.info(f"   - JSON: {files['json']}")
+                if files.get('html'):
+                    logger.info(f"   - HTML: {files['html']}")
+                if files.get('pdf'):
+                    logger.info(f"   - PDF: {files['pdf']}")
 
             except Exception as e:
                 logger.error(f"Error using OutputFormatter: {e}")
