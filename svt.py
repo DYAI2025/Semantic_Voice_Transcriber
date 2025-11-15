@@ -289,6 +289,13 @@ class SemanticVoiceTranscriberGUI:
         )
         self.prosody_test_button.pack(side=tk.LEFT, padx=5)
 
+        self.psychoanalysis_button = ttk.Button(
+            control_frame,
+            text="🧠 Psychoanalysis Dashboard",
+            command=self._generate_psychoanalysis_dashboard
+        )
+        self.psychoanalysis_button.pack(side=tk.LEFT, padx=5)
+
         # Progress frame
         progress_frame = ttk.LabelFrame(self.root, text="Fortschritt", padding="10")
         progress_frame.grid(row=6, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=10, pady=5)
@@ -709,6 +716,129 @@ class SemanticVoiceTranscriberGUI:
         finally:
             # Re-enable buttons
             self.progress_queue.put(('enable_buttons', None))
+
+    def _generate_psychoanalysis_dashboard(self):
+        """Generate psychoanalysis dashboard from latest transcript"""
+        import json
+        import webbrowser
+        import os
+        from psychoanalysis_pipeline import PsychoanalysisPipeline
+        from dashboard_generator import DashboardGenerator
+
+        try:
+            # Find latest transcript JSON file
+            output_dir = Path(self.output_dir_var.get())
+            if not output_dir.exists():
+                messagebox.showerror("Fehler", "Ausgabe-Ordner existiert nicht")
+                return
+
+            json_files = list(output_dir.glob("*.prosody.json"))
+            if not json_files:
+                messagebox.showwarning(
+                    "Keine Transkripte",
+                    "Keine Transkript-JSON-Dateien gefunden.\n\n"
+                    "Bitte führen Sie zuerst eine Transkription durch."
+                )
+                return
+
+            # Get most recent file
+            latest_json = max(json_files, key=lambda p: p.stat().st_mtime)
+
+            self._log(f"\n{'='*60}")
+            self._log("🧠 PSYCHOANALYSIS DASHBOARD GENERATION")
+            self._log(f"{'='*60}")
+            self._log(f"📂 Transkript: {latest_json.name}\n")
+
+            # Check for OPENAI_API_KEY
+            if not os.environ.get("OPENAI_API_KEY"):
+                response = messagebox.askyesno(
+                    "API-Schlüssel fehlt",
+                    "OPENAI_API_KEY nicht gesetzt.\n\n"
+                    "Ohne API-Schlüssel kann nur ein Test-Dashboard mit gecachten Daten "
+                    "generiert werden (falls vorhanden).\n\n"
+                    "Möchten Sie fortfahren?"
+                )
+                if not response:
+                    return
+
+            # Load transcript JSON
+            self._log("📖 Lade Transkript...")
+            with open(latest_json, 'r', encoding='utf-8') as f:
+                transcript_data = json.load(f)
+
+            # Prepare transcript for pipeline (convert from prosody JSON format)
+            utterances = []
+            for seg in transcript_data.get("segments", []):
+                utterances.append({
+                    "id": seg.get("id", 0),
+                    "speaker": seg.get("speaker", "Unknown"),
+                    "timestamp": seg.get("timestamp", "00:00:00"),
+                    "text": seg.get("text", ""),
+                    "prosody": seg.get("prosody", {})
+                })
+
+            pipeline_input = {
+                "transcript_meta": {
+                    "file": latest_json.stem.replace(".prosody", ".md"),
+                    "speaker_labels": list(set(u["speaker"] for u in utterances)),
+                    "duration_seconds": transcript_data.get("duration_seconds", 0),
+                    "timestamp": datetime.now().isoformat()
+                },
+                "utterances": utterances
+            }
+
+            # Initialize pipeline
+            self._log("🔧 Initialisiere Psychoanalysis Pipeline...")
+            pipeline = PsychoanalysisPipeline(
+                config_path="config/psychoanalysis_config.yaml"
+            )
+
+            # Get skill path
+            skill_path = Path(__file__).parent.parent / "emotion_dynaminc-skill" / "emotion-dynamics-deep-insight" / "SKILL.md"
+            if not skill_path.exists():
+                # Try alternative path
+                skill_path = Path("emotion_dynaminc-skill") / "emotion-dynamics-deep-insight" / "SKILL.md"
+
+            # Run pipeline
+            self._log("⚡ Führe Analyse durch (Cache → API → Turnpoints)...")
+            result = pipeline.analyze_transcript(pipeline_input, skill_path)
+
+            self._log(f"   ✅ Analyse abgeschlossen")
+            self._log(f"   Utterances: {len(result['utterance_states'])}")
+            self._log(f"   Turnpoints: {len(result.get('turnpoints', []))}")
+            self._log(f"   Marker: {len(result.get('marker_summary', {}).get('frequencies', {}))}")
+
+            # Generate dashboard
+            self._log("\n🎨 Generiere HTML Dashboard...")
+            generator = DashboardGenerator()
+            dashboard_path = output_dir / f"{latest_json.stem}_psychoanalysis_dashboard.html"
+
+            generator.generate_dashboard(result, dashboard_path)
+
+            self._log(f"   ✅ Dashboard gespeichert: {dashboard_path.name}\n")
+
+            # Open in browser
+            self._log("🌐 Öffne Dashboard im Browser...")
+            webbrowser.open(f"file://{dashboard_path.absolute()}")
+
+            self._log(f"\n{'='*60}")
+            self._log("✅ DASHBOARD GENERATION ABGESCHLOSSEN")
+            self._log(f"{'='*60}\n")
+
+            messagebox.showinfo(
+                "Dashboard erstellt",
+                f"Psychoanalysis Dashboard erfolgreich erstellt!\n\n"
+                f"Datei: {dashboard_path.name}\n\n"
+                f"Das Dashboard wurde im Browser geöffnet."
+            )
+
+        except Exception as e:
+            logger.error(f"Dashboard generation error: {e}", exc_info=True)
+            self._log(f"\n❌ Fehler: {e}\n")
+            messagebox.showerror(
+                "Fehler",
+                f"Dashboard-Generierung fehlgeschlagen:\n\n{str(e)}"
+            )
 
     def _stop_transcription(self):
         """Stop transcription"""
