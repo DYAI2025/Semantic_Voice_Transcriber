@@ -794,10 +794,19 @@ class SemanticVoiceTranscriberGUI:
             )
 
             # Get skill path
-            skill_path = Path(__file__).parent.parent / "emotion_dynaminc-skill" / "emotion-dynamics-deep-insight" / "SKILL.md"
+            skill_path = (
+                Path(__file__).parent
+                / "emotion_dynaminc-skill"
+                / "emotion-dynamics-deep-insight"
+                / "SKILL.md"
+            )
             if not skill_path.exists():
-                # Try alternative path
-                skill_path = Path("emotion_dynaminc-skill") / "emotion-dynamics-deep-insight" / "SKILL.md"
+                # Fallback: relative zum aktuellen Arbeitsverzeichnis
+                skill_path = (
+                    Path("emotion_dynaminc-skill")
+                    / "emotion-dynamics-deep-insight"
+                    / "SKILL.md"
+                )
 
             # Run pipeline
             self._log("⚡ Führe Analyse durch (Cache → API → Turnpoints)...")
@@ -811,7 +820,8 @@ class SemanticVoiceTranscriberGUI:
             # Generate dashboard
             self._log("\n🎨 Generiere HTML Dashboard...")
             generator = DashboardGenerator()
-            dashboard_path = output_dir / f"{latest_json.stem}_psychoanalysis_dashboard.html"
+            base_name = latest_json.stem.replace(".prosody", "")
+            dashboard_path = output_dir / f"{base_name}_psychoanalysis_dashboard.html"
 
             generator.generate_dashboard(result, dashboard_path)
 
