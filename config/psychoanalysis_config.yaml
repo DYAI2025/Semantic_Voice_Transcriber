@@ -1,0 +1,37 @@
+# config/psychoanalysis_config.yaml
+openai:
+  api_key: ${OPENAI_API_KEY}  # Read from environment variable
+  model: gpt-4-turbo-preview
+  max_tokens: 4096
+  temperature: 0.3
+
+cache:
+  enabled: true
+  directory: Transkripte_LLM
+  hash_algorithm: sha256
+
+privacy:
+  show_real_names: false
+  pseudonymize_speakers: true
+
+turnpoints:
+  valence_threshold: 0.5
+  arousal_threshold: 0.3
+  prosody_pause_threshold_ms: 2000
+  significance_levels:
+    - low
+    - medium
+    - high
+
+markers:
+  ato_directory: VP_ATO/psychoanalytic
+  categories:
+    - defense
+    - resistance
+    - transference
+    - theme
+
+dashboard:
+  output_directory: Transkripte_LLM
+  auto_open_browser: true
+  template: dashboard_template.html
