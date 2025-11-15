@@ -1,0 +1,23 @@
+id: ATO_RESISTANCE_HUMOR
+frame:
+  signal:
+    - pattern: '\b(lacht|scherz|witzig|lustig|haha|ironisch)\b'
+      flags: IGNORECASE
+    - pattern: '\b(Witz|Spaß|zum Lachen)\b'
+      flags: IGNORECASE
+    - pattern: '\[lacht\]|\(lacht\)'
+  concept: "Ablenkung durch Humor bei emotional belastenden Themen"
+  pragmatics: "Bagatellisierung ernster Inhalte durch Witzigkeit"
+  narrative: "Dient der Distanzierung von schmerzhaften Gefühlen"
+examples:
+  - "[lacht] Das ist ja total absurd!"
+  - "Das klingt wie ein schlechter Witz."
+  - "Zum Lachen ist das eigentlich nicht, aber..."
+  - "Haha, wenn das nicht so traurig wäre, wäre es lustig."
+  - "Ironischerweise finde ich das gerade witzig."
+  - "Kann man sich nicht ausdenken, oder? [lacht]"
+category: resistance
+severity: low
+co_occurs_with:
+  - ATO_DEFENSE_RATIONALIZATION
+  - high_valence

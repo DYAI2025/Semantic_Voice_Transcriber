@@ -1,0 +1,24 @@
+id: ATO_DEFENSE_PROJECTION
+frame:
+  signal:
+    - pattern: '\b(die anderen sind|er\/sie ist schuld|alle anderen)\b'
+      flags: IGNORECASE
+    - pattern: '\b(die Leute|mein Partner|meine Mutter) (ist|sind) (schuld|das Problem)\b'
+      flags: IGNORECASE
+    - pattern: '\b(nicht ich, sondern|nicht meine Schuld)\b'
+      flags: IGNORECASE
+  concept: "Projektion eigener unerwünschter Gefühle auf andere Personen"
+  pragmatics: "Externalisierung von Schuld und Verantwortung zur Selbstentlastung"
+  narrative: "Häufig bei Konflikten, wo eigene Anteile schwer zu ertragen sind"
+examples:
+  - "Die anderen sind schuld, nicht ich."
+  - "Er ist das Problem, er versteht mich nicht."
+  - "Alle anderen machen Fehler, nur ich nicht."
+  - "Meine Mutter ist schuld an allem."
+  - "Die Leute um mich herum sind aggressiv."
+  - "Nicht ich bin wütend, du bist wütend."
+category: defense
+severity: medium
+co_occurs_with:
+  - ATO_DEFENSE_DENIAL
+  - low_dominance

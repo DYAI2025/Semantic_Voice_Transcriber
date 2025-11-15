@@ -1,0 +1,25 @@
+id: ATO_THEME_SEPARATION_ANXIETY
+frame:
+  signal:
+    - pattern: '\b(Angst (vor|zu sein) (allein|verlassen))\b'
+      flags: IGNORECASE
+    - pattern: '\b(nicht alleine|kann nicht ohne)\b'
+      flags: IGNORECASE
+    - pattern: '\b(Trennung|Verlust|Abschied) (macht mir Angst)\b'
+      flags: IGNORECASE
+  concept: "Unbewusstes Thema: Angst vor Trennung und Alleinsein"
+  pragmatics: "Kernthema bei Abhängigkeitsmustern"
+  narrative: "Wurzelt oft in frühen Trennungserfahrungen"
+examples:
+  - "Ich habe Angst, allein zu sein."
+  - "Die Trennung macht mir solche Angst."
+  - "Ich kann nicht ohne meinen Partner leben."
+  - "Alleinsein ist meine größte Angst."
+  - "Jeder Abschied fühlt sich an wie ein Verlust."
+  - "Ich klammere, weil ich Angst habe, verlassen zu werden."
+category: theme
+severity: high
+co_occurs_with:
+  - ATO_DEFENSE_REGRESSION
+  - ATO_THEME_ABANDONMENT
+  - high_arousal
