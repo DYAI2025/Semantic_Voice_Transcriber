@@ -81,22 +81,28 @@ turnpoints:
 
 ## Verwendung
 
-### Methode 1: SVT GUI (Empfohlen)
+### Methode 1: SVT GUI (Empfohlen) - One-Click Workflow
 
 1. **SVT starten**:
    ```bash
    python3 svt.py
    ```
 
-2. **Transkription durchführen**:
-   - Audiodateien auswählen
-   - "🚀 Transkription starten" klicken
-   - Warten bis `.prosody.json` Dateien erstellt werden
-
-3. **Dashboard generieren**:
+2. **Dashboard erstellen** (Integrierter Workflow):
    - Button "🧠 Psychoanalysis Dashboard" klicken
-   - System verwendet neueste Transkriptdatei
-   - Dashboard öffnet automatisch im Browser
+   - **Dateiauswahl**: Audio-Datei im Dialog auswählen (m4a, opus, wav, mp3, etc.)
+   - **Automatische Prüfung**:
+     - Falls `.prosody.json` bereits existiert → wird wiederverwendet (keine Neutranskription)
+     - Falls nicht vorhanden → automatische Transkription mit **Prosody forciert ON**
+   - **Asynchrone Verarbeitung**: Transkription läuft im Hintergrund (Log zeigt Fortschritt)
+   - **Dashboard-Generierung**: Nach Transkription automatisch
+   - **Browser öffnet automatisch**: Dashboard wird angezeigt
+
+**Vorteile**:
+- ✅ Keine manuelle Transkription nötig
+- ✅ Wiederverwendung existierender Transkripte (spart Zeit & API-Kosten)
+- ✅ Ein Klick vom Audio bis zum Dashboard
+- ✅ Prosody automatisch aktiviert (erforderlich für Dashboard)
 
 ### Methode 2: Programmatisch (Python)
 

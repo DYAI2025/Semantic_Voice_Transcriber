@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Working Directory**: This CLAUDE.md is located in `Super_semantic_whisper/`, which is the main working directory for all development and operations.
+
 ## Project Overview
 
 **Semantic Voice Transcriber (SVT)** is a professional therapeutic transcription system that combines state-of-the-art speech recognition with advanced prosody analysis, emotion detection, and semantic marker recognition. Designed for therapeutic applications, it provides deep insights into spoken communication through multi-modal analysis.
@@ -25,7 +27,6 @@ python3 svt.py
 
 # Legacy/Alternative interfaces
 python3 auto_transcriber_v4_emotion.py  # V4 with emotion analysis
-python3 auto_transcriber_v3.py --local   # V3 basic transcription
 python3 start_super_semantic.py          # Interactive launcher
 python3 super_semantic_gui.py            # Semantic analysis GUI
 ```
@@ -47,6 +48,19 @@ python3 test_transcription.py
 # Quick validation
 python3 test_initialize_person.py
 python3 test_yaml_structure.py
+
+# Run a single test
+python3 -m pytest test_prosody_analyzer.py::test_function_name -v
+
+# CI/CD tests (fast tests without real audio/API calls)
+python3 -m pytest tests/test_ci_transcription.py -v
+python3 -m pytest tests/test_ci_pipeline.py -v
+python3 -m pytest tests/test_ci_gpt_integration.py -v
+
+# Psychoanalysis Dashboard tests
+python3 -m pytest tests/test_psychoanalysis_pipeline.py -v
+python3 -m pytest tests/test_dashboard_generator.py -v
+python3 -m pytest tests/test_e2e_psychoanalysis.py -v
 ```
 
 ### Installation
@@ -86,9 +100,11 @@ See `SPEAKER_DIARIZATION.md` for details.
 ### Processing Pipeline
 
 ```
-Audio Input
+Audio Input (m4a, opus, wav, mp3)
     ↓
 [Audio Quality Analysis] → Model Selection (tiny/base/small/medium/large)
+    ↓
+[Audio Preprocessing] → Noise reduction, normalization (optional)
     ↓
 [Whisper Transcription] → Segments with timestamps + confidence scores
     ↓
@@ -105,6 +121,20 @@ Audio Input
 [Memory Update] → Update speaker profiles with prosody patterns
     ↓
 [Output Formatting] → MD, JSON, HTML, PDF, CSV with markers
+```
+
+### Core Module Interaction
+
+```
+svt.py (GUI)
+    ├── auto_transcriber_v4_emotion.py (orchestrates pipeline)
+    │   ├── audio_quality_analyzer.py (SNR, quality metrics)
+    │   ├── audio_preprocessor.py (noise reduction)
+    │   ├── speaker_diarizer.py (pyannote.audio)
+    │   ├── prosody_extractor.py (Parselmouth, librosa)
+    │   └── output_formatter.py (multi-format export)
+    ├── super_semantic_processor.py (ATO marker detection)
+    └── Memory/ (speaker profiles, SQLite DB)
 ```
 
 ### Key Components
@@ -167,23 +197,67 @@ Super_semantic_whisper/
 ├── output_formatter.py             # Multi-format output
 ├── audio_quality_analyzer.py       # Quality analysis for model selection
 ├── audio_preprocessor.py           # Audio preprocessing
+├── audio_chunker.py                # Audio segmentation utilities
 ├── super_semantic_processor.py     # Semantic analysis engine
 │
 ├── Eingang/                        # INPUT: Audio files (organized by speaker)
 │   └── Patient/                    # Speaker-specific folders
 ├── Transkripte_LLM/                # OUTPUT: Transcripts (MD, JSON, HTML, PDF, CSV)
-├── Memory/                         # Speaker profiles (YAML)
+├── Memory/                         # Speaker profiles (YAML + SQLite)
 │   ├── speaker_profiles.db         # SQLite speaker database
+│   ├── Unknown.yaml                # Unknown speaker profile
 │   └── *.yaml                      # Individual speaker profiles
 │
 ├── VP_ATO/                         # Atomic Voice Markers (YAML)
-├── Marker_LD3.5_SSoTh/             # 4-Tier marker system
+├── Marker_LD3.5_SSoTh/             # 4-Tier marker system (LeanDeep 3.5)
+│   └── .cursor/rules/              # Cursor IDE configuration (leandeep35.mdc)
 ├── TextBlob/                       # Local TextBlob installation
+├── emotion_dynaminc-skill/         # UED emotion dynamics analysis skill
+│   └── emotion-dynamics-deep-insight/  # Claude Code skill for GPT-4 integration
+├── Emotion_marker_psychoanalysis/  # Psychoanalysis dashboard output
+│   └── output-dashboard/           # Generated HTML dashboards
+├── config/                         # Configuration files
+│   └── psychoanalysis_config.yaml  # Dashboard and API settings
 ├── requirements.txt                # Core dependencies
 └── requirements_emotion.txt        # Emotion analysis dependencies
 ```
 
+### Marker Directory Relationships
+
+The project integrates multiple marker systems:
+
+1. **VP_ATO/**: Voice-specific atomic markers (YAML format) for prosody-triggered detection
+2. **Marker_LD3.5_SSoTh/**: LeanDeep 3.5 framework with 4-tier hierarchy (ATO→SEM→CLU→MEMA)
+   - Contains `.cursor/rules/leandeep35.mdc` with complete framework specification
+3. **External integrations** (referenced in `super_semantic_processor.py`):
+   - `../ALL_SEMANTIC_MARKER_TXT/`: Main marker repository
+   - `../Marker_assist_bot/`: FRAUSAR marker management system
+   - `../MARSAP/`: CoSD (Coherence of Self-Description) drift analysis
+4. **emotion_dynaminc-skill/**: Claude Code skill for GPT-4-based UED analysis
+   - Integrates with Psychoanalysis Dashboard feature
+   - Outputs structured JSON with VAD dimensions and discrete emotions
+
+All marker systems follow the LeanDeep 3.5 JSON schema with `id`, `frame`, `examples` (min 5), and structure fields.
+```
+
 ## Important Technical Details
+
+### LeanDeep 3.5 Marker System
+
+The project uses the LeanDeep 3.5 framework with a 4-tier marker hierarchy:
+- **ATO_** (Atomic): Primitive signals (tokens, emojis, regex patterns)
+- **SEM_** (Semantic): Combinations of 2+ ATOs forming micro-patterns
+- **CLU_** (Cluster): Thematic aggregations of SEMs over defined windows
+- **MEMA_** (Meta-Analysis): Dynamic patterns emerging from multiple CLUs
+
+Key concepts:
+- **Intuition Markers**: CLU_INTUITION_* markers track provisional → confirmed → decayed states
+- **Resonance Framework 2.0 (RF2.0)**: Contextualizes markers by developmental stages (L1:STONE → L8:COSMOS)
+- **Matrix Rules**: RF_BRIDGE module combines level × marker-type × time × intensity
+
+All markers follow JSON schema with `id`, `frame` (signal/concept/pragmatics/narrative), `examples` (min 5), and structure (`pattern`/`composed_of`/`detect_class`).
+
+See `.cursor/rules/leandeep35.mdc` for full specification.
 
 ### Confidence Score Calculation
 
@@ -256,15 +330,89 @@ Selection based on:
 
 1. Place audio in `Eingang/Patient/` (or speaker-specific folder)
 2. Launch SVT GUI: `python3 svt.py`
-3. Configure features (Prosody, Emotion, Speaker Diarization)
-4. Click "Transkription starten" or "Quick Test"
-5. Output appears in `Transkripte_LLM/`
+3. Configure features:
+   - Prosody Analysis (Big 4: Tempo, Pitch, Energy, Pauses)
+   - Emotion Detection (TextBlob sentiment)
+   - Speaker Diarization (pyannote.audio)
+   - Memory Updates (speaker profiles)
+4. Click "Transkription starten" (batch) or "Quick Test" (first file only)
+5. Output appears in `Transkripte_LLM/`:
+   - `.md` - Human-readable with inline markers
+   - `.prosody.json` - Structured prosody data
+   - `.html` - Color-coded speakers
+   - `.pdf` - Professional layout
+   - `.csv` - Data export
+
+### Generating Psychoanalysis Dashboard
+
+**Psychoanalysis Dashboard** provides GPT-4-powered emotion dynamics analysis with interactive visualizations.
+
+#### One-Click Workflow (Recommended)
+
+1. **Set OpenAI API key** (prerequisite):
+   ```bash
+   export OPENAI_API_KEY=sk-your-key-here
+   # Or create .env file with OPENAI_API_KEY=sk-your-key-here
+   ```
+
+2. **Launch SVT GUI**: `python3 svt.py`
+
+3. **Click "🧠 Psychoanalysis Dashboard" button**
+
+4. **Select audio file** in file dialog (m4a, opus, wav, mp3, etc.)
+
+5. **Automatic workflow**:
+   - System checks for existing `.prosody.json` transcript
+   - **If exists**: Reuses transcript (skips transcription)
+   - **If not**: Transcribes audio asynchronously with **prosody forced ON**
+   - Runs psychoanalysis pipeline with GPT-4-Turbo
+   - Generates interactive HTML dashboard
+   - **Auto-opens in browser**
+
+6. **Dashboard contents**:
+   - Annotated transcript with emotion states
+   - VAD trajectory charts (Valence, Arousal, Dominance)
+   - Discrete emotion frequency analysis
+   - UED metrics (Home Base, Variability, Instability, Inertia, Rise/Recovery Rates)
+   - Marker network visualization (Cytoscape.js)
+   - Therapeutic turning point annotations
+
+**Key Features**:
+- ✅ **Smart caching**: Reuses existing transcripts automatically
+- ✅ **Async processing**: Non-blocking GUI during transcription
+- ✅ **Prosody enforcement**: Always includes prosody data (required for dashboard)
+- ✅ **Tri-modal turnpoint detection**: Emotion + Markers + Prosody
+
+**Configuration**: Edit `config/psychoanalysis_config.yaml` to customize:
+- OpenAI model and parameters (`gpt-4-turbo-preview` by default)
+- Turnpoint detection thresholds (valence, arousal, prosody pauses)
+- Marker weights and categories
+- Dashboard styling and output directory
+
+**Cache System**:
+- Transcript-based caching (SHA256 hash)
+- Avoids redundant API calls
+- See `psychoanalysis_cache.py` for details
+- Manual clear: `rm -rf cache/psychoanalysis/`
+
+**See**: `PSYCHOANALYSIS_DASHBOARD.md` for comprehensive usage guide
 
 ### Adding New ATO Markers
 
-1. Create YAML file: `ATO_NEW_MARKER.yaml` with pattern definitions
-2. Markers auto-loaded by semantic processor on next run
-3. Test with: `python3 test_yaml_structure.py`
+1. Create YAML file: `ATO_NEW_MARKER.yaml` in project root or `VP_ATO/`
+2. Follow LeanDeep 3.5 schema:
+   ```yaml
+   id: ATO_YOUR_MARKER
+   frame:
+     signal: "regex pattern or token"
+     concept: "What it represents"
+     pragmatics: "How it's used"
+     narrative: "Why it matters"
+   examples: ["example1", "example2", ...]  # Min 5 required
+   pattern: "detection logic"
+   ```
+3. Markers auto-loaded by semantic processor on next run
+4. Test with: `python3 test_yaml_structure.py`
 
 ### Running Semantic Analysis
 
@@ -282,6 +430,10 @@ New speaker profiles created automatically on first transcription. To manually i
 ```bash
 python3 initialize_person.py --name "NewSpeaker"
 ```
+
+Profiles stored in:
+- `Memory/speaker_profiles.db` (SQLite)
+- `Memory/<speaker_name>.yaml` (YAML backup)
 
 ## Common Issues
 
@@ -311,19 +463,24 @@ Accept Hugging Face model agreements and create token (see Speaker Diarization S
 - ✅ Speaker diarization with pyannote.audio
 - ✅ Overlapped speech detection (OSD)
 - ✅ Intelligent pipeline with quality-based model selection
+- ✅ **Psychoanalysis Dashboard with GPT-4 integration** (NEW)
+- ✅ **Interactive HTML dashboards with Chart.js and Cytoscape.js** (NEW)
+- ✅ **UED (Utterance Emotion Dynamics) analysis** (NEW)
+- ✅ **CI/CD test suite for pipeline validation** (NEW)
 
 **Phase 2d In Progress** 🔄
 - ATO marker integration with prosody triggers
 - Real-time marker detection during transcription
-- ATO → SEM → CLU → MEMA hierarchy
-- Therapeutic turning point detection
+- ATO → SEM → CLU → MEMA hierarchy refinement
 - GUI integration for speaker editing
+- Therapeutic turning point detection enhancement
 
 **Phase 3 Planned** 📋
 - Live streaming transcription
 - Real-time prosody visualization
 - WebSocket API for external tools
 - Real-time marker display
+- Multi-session comparative analysis
 
 ## Logging
 
@@ -331,3 +488,21 @@ Accept Hugging Face model agreements and create token (see Speaker Diarization S
 - `transcription.log`: Legacy V3 log
 - Console output with timestamps for all operations
 - Quality warnings and confidence scores logged per segment
+
+## Git Workflow
+
+Current branch structure:
+- `main`: Stable releases
+- `feat/*`: Feature branches (current: `feat/professional-quality-enhancement`)
+
+When making commits:
+1. Stage changes: `git add <files>`
+2. Commit with descriptive message: `git commit -m "feat: description"`
+3. Push to remote: `git push origin <branch-name>`
+
+Commit prefixes:
+- `feat:` New features
+- `fix:` Bug fixes
+- `docs:` Documentation changes
+- `test:` Test additions/modifications
+- `refactor:` Code restructuring

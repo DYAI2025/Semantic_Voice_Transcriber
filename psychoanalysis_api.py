@@ -5,6 +5,13 @@ from pathlib import Path
 from openai import OpenAI
 import json
 
+# Try to load .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file from current directory
+except ImportError:
+    pass  # dotenv not installed, use environment variables only
+
 class PsychoanalysisAPI:
     """OpenAI API client for psychoanalytic analysis using emotion-dynamics skill"""
 

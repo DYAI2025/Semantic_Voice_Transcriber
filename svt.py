@@ -718,7 +718,135 @@ class SemanticVoiceTranscriberGUI:
             self.progress_queue.put(('enable_buttons', None))
 
     def _generate_psychoanalysis_dashboard(self):
-        """Generate psychoanalysis dashboard from latest transcript"""
+        """Select audio file, transcribe if needed, and generate psychoanalysis dashboard"""
+        # DEBUG: Log that button was clicked
+        self._log("\n" + "="*60)
+        self._log("🧠 PSYCHOANALYSIS DASHBOARD BUTTON CLICKED")
+        self._log("="*60 + "\n")
+        logger.info("Dashboard button clicked - starting workflow")
+
+        # Try to import required modules with proper error handling
+        try:
+            import json
+            import webbrowser
+            import os
+            from psychoanalysis_pipeline import PsychoanalysisPipeline
+            from dashboard_generator import DashboardGenerator
+        except ImportError as e:
+            error_msg = f"❌ Fehlende Abhängigkeiten: {str(e)}\n\n"
+            error_msg += "Bitte installieren Sie:\n"
+            error_msg += "  pip install openai>=1.0.0\n\n"
+            error_msg += "Oder starten Sie SVT mit dem Virtual Environment:\n"
+            error_msg += "  .venv/bin/python3 svt.py"
+
+            self._log(error_msg + "\n")
+            messagebox.showerror(
+                "Fehlende Abhängigkeiten",
+                "Das Psychoanalysis Dashboard benötigt das 'openai' Paket.\n\n"
+                "Bitte installieren Sie es mit:\n"
+                "  pip install openai>=1.0.0\n\n"
+                "Oder starten Sie SVT mit:\n"
+                "  .venv/bin/python3 svt.py"
+            )
+            logger.error(f"Import error in dashboard: {e}", exc_info=True)
+            return
+
+        # Step 1: File selection dialog
+        self._log("📂 Öffne Dateiauswahl-Dialog...\n")
+        audio_file = filedialog.askopenfilename(
+            title="Audio-Datei für Psychoanalysis Dashboard auswählen",
+            initialdir=self.input_dir_var.get(),
+            filetypes=[
+                ("Audio Files", "*.m4a *.opus *.wav *.mp3 *.ogg *.flac"),
+                ("All Files", "*.*")
+            ]
+        )
+
+        if not audio_file:
+            return  # User cancelled
+
+        audio_path = Path(audio_file)
+        output_dir = Path(self.output_dir_var.get())
+
+        # Step 2: Check for existing .prosody.json
+        expected_json = output_dir / f"{audio_path.stem}_transkript.prosody.json"
+
+        if expected_json.exists():
+            self._log(f"\n✅ Transkript gefunden: {expected_json.name}")
+            self._log("   Überspringe Transkription (verwende existierende Datei)\n")
+            latest_json = expected_json
+        else:
+            # Step 3: Transcribe audio file (async with prosody forced ON)
+            self._log(f"\n🎤 Keine Transkription gefunden für: {audio_path.name}")
+            self._log("   Starte Transkription mit Prosody-Analyse...\n")
+
+            # Prepare settings for transcription
+            settings = {
+                'audio_files': [audio_path],
+                'model': self.model_var.get(),
+                'language': self.language_var.get() if self.language_var.get() != "auto" else None,
+                'enable_prosody': True,  # FORCED ON for dashboard
+                'enable_emotion': self.emotion_var.get(),
+                'enable_diarization': self.diarization_var.get(),
+                'enable_memory': self.memory_var.get(),
+                'use_intelligent_pipeline': self.intelligent_pipeline_var.get(),
+                'use_audio_chunking': self.chunking_var.get(),
+                'chunk_duration': float(self.chunk_duration_var.get()),
+                'overlap_duration': float(self.overlap_duration_var.get()),
+                'confidence_threshold': float(self.confidence_threshold_var.get()),
+                'output_dir': output_dir
+            }
+
+            # Disable dashboard button during transcription
+            self.psychoanalysis_button.config(state='disabled')
+            self.is_processing = True
+
+            # Run transcription in background thread
+            self.processing_thread = threading.Thread(
+                target=self._transcribe_for_dashboard,
+                args=(settings, audio_path),
+                daemon=True
+            )
+            self.processing_thread.start()
+
+            # Wait for transcription to complete (check every 500ms)
+            self.root.after(500, lambda: self._check_dashboard_transcription(expected_json))
+            return
+
+        # If we have the JSON (either found or just created), proceed with dashboard
+        self._run_dashboard_pipeline(latest_json)
+
+    def _transcribe_for_dashboard(self, settings: Dict[str, Any], audio_path: Path):
+        """Transcribe audio file for dashboard (runs in background thread)"""
+        try:
+            self._process_transcriptions(settings)
+        except Exception as e:
+            logger.error(f"Dashboard transcription error: {e}", exc_info=True)
+            self.progress_queue.put(('log', f"\n❌ Transkriptionsfehler: {e}\n"))
+        finally:
+            self.is_processing = False
+
+    def _check_dashboard_transcription(self, expected_json: Path):
+        """Check if dashboard transcription is complete"""
+        if expected_json.exists():
+            # Transcription complete - re-enable button and run pipeline
+            self.psychoanalysis_button.config(state='normal')
+            self._log(f"\n✅ Transkription abgeschlossen: {expected_json.name}\n")
+            self._run_dashboard_pipeline(expected_json)
+        elif self.is_processing:
+            # Still processing - check again in 500ms
+            self.root.after(500, lambda: self._check_dashboard_transcription(expected_json))
+        else:
+            # Processing stopped but no file - error occurred
+            self.psychoanalysis_button.config(state='normal')
+            self._log("\n❌ Transkription fehlgeschlagen oder abgebrochen\n")
+            messagebox.showerror(
+                "Fehler",
+                "Transkription fehlgeschlagen.\n\nBitte prüfen Sie das Log für Details."
+            )
+
+    def _run_dashboard_pipeline(self, latest_json: Path):
+        """Run psychoanalysis pipeline and generate dashboard"""
         import json
         import webbrowser
         import os
@@ -726,23 +854,7 @@ class SemanticVoiceTranscriberGUI:
         from dashboard_generator import DashboardGenerator
 
         try:
-            # Find latest transcript JSON file
             output_dir = Path(self.output_dir_var.get())
-            if not output_dir.exists():
-                messagebox.showerror("Fehler", "Ausgabe-Ordner existiert nicht")
-                return
-
-            json_files = list(output_dir.glob("*.prosody.json"))
-            if not json_files:
-                messagebox.showwarning(
-                    "Keine Transkripte",
-                    "Keine Transkript-JSON-Dateien gefunden.\n\n"
-                    "Bitte führen Sie zuerst eine Transkription durch."
-                )
-                return
-
-            # Get most recent file
-            latest_json = max(json_files, key=lambda p: p.stat().st_mtime)
 
             self._log(f"\n{'='*60}")
             self._log("🧠 PSYCHOANALYSIS DASHBOARD GENERATION")
@@ -769,18 +881,31 @@ class SemanticVoiceTranscriberGUI:
             # Prepare transcript for pipeline (convert from prosody JSON format)
             utterances = []
             for seg in transcript_data.get("segments", []):
+                # Ensure speaker is never None
+                speaker = seg.get("speaker") or "Unknown"
+                # Ensure text is never None
+                text = seg.get("text") or ""
+
                 utterances.append({
                     "id": seg.get("id", 0),
-                    "speaker": seg.get("speaker", "Unknown"),
+                    "speaker": speaker,
                     "timestamp": seg.get("timestamp", "00:00:00"),
-                    "text": seg.get("text", ""),
+                    "text": text,
                     "prosody": seg.get("prosody", {})
                 })
+
+            # Filter out None values from speaker_labels
+            speaker_labels = list(set(
+                u["speaker"] for u in utterances if u["speaker"] is not None
+            ))
+            # Ensure we have at least one speaker
+            if not speaker_labels:
+                speaker_labels = ["Unknown"]
 
             pipeline_input = {
                 "transcript_meta": {
                     "file": latest_json.stem.replace(".prosody", ".md"),
-                    "speaker_labels": list(set(u["speaker"] for u in utterances)),
+                    "speaker_labels": speaker_labels,
                     "duration_seconds": transcript_data.get("duration_seconds", 0),
                     "timestamp": datetime.now().isoformat()
                 },
@@ -845,10 +970,23 @@ class SemanticVoiceTranscriberGUI:
         except Exception as e:
             logger.error(f"Dashboard generation error: {e}", exc_info=True)
             self._log(f"\n❌ Fehler: {e}\n")
-            messagebox.showerror(
-                "Fehler",
-                f"Dashboard-Generierung fehlgeschlagen:\n\n{str(e)}"
-            )
+
+            # Check if it's an OpenAI quota error
+            error_msg = str(e)
+            if "insufficient_quota" in error_msg or "429" in error_msg:
+                messagebox.showerror(
+                    "OpenAI API Quota erschöpft",
+                    "Ihr OpenAI API-Guthaben ist aufgebraucht.\n\n"
+                    "Bitte gehen Sie zu:\n"
+                    "https://platform.openai.com/account/billing/overview\n\n"
+                    "um Ihr Guthaben aufzuladen.\n\n"
+                    "Das Psychoanalysis Dashboard benötigt GPT-4 API-Zugriff."
+                )
+            else:
+                messagebox.showerror(
+                    "Fehler",
+                    f"Dashboard-Generierung fehlgeschlagen:\n\n{str(e)}"
+                )
 
     def _stop_transcription(self):
         """Stop transcription"""
