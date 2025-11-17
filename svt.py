@@ -16,7 +16,8 @@ from typing import Optional, Dict, Any
 import auto_transcriber_v4_emotion as v4
 from audio_quality_analyzer import AudioQualityAnalyzer
 from audio_preprocessor import AudioPreprocessor
-from output_formatter import OutputFormatter
+from output_formatter import OutputFormatter, SpeakerConfig
+from ato_marker_integration import ATOMarkerIntegration
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +45,17 @@ class SemanticVoiceTranscriberGUI:
         # Intelligent pipeline components
         self.quality_analyzer = AudioQualityAnalyzer()
         self.audio_preprocessor = AudioPreprocessor()
-        self.output_formatter = OutputFormatter()
+
+        # Speaker configuration and output formatting
+        self.speaker_config = SpeakerConfig(mode=SpeakerConfig.MODE_ANONYMOUS)
+        self.output_formatter = OutputFormatter(speaker_config=self.speaker_config)
+
+        # ATO Marker integration for semantic analysis
+        self.ato_integration = ATOMarkerIntegration(
+            use_curated=True,
+            confidence_threshold=0.6,
+            max_markers_per_segment=5
+        )
 
         self._create_widgets()
         self._check_progress_queue()
@@ -1138,10 +1149,22 @@ class SemanticVoiceTranscriberGUI:
         if has_prosody:
             # Use new OutputFormatter for annotated Markdown + JSON sidecar + HTML + PDF
             try:
+                # Add ATO marker detection to segments
+                if self.ato_integration.is_available():
+                    logger.info("🔍 Detecting ATO semantic markers...")
+                    result['segments'] = self.ato_integration.add_markers_to_segments(
+                        result['segments'],
+                        combine_adjacent=False
+                    )
+                    marker_summary = self.ato_integration.get_marker_summary(result['segments'])
+                    logger.info(f"   Found {marker_summary['total']} markers ({marker_summary['unique']} unique)")
+                else:
+                    logger.info("⚠️ ATO marker detection not available")
+
                 # Remove .md extension from output_path for base path
                 base_output_path = output_path.with_suffix('')
 
-                # Generate ALL formats (Markdown, JSON, HTML, PDF)
+                # Generate ALL formats (Markdown, JSON, HTML, PDF, Enhanced HTML)
                 files = self.output_formatter.format_all(
                     result,
                     audio_file.name,
@@ -1149,7 +1172,8 @@ class SemanticVoiceTranscriberGUI:
                     include_prosody_markers=True,
                     generate_html=True,
                     generate_pdf=True,
-                    generate_csv=False
+                    generate_csv=False,
+                    generate_enhanced_html=True
                 )
 
                 logger.info(f"✅ Saved annotated transcript with FusionDynamics features:")
@@ -1157,6 +1181,8 @@ class SemanticVoiceTranscriberGUI:
                 logger.info(f"   - JSON: {files['json']}")
                 if files.get('html'):
                     logger.info(f"   - HTML: {files['html']}")
+                if files.get('html_enhanced'):
+                    logger.info(f"   - Enhanced HTML: {files['html_enhanced']}")
                 if files.get('pdf'):
                     logger.info(f"   - PDF: {files['pdf']}")
 
