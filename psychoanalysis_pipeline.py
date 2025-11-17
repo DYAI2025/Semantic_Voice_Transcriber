@@ -5,6 +5,7 @@ from pathlib import Path
 from psychoanalysis_cache import CacheManager
 from turnpoint_detector import TurnpointDetector
 from psychoanalysis_api import PsychoanalysisAPI
+from psychoanalysis_api_ollama import OllamaPsychoanalysisAPI
 
 class PsychoanalysisPipeline:
     """Main orchestrator for psychoanalysis pipeline: cache → API → turnpoints → output"""
@@ -29,11 +30,25 @@ class PsychoanalysisPipeline:
         # Initialize turnpoint detector
         self.turnpoint_detector = TurnpointDetector(config_path=config_path)
 
-        # Initialize API client (only if API key exists)
-        if os.environ.get("OPENAI_API_KEY"):
-            self.api = PsychoanalysisAPI(config_path=config_path)
-        else:
-            self.api = None
+        # Initialize API client based on provider setting
+        provider = self.config.get("provider", "ollama")  # Default to free Ollama
+
+        if provider == "ollama":
+            try:
+                self.api = OllamaPsychoanalysisAPI(config_path=config_path)
+                self.provider_name = "Ollama (FREE, local)"
+            except Exception as e:
+                print(f"⚠️ Ollama not available: {e}")
+                print(f"   Falling back to OpenAI if API key is set")
+                provider = "openai"  # Fallback
+
+        if provider == "openai":
+            if os.environ.get("OPENAI_API_KEY"):
+                self.api = PsychoanalysisAPI(config_path=config_path)
+                self.provider_name = "OpenAI (requires API key)"
+            else:
+                self.api = None
+                self.provider_name = "None (no API available)"
 
     def analyze_transcript(self, transcript_data, skill_path):
         """Analyze transcript with caching, API call, and turnpoint detection
@@ -50,18 +65,26 @@ class PsychoanalysisPipeline:
 
         if cached_analysis:
             # Use cached analysis (skip API call)
+            print(f"✅ Using cached analysis (provider: {self.provider_name})")
             analysis = cached_analysis
         elif self.api:
-            # Step 2: Call OpenAI API (cache miss)
+            # Step 2: Call API (OpenAI or Ollama)
+            print(f"🔍 Analyzing with {self.provider_name}...")
             analysis = self.api.analyze_transcript(transcript_data, skill_path)
 
             # Step 3: Save to cache
             self.cache.save_analysis(transcript_data, analysis)
+            print(f"✅ Analysis complete and cached")
         else:
-            # No cache and no API key - cannot proceed
+            # No cache and no API - cannot proceed
             raise ValueError(
-                "No cached analysis found and OPENAI_API_KEY not set. "
-                "Cannot analyze transcript without API access."
+                f"No cached analysis found and no API provider available.\n"
+                f"Current provider: {self.provider_name}\n\n"
+                f"Solutions:\n"
+                f"1. Install Ollama (FREE): https://ollama.com/download\n"
+                f"   Then: ollama pull qwen2.5-coder:7b\n"
+                f"2. Set OPENAI_API_KEY environment variable (costs money)\n"
+                f"3. Set provider: ollama in config/psychoanalysis_config.yaml"
             )
 
         # Step 4: Merge prosody data from transcript into utterance_states

@@ -21,6 +21,12 @@ except ImportError:
     HTML_FORMATTER_AVAILABLE = False
     WEASYPRINT_AVAILABLE = False
 
+try:
+    from quality_validator import QualityValidator
+    QUALITY_VALIDATOR_AVAILABLE = True
+except ImportError:
+    QUALITY_VALIDATOR_AVAILABLE = False
+
 
 class SpeakerConfig:
     """
@@ -226,10 +232,11 @@ class OutputFormatter:
         generate_html: bool = True,
         generate_pdf: bool = True,
         generate_csv: bool = True,
-        generate_enhanced_html: bool = True
+        generate_enhanced_html: bool = True,
+        generate_quality_report: bool = True
     ) -> Dict[str, Optional[Path]]:
         """
-        Generate ALL output formats: Markdown, JSON, HTML, PDF, Enhanced HTML
+        Generate ALL output formats: Markdown, JSON, HTML, PDF, Enhanced HTML, Quality Report
 
         Args:
             transcription_result: Result from transcribe_with_whisper
@@ -240,10 +247,11 @@ class OutputFormatter:
             generate_pdf: Whether to generate PDF
             generate_csv: Whether to generate CSV
             generate_enhanced_html: Whether to generate enhanced therapeutic HTML
+            generate_quality_report: Whether to generate quality validation report
 
         Returns:
             Dict with paths: {'markdown': Path, 'json': Path, 'html': Path,
-                             'html_enhanced': Path, 'pdf': Path, 'csv': Path}
+                             'html_enhanced': Path, 'pdf': Path, 'csv': Path, 'quality_report': Path}
         """
         # Generate Markdown + JSON
         files = self.format_transcript(
@@ -297,7 +305,77 @@ class OutputFormatter:
         else:
             files['csv'] = None
 
+        # Generate quality report (automatic validation)
+        if generate_quality_report and QUALITY_VALIDATOR_AVAILABLE:
+            quality_report_path = self.generate_quality_report(
+                transcription_result,
+                output_path
+            )
+            files['quality_report'] = quality_report_path
+        else:
+            files['quality_report'] = None
+
         return files
+
+    def generate_quality_report(
+        self,
+        transcription_result: Dict[str, Any],
+        output_path: Path
+    ) -> Path:
+        """
+        Generate quality validation report
+
+        Args:
+            transcription_result: Result from transcribe_with_whisper
+            output_path: Base output path (without extension)
+
+        Returns:
+            Path to quality report JSON file
+        """
+        # Prepare data for validation
+        segments = transcription_result.get('segments', [])
+        prosody_features = transcription_result.get('prosody_features', [])
+        confidence_scores = transcription_result.get('confidence_scores', {})
+
+        # Build transcript JSON for validator
+        transcript_json = {
+            "meta": {
+                "file": str(output_path.name),
+                "duration_seconds": segments[-1].get('end', 0.0) if segments else 0.0,
+                "model": transcription_result.get('model', 'unknown')
+            },
+            "segments": [
+                {
+                    "id": i,
+                    "speaker": seg.get('speaker', None),
+                    "text": seg.get('text', '').strip(),
+                    "confidence": confidence_scores.get('segments', [])[i].get('confidence', 0.0)
+                    if i < len(confidence_scores.get('segments', [])) else 0.0,
+                    "ato_markers": seg.get('ato_markers', [])
+                }
+                for i, seg in enumerate(segments)
+            ]
+        }
+
+        # Build prosody JSON
+        prosody_json = None
+        if prosody_features:
+            prosody_json = {
+                "segments": prosody_features
+            }
+
+        # Run validation
+        validator = QualityValidator()
+        issues = validator.validate_transcript(transcript_json, prosody_json)
+
+        # Generate report
+        quality_report_path = output_path.with_suffix('.quality_report.json')
+        report = validator.generate_quality_report(issues, quality_report_path)
+
+        # Also print to console for immediate feedback
+        validator.print_quality_report(issues)
+
+        return quality_report_path
 
     def generate_csv(
         self,

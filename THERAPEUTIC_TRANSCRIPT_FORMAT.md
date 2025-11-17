@@ -439,6 +439,44 @@ self.ato_integration = ATOMarkerIntegration(
    ```
 2. Ensure audio has at least 5 segments for accurate baseline
 
+### Issue: Stale Python Cache (New Transcripts Show Old Format)
+
+**Symptoms:**
+- Speakers show "Unknown" even after code update
+- Wrong ATO markers appearing (e.g., only "ATO_OFFENDED_SILENCE")
+- Transcripts don't reflect recent code changes
+
+**Causes:**
+Python bytecode cache (.pyc files) from before code updates
+
+**Solutions:**
+1. Clear Python cache completely:
+   ```bash
+   cd Super_semantic_whisper/
+   find . -name "*.pyc" -delete
+   find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null
+   ```
+
+2. Restart SVT GUI:
+   ```bash
+   python3 svt.py
+   ```
+
+3. Verify fresh code is loaded:
+   ```python
+   python3 -c "
+   from output_formatter import SpeakerConfig
+   print('✅ Fresh code loaded')
+   "
+   ```
+
+**Prevention:**
+Always clear cache after `git pull` or code updates:
+```bash
+# Add to workflow
+git pull && find . -name "*.pyc" -delete && python3 svt.py
+```
+
 ---
 
 ## Best Practices

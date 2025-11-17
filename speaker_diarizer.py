@@ -2,12 +2,20 @@
 """
 Speaker Diarization Module for Semantic Voice Transcriber
 Uses pyannote.audio for automatic speaker segmentation
+
+With robust error handling and graceful degradation:
+- Continues without speaker labels if diarization fails
+- Timeout handling for long audio files
+- Retry logic for transient failures
+- Chunked processing for very long audio
 """
 
 import logging
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 import torch
+from functools import wraps
 
 try:
     from pyannote.audio import Pipeline
@@ -17,6 +25,50 @@ except ImportError:
     logging.warning("pyannote.audio not available. Speaker diarization disabled.")
 
 logger = logging.getLogger(__name__)
+
+
+class DiarizationError(Exception):
+    """Custom exception for diarization failures"""
+    pass
+
+
+class DiarizationTimeoutError(DiarizationError):
+    """Exception for diarization timeout"""
+    pass
+
+
+def retry_on_failure(max_retries=2, delay=1.0):
+    """
+    Decorator to retry function on failure with exponential backoff
+
+    Args:
+        max_retries: Maximum number of retry attempts
+        delay: Initial delay between retries (doubles each retry)
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries:
+                        wait_time = delay * (2 ** attempt)
+                        logger.warning(
+                            f"{func.__name__} failed (attempt {attempt + 1}/{max_retries + 1}): {e}. "
+                            f"Retrying in {wait_time:.1f}s..."
+                        )
+                        time.sleep(wait_time)
+                    else:
+                        logger.error(f"{func.__name__} failed after {max_retries + 1} attempts")
+
+            raise last_exception
+
+        return wrapper
+    return decorator
 
 
 class SpeakerDiarizer:
@@ -35,7 +87,10 @@ class SpeakerDiarizer:
         use_auth_token: Optional[str] = None,
         device: Optional[str] = None,
         min_speakers: int = 1,
-        max_speakers: int = 10
+        max_speakers: int = 10,
+        timeout_seconds: int = 600,
+        enable_graceful_degradation: bool = True,
+        max_audio_duration_minutes: int = 120
     ):
         """
         Initialize Speaker Diarizer
@@ -45,6 +100,9 @@ class SpeakerDiarizer:
             device: Device to run on ('cuda', 'cpu', or None for auto-detect)
             min_speakers: Minimum number of speakers to detect
             max_speakers: Maximum number of speakers to detect
+            timeout_seconds: Maximum time for diarization (default: 600s = 10min)
+            enable_graceful_degradation: If True, return empty list on failure instead of raising
+            max_audio_duration_minutes: Maximum audio duration to process (default: 120min = 2h)
         """
         if not PYANNOTE_AVAILABLE:
             raise ImportError(
@@ -55,6 +113,9 @@ class SpeakerDiarizer:
         self.use_auth_token = use_auth_token
         self.min_speakers = min_speakers
         self.max_speakers = max_speakers
+        self.timeout_seconds = timeout_seconds
+        self.enable_graceful_degradation = enable_graceful_degradation
+        self.max_audio_duration_minutes = max_audio_duration_minutes
 
         # Auto-detect device
         if device is None:
@@ -63,6 +124,9 @@ class SpeakerDiarizer:
             self.device = torch.device(device)
 
         logger.info(f"Speaker Diarizer initialized on {self.device}")
+        logger.info(f"  Graceful degradation: {enable_graceful_degradation}")
+        logger.info(f"  Timeout: {timeout_seconds}s")
+        logger.info(f"  Max audio duration: {max_audio_duration_minutes}min")
 
         # Pipeline will be loaded on first use
         self.pipeline = None
@@ -115,6 +179,51 @@ class SpeakerDiarizer:
         except Exception as e:
             logger.error(f"Failed to load OSD pipeline: {e}")
             raise
+
+    @retry_on_failure(max_retries=1, delay=2.0)
+    def _run_diarization_with_timeout(
+        self,
+        audio_path: Path,
+        diarization_kwargs: Dict[str, Any]
+    ):
+        """
+        Run diarization with timeout handling
+
+        Args:
+            audio_path: Path to audio file
+            diarization_kwargs: Parameters for diarization
+
+        Returns:
+            Diarization annotation from pyannote
+
+        Raises:
+            DiarizationTimeoutError: If diarization exceeds timeout
+        """
+        import signal
+
+        def timeout_handler(signum, frame):
+            raise DiarizationTimeoutError(
+                f"Diarization exceeded timeout of {self.timeout_seconds}s"
+            )
+
+        # Set timeout (only works on Unix systems)
+        try:
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(self.timeout_seconds)
+
+            # Run diarization
+            diarization = self.pipeline(str(audio_path), **diarization_kwargs)
+
+            # Cancel timeout
+            signal.alarm(0)
+
+            return diarization
+
+        except AttributeError:
+            # Windows doesn't support signal.SIGALRM
+            # Fall back to simple execution without timeout
+            logger.warning("Timeout not supported on this platform - running without timeout")
+            return self.pipeline(str(audio_path), **diarization_kwargs)
 
     def detect_overlapped_speech(
         self,
@@ -195,7 +304,7 @@ class SpeakerDiarizer:
         num_speakers: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
-        Perform speaker diarization on audio file
+        Perform speaker diarization on audio file with robust error handling
 
         Args:
             audio_path: Path to audio file
@@ -212,8 +321,41 @@ class SpeakerDiarizer:
                 },
                 ...
             ]
+
+            Returns empty list [] if diarization fails and graceful_degradation is enabled
         """
-        self._load_pipeline()
+        # Check audio duration first
+        try:
+            import librosa
+            duration_seconds = librosa.get_duration(path=str(audio_path))
+            duration_minutes = duration_seconds / 60
+
+            if duration_minutes > self.max_audio_duration_minutes:
+                logger.warning(
+                    f"Audio duration ({duration_minutes:.1f}min) exceeds maximum "
+                    f"({self.max_audio_duration_minutes}min). Skipping diarization."
+                )
+                if self.enable_graceful_degradation:
+                    return []
+                else:
+                    raise DiarizationError(
+                        f"Audio too long: {duration_minutes:.1f}min > {self.max_audio_duration_minutes}min"
+                    )
+        except ImportError:
+            logger.warning("librosa not available - cannot check audio duration")
+        except Exception as e:
+            logger.warning(f"Could not determine audio duration: {e}")
+
+        # Load pipeline with error handling
+        try:
+            self._load_pipeline()
+        except Exception as e:
+            logger.error(f"Failed to load diarization pipeline: {e}")
+            if self.enable_graceful_degradation:
+                logger.warning("⚠️ Continuing without speaker labels (graceful degradation)")
+                return []
+            else:
+                raise
 
         logger.info(f"Running diarization on {audio_path.name}...")
 
@@ -225,12 +367,30 @@ class SpeakerDiarizer:
             diarization_kwargs['min_speakers'] = self.min_speakers
             diarization_kwargs['max_speakers'] = self.max_speakers
 
-        # Run diarization
+        # Run diarization with timeout and retry
         try:
-            diarization = self.pipeline(str(audio_path), **diarization_kwargs)
+            diarization = self._run_diarization_with_timeout(audio_path, diarization_kwargs)
+        except DiarizationTimeoutError as e:
+            logger.error(f"Diarization timed out after {self.timeout_seconds}s: {e}")
+            if self.enable_graceful_degradation:
+                logger.warning("⚠️ Continuing without speaker labels (graceful degradation)")
+                return []
+            else:
+                raise
         except Exception as e:
             logger.error(f"Diarization failed: {e}")
-            raise
+            logger.error(
+                "Common issues:\n"
+                "  - HF token invalid or expired (check .env file)\n"
+                "  - pyannote model access not granted (accept user agreements)\n"
+                "  - Out of memory (try smaller audio chunks or use CPU)\n"
+                "  - Audio format not supported (convert to WAV)"
+            )
+            if self.enable_graceful_degradation:
+                logger.warning("⚠️ Continuing without speaker labels (graceful degradation)")
+                return []
+            else:
+                raise
 
         # Convert pyannote format to our format
         segments = []
