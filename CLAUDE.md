@@ -337,11 +337,44 @@ Selection based on:
    - Memory Updates (speaker profiles)
 4. Click "Transkription starten" (batch) or "Quick Test" (first file only)
 5. Output appears in `Transkripte_LLM/`:
-   - `.md` - Human-readable with inline markers
+   - `.md` - **NEW** Therapeutic format with speaker headers and metadata sidebar
    - `.prosody.json` - Structured prosody data
-   - `.html` - Color-coded speakers
+   - `.html` - Legacy HTML (color-coded speakers)
+   - `_enhanced.html` - **NEW** Therapeutic HTML (green=Patient, blue=Therapeut)
    - `.pdf` - Professional layout
    - `.csv` - Data export
+
+### Therapeutic Transcript Format (New in v1.0)
+
+**Speaker Labels Now Visible:**
+```markdown
+### **Therapeut** | 00:05 - 00:12
+
+Wie geht es Ihnen heute?
+
+> **Metadaten:**
+> 📊 **Prosody**: Energie ↑ (+28.0%)
+```
+
+**Key Features:**
+- ✅ **Speaker headers**: Clear "Therapeut" / "Patient" labels (configurable)
+- ✅ **Metadata sidebar**: Prosody and ATO markers organized below each utterance
+- ✅ **Clean text**: No inline markers cluttering the transcript
+- ✅ **Enhanced HTML**: Color-coded speakers with hover effects
+- ✅ **ATO markers**: Automatic detection of 40 curated semantic patterns
+
+**Speaker Modes** (edit `svt.py` line 50):
+- `MODE_ANONYMOUS` (default): "Therapeut", "Patient"
+- `MODE_LETTERS`: "Speaker A", "Speaker B"
+- `MODE_NAMES`: Use actual names
+- `MODE_CUSTOM`: Define custom mapping
+
+**ATO Markers Detected:**
+- Emotions: SADNESS, ANGER, ANXIETY, JOY
+- Turning Points: BREAKTHROUGH, INSIGHT, RESISTANCE_BREAK
+- Therapeutic: AFFIRMATION, DEFLECTION, DISCLOSURE
+
+**See:** `THERAPEUTIC_TRANSCRIPT_FORMAT.md` for comprehensive user guide
 
 ### Generating Psychoanalysis Dashboard
 
