@@ -1,0 +1,12 @@
+{
+  "transcript_meta": {
+    "file": "session1.wav",
+    "speaker_labels": ["Speaker A", "Speaker B"],
+    "duration_seconds": 2.0
+  },
+  "utterances": [
+    {"id": 0, "speaker": "Speaker A", "text": "Das ist der Anfang.", "start": 0.0, "end": 0.6},
+    {"id": 1, "speaker": "Speaker A", "text": "Ich spüre eine Veränderung.", "start": 0.6, "end": 1.2},
+    {"id": 2, "speaker": "Speaker B", "text": "Das war ein Wendepunkt.", "start": 1.2, "end": 2.0}
+  ]
+}
