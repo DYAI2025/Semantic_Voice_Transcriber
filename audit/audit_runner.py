@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Dict
 
-from .feature_registry import FEATURE_REGISTRY, FeatureMetadata
+from .feature_registry import FEATURE_REGISTRY
 
 DEFAULT_DATASET = Path("testdata")
 
