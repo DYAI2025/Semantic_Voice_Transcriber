@@ -370,6 +370,7 @@ def process_large_audio_with_chunking(
                         torch.cuda.empty_cache()
                         logger.debug(f"Cleared CUDA cache after chunk {i+1}")
                 except ImportError:
+                    # torch is not installed; skip CUDA cache clearing
                     pass
 
                 logger.info(f"Cleared memory after processing chunk {i+1}/{len(chunk_paths)}")
