@@ -38,7 +38,7 @@ echo "=============================================="
 echo ""
 
 # Bestätigung einholen
-read -p "$(echo -e ${YELLOW}Möchten Sie die Bereinigung starten? [y/N]: ${NC})" -n 1 -r
+read -p "$(printf '%b' "${YELLOW}Möchten Sie die Bereinigung starten? [y/N]: ${NC}")" -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]
 then
