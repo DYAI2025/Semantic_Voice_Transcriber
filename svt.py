@@ -20,6 +20,9 @@ from audio_preprocessor import AudioPreprocessor
 from output_formatter import OutputFormatter, SpeakerConfig
 from ato_marker_integration import ATOMarkerIntegration
 from svt_core import health_check
+from svt_core.llm_provider.factory import build_default_manager, build_provider_from_profile
+from svt_core.config.settings import SettingsStore, ProviderProfile
+from svt_core.ui.provider_dialog import ProviderDialog
 
 try:
     from openai import RateLimitError, OpenAIError  # type: ignore
@@ -70,6 +73,10 @@ class SemanticVoiceTranscriberGUI:
             max_markers_per_segment=5
         )
 
+        self.settings_store = SettingsStore()
+        self.provider_manager = build_default_manager()
+        self._apply_provider_profile(self.settings_store.get_provider_profile())
+
         self._create_widgets()
         self._check_progress_queue()
 
@@ -86,6 +93,12 @@ class SemanticVoiceTranscriberGUI:
 
     def _create_widgets(self):
         """Create all GUI widgets"""
+
+        menubar = tk.Menu(self.root)
+        settings_menu = tk.Menu(menubar, tearoff=0)
+        settings_menu.add_command(label="Provider-Einstellungen", command=self._open_provider_dialog)
+        menubar.add_cascade(label="Einstellungen", menu=settings_menu)
+        self.root.config(menu=menubar)
 
         # Title
         title_frame = ttk.Frame(self.root, padding="10")
@@ -457,6 +470,8 @@ class SemanticVoiceTranscriberGUI:
             'chunk_duration': self.chunk_duration_var.get(),
             'overlap_duration': 5.0  # Fixed at 5 seconds for now
         }
+
+        settings['provider'] = self.provider_manager.describe_active()
 
         self._log(f"\n{'='*60}")
         self._log(f"🚀 Starte Transkription von {len(selected_files)} Datei(en)")
@@ -1376,6 +1391,24 @@ class SemanticVoiceTranscriberGUI:
 
         # Schedule next check
         self.root.after(100, self._check_progress_queue)
+
+    def _apply_provider_profile(self, profile: ProviderProfile):
+        if profile.key == "local":
+            self.provider_manager.set_active("local")
+            return
+        provider = build_provider_from_profile(profile)
+        self.provider_manager.register(profile.key, provider)
+        self.provider_manager.set_active(profile.key)
+
+    def _open_provider_dialog(self):
+        def _on_save(profile: ProviderProfile):
+            try:
+                self._apply_provider_profile(profile)
+            except Exception as exc:
+                messagebox.showerror("Provider", f"Konfiguration fehlgeschlagen: {exc}")
+
+        dialog = ProviderDialog(self.root, self.provider_manager, self.settings_store, on_save=_on_save)
+        dialog.grab_set()
 
     def _log(self, message: str):
         """Add message to log"""
