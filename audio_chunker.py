@@ -392,6 +392,3 @@ def process_large_audio_with_chunking(
                 Path(chunk_path).unlink(missing_ok=True)
             except Exception as e:
                 logger.warning(f"Could not delete temporary chunk file {chunk_path}: {e}")
-
-    logger.warning("Chunking processing completed but without result (error during processing)")
-    return {}
