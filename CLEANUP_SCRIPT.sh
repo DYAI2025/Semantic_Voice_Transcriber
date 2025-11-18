@@ -390,8 +390,12 @@ if [[ $PHASE == "5" ]] || [[ $PHASE == "A" ]] || [[ $PHASE == "a" ]]; then
     read -p "$(echo -e ${YELLOW}Phase 5 committen? [y/N]: ${NC})" -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        git commit -m "Phase 5: Centralize marker system" 2>/dev/null || print_warning "Nichts zu committen"
-        print_success "Phase 5 committed"
+        if git diff --cached --quiet; then
+            print_warning "Nichts zu committen"
+        else
+            git commit -m "Phase 5: Centralize marker system"
+            print_success "Phase 5 committed"
+        fi
     fi
     echo ""
 
