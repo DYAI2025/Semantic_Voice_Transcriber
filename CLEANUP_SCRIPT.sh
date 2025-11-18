@@ -206,7 +206,7 @@ if [[ $PHASE == "2" ]] || [[ $PHASE == "A" ]] || [[ $PHASE == "a" ]]; then
         if [ -f "$test_file" ]; then
             mv "$test_file" tests/
             print_success "Verschoben: $test_file → tests/"
-            ((MOVED++))
+            MOVED=$((MOVED + 1))
         else
             print_warning "Nicht gefunden: $test_file"
         fi
