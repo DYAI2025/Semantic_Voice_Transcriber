@@ -16,7 +16,8 @@ from typing import Optional, Dict, Any
 import auto_transcriber_v4_emotion as v4
 from audio_quality_analyzer import AudioQualityAnalyzer
 from audio_preprocessor import AudioPreprocessor
-from output_formatter import OutputFormatter
+from output_formatter import OutputFormatter, SpeakerConfig
+from ato_marker_integration import ATOMarkerIntegration
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +45,17 @@ class SemanticVoiceTranscriberGUI:
         # Intelligent pipeline components
         self.quality_analyzer = AudioQualityAnalyzer()
         self.audio_preprocessor = AudioPreprocessor()
-        self.output_formatter = OutputFormatter()
+
+        # Speaker configuration and output formatting
+        self.speaker_config = SpeakerConfig(mode=SpeakerConfig.MODE_ANONYMOUS)
+        self.output_formatter = OutputFormatter(speaker_config=self.speaker_config)
+
+        # ATO Marker integration for semantic analysis
+        self.ato_integration = ATOMarkerIntegration(
+            use_curated=True,
+            confidence_threshold=0.6,
+            max_markers_per_segment=5
+        )
 
         self._create_widgets()
         self._check_progress_queue()
@@ -92,7 +103,7 @@ class SemanticVoiceTranscriberGUI:
 
         # Whisper model selection
         ttk.Label(quality_frame, text="Whisper-Modell:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.model_var = tk.StringVar(value="medium")
+        self.model_var = tk.StringVar(value="small")  # Changed to small for memory efficiency
         model_combo = ttk.Combobox(
             quality_frame,
             textvariable=self.model_var,
@@ -146,6 +157,44 @@ class SemanticVoiceTranscriberGUI:
             font=("Helvetica", 9, "italic")
         ).grid(row=4, column=1, columnspan=2, sticky=tk.W, padx=5)
 
+        # Audio Processing settings frame
+        processing_frame = ttk.LabelFrame(self.root, text="Audio-Verarbeitung", padding="10")
+        processing_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+
+        # Audio chunking toggle
+        ttk.Label(processing_frame, text="Audio Chunking:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.use_chunking_var = tk.BooleanVar(value=True)
+        chunking_checkbox = ttk.Checkbutton(
+            processing_frame,
+            text="Speicher-effiziente Verarbeitung großer Dateien aktivieren",
+            variable=self.use_chunking_var
+        )
+        chunking_checkbox.grid(row=0, column=1, columnspan=2, sticky=tk.W, pady=5, padx=5)
+
+        ttk.Label(
+            processing_frame,
+            text="(Teilt große Dateien in kleinere Chunks zur Speicherersparnis)",
+            font=("Helvetica", 9, "italic")
+        ).grid(row=1, column=1, columnspan=2, sticky=tk.W, padx=5)
+
+        # Chunk duration
+        ttk.Label(processing_frame, text="Chunk-Dauer (Sekunden):").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.chunk_duration_var = tk.DoubleVar(value=120.0)  # 2 minutes default (memory-optimized for low RAM)
+        chunk_duration_spin = ttk.Spinbox(
+            processing_frame,
+            from_=60.0,  # 1 minute minimum
+            to=600.0,   # 10 minutes maximum
+            increment=30.0,
+            textvariable=self.chunk_duration_var,
+            width=15
+        )
+        chunk_duration_spin.grid(row=2, column=1, sticky=tk.W, pady=5, padx=5)
+        ttk.Label(processing_frame, text="(Standard: 180 = 3 Min, RAM-freundlich)").grid(row=2, column=2, sticky=tk.W, pady=5)
+
+        # Update row positions for the features frame
+        features_frame = ttk.LabelFrame(self.root, text="Features", padding="10")
+        features_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
+
         # Feature toggles frame
         features_frame = ttk.LabelFrame(self.root, text="Features", padding="10")
         features_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
@@ -171,27 +220,34 @@ class SemanticVoiceTranscriberGUI:
             variable=self.memory_var
         ).grid(row=2, column=0, sticky=tk.W, pady=2)
 
+        self.diarization_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            features_frame,
+            text="Sprechertrennung (Speaker Diarization)",
+            variable=self.diarization_var
+        ).grid(row=3, column=0, sticky=tk.W, pady=2)
+
         # New layer features
         self.turning_points_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
             features_frame,
             text="Wendepunkte-Erkennung (Turning Points)",
             variable=self.turning_points_var
-        ).grid(row=3, column=0, sticky=tk.W, pady=2)
+        ).grid(row=4, column=0, sticky=tk.W, pady=2)
 
         self.dual_markers_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(
             features_frame,
             text="Duale Marker (Einfach + Erweitert)",
             variable=self.dual_markers_var
-        ).grid(row=4, column=0, sticky=tk.W, pady=2)
+        ).grid(row=5, column=0, sticky=tk.W, pady=2)
 
         self.enhanced_speakers_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(
             features_frame,
             text="Erweiterte Sprecherdarstellung",
             variable=self.enhanced_speakers_var
-        ).grid(row=5, column=0, sticky=tk.W, pady=2)
+        ).grid(row=6, column=0, sticky=tk.W, pady=2)
 
         # Audio file selection frame
         file_frame = ttk.LabelFrame(self.root, text="Audio-Dateien", padding="10")
@@ -243,6 +299,13 @@ class SemanticVoiceTranscriberGUI:
             command=self._run_prosody_test
         )
         self.prosody_test_button.pack(side=tk.LEFT, padx=5)
+
+        self.psychoanalysis_button = ttk.Button(
+            control_frame,
+            text="🧠 Psychoanalysis Dashboard",
+            command=self._generate_psychoanalysis_dashboard
+        )
+        self.psychoanalysis_button.pack(side=tk.LEFT, padx=5)
 
         # Progress frame
         progress_frame = ttk.LabelFrame(self.root, text="Fortschritt", padding="10")
@@ -353,7 +416,14 @@ class SemanticVoiceTranscriberGUI:
             'enable_emotion': self.emotion_var.get(),
             'enable_prosody': self.prosody_var.get(),
             'enable_memory': self.memory_var.get(),
-            'use_intelligent_pipeline': self.intelligent_pipeline_var.get()
+            'enable_diarization': self.diarization_var.get(),
+            'enable_turning_points': self.turning_points_var.get(),
+            'enable_dual_markers': self.dual_markers_var.get(),
+            'enable_enhanced_speakers': self.enhanced_speakers_var.get(),
+            'use_intelligent_pipeline': self.intelligent_pipeline_var.get(),
+            'use_audio_chunking': self.use_chunking_var.get(),
+            'chunk_duration': self.chunk_duration_var.get(),
+            'overlap_duration': 5.0  # Fixed at 5 seconds for now
         }
 
         self._log(f"\n{'='*60}")
@@ -434,19 +504,14 @@ class SemanticVoiceTranscriberGUI:
                 self.progress_queue.put(('log', f"   🔇 Silence: {quality_metrics['silence_ratio']:.2%}"))
                 self.progress_queue.put(('log', f"   ⏱️  Dauer: {quality_metrics['duration']:.1f}s\n"))
 
-                # Model selection
-                if quality_score < 0.4:
-                    optimal_model = "large"
-                    self.progress_queue.put(('log', "🎯 Niedrige Qualität → large Modell + aggressives Preprocessing"))
-                elif quality_score < 0.6:
+                # Model selection (MEMORY-OPTIMIZED)
+                # Always use small model except for extremely poor quality
+                if quality_score < 0.3:
                     optimal_model = "medium"
-                    self.progress_queue.put(('log', "🎯 Mittlere Qualität → medium Modell + moderates Preprocessing"))
-                elif quality_score < 0.8:
-                    optimal_model = "medium"
-                    self.progress_queue.put(('log', "🎯 Gute Qualität → medium Modell + leichtes Preprocessing"))
+                    self.progress_queue.put(('log', "🎯 Sehr niedrige Qualität → medium Modell + aggressives Preprocessing"))
                 else:
                     optimal_model = "small"
-                    self.progress_queue.put(('log', "🎯 Sehr gute Qualität → small Modell (schneller)"))
+                    self.progress_queue.put(('log', "🎯 Small Modell (memory-optimized)"))
             else:
                 self.progress_queue.put(('log', f"⚙️  Manuelle Einstellungen: {manual_model} Modell"))
                 optimal_model = manual_model
@@ -464,7 +529,11 @@ class SemanticVoiceTranscriberGUI:
                 quality_score=quality_score,
                 quality_analyzer=self.quality_analyzer if use_intelligent else None,
                 audio_preprocessor=self.audio_preprocessor if use_intelligent else None,
-                extract_prosody=True  # Always extract for quick test
+                extract_prosody=True,  # Always extract for quick test
+                enable_diarization=self.diarization_var.get(),
+                use_audio_chunking=self.use_chunking_var.get(),
+                chunk_duration=self.chunk_duration_var.get(),
+                overlap_duration=5.0
             )
             transcription_time = time.time() - start_time
 
@@ -583,7 +652,11 @@ class SemanticVoiceTranscriberGUI:
                 model_size='small',
                 language='de',
                 use_intelligent_pipeline=False,
-                extract_prosody=True
+                extract_prosody=True,
+                enable_diarization=self.diarization_var.get(),
+                use_audio_chunking=self.use_chunking_var.get(),
+                chunk_duration=self.chunk_duration_var.get(),
+                overlap_duration=5.0
             )
             transcription_time = time.time() - start_time
 
@@ -655,6 +728,277 @@ class SemanticVoiceTranscriberGUI:
             # Re-enable buttons
             self.progress_queue.put(('enable_buttons', None))
 
+    def _generate_psychoanalysis_dashboard(self):
+        """Select audio file, transcribe if needed, and generate psychoanalysis dashboard"""
+        # DEBUG: Log that button was clicked
+        self._log("\n" + "="*60)
+        self._log("🧠 PSYCHOANALYSIS DASHBOARD BUTTON CLICKED")
+        self._log("="*60 + "\n")
+        logger.info("Dashboard button clicked - starting workflow")
+
+        # Try to import required modules with proper error handling
+        try:
+            import json
+            import webbrowser
+            import os
+            from psychoanalysis_pipeline import PsychoanalysisPipeline
+            from dashboard_generator import DashboardGenerator
+        except ImportError as e:
+            error_msg = f"❌ Fehlende Abhängigkeiten: {str(e)}\n\n"
+            error_msg += "Bitte installieren Sie:\n"
+            error_msg += "  pip install openai>=1.0.0\n\n"
+            error_msg += "Oder starten Sie SVT mit dem Virtual Environment:\n"
+            error_msg += "  .venv/bin/python3 svt.py"
+
+            self._log(error_msg + "\n")
+            messagebox.showerror(
+                "Fehlende Abhängigkeiten",
+                "Das Psychoanalysis Dashboard benötigt das 'openai' Paket.\n\n"
+                "Bitte installieren Sie es mit:\n"
+                "  pip install openai>=1.0.0\n\n"
+                "Oder starten Sie SVT mit:\n"
+                "  .venv/bin/python3 svt.py"
+            )
+            logger.error(f"Import error in dashboard: {e}", exc_info=True)
+            return
+
+        # Step 1: File selection dialog
+        self._log("📂 Öffne Dateiauswahl-Dialog...\n")
+        audio_file = filedialog.askopenfilename(
+            title="Audio-Datei für Psychoanalysis Dashboard auswählen",
+            initialdir=self.input_dir_var.get(),
+            filetypes=[
+                ("Audio Files", "*.m4a *.opus *.wav *.mp3 *.ogg *.flac"),
+                ("All Files", "*.*")
+            ]
+        )
+
+        if not audio_file:
+            return  # User cancelled
+
+        audio_path = Path(audio_file)
+        output_dir = Path(self.output_dir_var.get())
+
+        # Step 2: Check for existing .prosody.json
+        expected_json = output_dir / f"{audio_path.stem}_transkript.prosody.json"
+
+        if expected_json.exists():
+            self._log(f"\n✅ Transkript gefunden: {expected_json.name}")
+            self._log("   Überspringe Transkription (verwende existierende Datei)\n")
+            latest_json = expected_json
+        else:
+            # Step 3: Transcribe audio file (async with prosody forced ON)
+            self._log(f"\n🎤 Keine Transkription gefunden für: {audio_path.name}")
+            self._log("   Starte Transkription mit Prosody-Analyse...\n")
+
+            # Prepare settings for transcription
+            settings = {
+                'audio_files': [audio_path],
+                'model': self.model_var.get(),
+                'language': self.language_var.get() if self.language_var.get() != "auto" else None,
+                'enable_prosody': True,  # FORCED ON for dashboard
+                'enable_emotion': self.emotion_var.get(),
+                'enable_diarization': self.diarization_var.get(),
+                'enable_memory': self.memory_var.get(),
+                'use_intelligent_pipeline': self.intelligent_pipeline_var.get(),
+                'use_audio_chunking': self.chunking_var.get(),
+                'chunk_duration': float(self.chunk_duration_var.get()),
+                'overlap_duration': float(self.overlap_duration_var.get()),
+                'confidence_threshold': float(self.confidence_threshold_var.get()),
+                'output_dir': output_dir
+            }
+
+            # Disable dashboard button during transcription
+            self.psychoanalysis_button.config(state='disabled')
+            self.is_processing = True
+
+            # Run transcription in background thread
+            self.processing_thread = threading.Thread(
+                target=self._transcribe_for_dashboard,
+                args=(settings, audio_path),
+                daemon=True
+            )
+            self.processing_thread.start()
+
+            # Wait for transcription to complete (check every 500ms)
+            self.root.after(500, lambda: self._check_dashboard_transcription(expected_json))
+            return
+
+        # If we have the JSON (either found or just created), proceed with dashboard
+        self._run_dashboard_pipeline(latest_json)
+
+    def _transcribe_for_dashboard(self, settings: Dict[str, Any], audio_path: Path):
+        """Transcribe audio file for dashboard (runs in background thread)"""
+        try:
+            self._process_transcriptions(settings)
+        except Exception as e:
+            logger.error(f"Dashboard transcription error: {e}", exc_info=True)
+            self.progress_queue.put(('log', f"\n❌ Transkriptionsfehler: {e}\n"))
+        finally:
+            self.is_processing = False
+
+    def _check_dashboard_transcription(self, expected_json: Path):
+        """Check if dashboard transcription is complete"""
+        if expected_json.exists():
+            # Transcription complete - re-enable button and run pipeline
+            self.psychoanalysis_button.config(state='normal')
+            self._log(f"\n✅ Transkription abgeschlossen: {expected_json.name}\n")
+            self._run_dashboard_pipeline(expected_json)
+        elif self.is_processing:
+            # Still processing - check again in 500ms
+            self.root.after(500, lambda: self._check_dashboard_transcription(expected_json))
+        else:
+            # Processing stopped but no file - error occurred
+            self.psychoanalysis_button.config(state='normal')
+            self._log("\n❌ Transkription fehlgeschlagen oder abgebrochen\n")
+            messagebox.showerror(
+                "Fehler",
+                "Transkription fehlgeschlagen.\n\nBitte prüfen Sie das Log für Details."
+            )
+
+    def _run_dashboard_pipeline(self, latest_json: Path):
+        """Run psychoanalysis pipeline and generate dashboard"""
+        import json
+        import webbrowser
+        import os
+        from psychoanalysis_pipeline import PsychoanalysisPipeline
+        from dashboard_generator import DashboardGenerator
+
+        try:
+            output_dir = Path(self.output_dir_var.get())
+
+            self._log(f"\n{'='*60}")
+            self._log("🧠 PSYCHOANALYSIS DASHBOARD GENERATION")
+            self._log(f"{'='*60}")
+            self._log(f"📂 Transkript: {latest_json.name}\n")
+
+            # Check for OPENAI_API_KEY
+            if not os.environ.get("OPENAI_API_KEY"):
+                response = messagebox.askyesno(
+                    "API-Schlüssel fehlt",
+                    "OPENAI_API_KEY nicht gesetzt.\n\n"
+                    "Ohne API-Schlüssel kann nur ein Test-Dashboard mit gecachten Daten "
+                    "generiert werden (falls vorhanden).\n\n"
+                    "Möchten Sie fortfahren?"
+                )
+                if not response:
+                    return
+
+            # Load transcript JSON
+            self._log("📖 Lade Transkript...")
+            with open(latest_json, 'r', encoding='utf-8') as f:
+                transcript_data = json.load(f)
+
+            # Prepare transcript for pipeline (convert from prosody JSON format)
+            utterances = []
+            for seg in transcript_data.get("segments", []):
+                # Ensure speaker is never None
+                speaker = seg.get("speaker") or "Unknown"
+                # Ensure text is never None
+                text = seg.get("text") or ""
+
+                utterances.append({
+                    "id": seg.get("id", 0),
+                    "speaker": speaker,
+                    "timestamp": seg.get("timestamp", "00:00:00"),
+                    "text": text,
+                    "prosody": seg.get("prosody", {})
+                })
+
+            # Filter out None values from speaker_labels
+            speaker_labels = list(set(
+                u["speaker"] for u in utterances if u["speaker"] is not None
+            ))
+            # Ensure we have at least one speaker
+            if not speaker_labels:
+                speaker_labels = ["Unknown"]
+
+            pipeline_input = {
+                "transcript_meta": {
+                    "file": latest_json.stem.replace(".prosody", ".md"),
+                    "speaker_labels": speaker_labels,
+                    "duration_seconds": transcript_data.get("duration_seconds", 0),
+                    "timestamp": datetime.now().isoformat()
+                },
+                "utterances": utterances
+            }
+
+            # Initialize pipeline
+            self._log("🔧 Initialisiere Psychoanalysis Pipeline...")
+            pipeline = PsychoanalysisPipeline(
+                config_path="config/psychoanalysis_config.yaml"
+            )
+
+            # Get skill path
+            skill_path = (
+                Path(__file__).parent
+                / "emotion_dynaminc-skill"
+                / "emotion-dynamics-deep-insight"
+                / "SKILL.md"
+            )
+            if not skill_path.exists():
+                # Fallback: relative zum aktuellen Arbeitsverzeichnis
+                skill_path = (
+                    Path("emotion_dynaminc-skill")
+                    / "emotion-dynamics-deep-insight"
+                    / "SKILL.md"
+                )
+
+            # Run pipeline
+            self._log("⚡ Führe Analyse durch (Cache → API → Turnpoints)...")
+            result = pipeline.analyze_transcript(pipeline_input, skill_path)
+
+            self._log(f"   ✅ Analyse abgeschlossen")
+            self._log(f"   Utterances: {len(result['utterance_states'])}")
+            self._log(f"   Turnpoints: {len(result.get('turnpoints', []))}")
+            self._log(f"   Marker: {len(result.get('marker_summary', {}).get('frequencies', {}))}")
+
+            # Generate dashboard
+            self._log("\n🎨 Generiere HTML Dashboard...")
+            generator = DashboardGenerator()
+            base_name = latest_json.stem.replace(".prosody", "")
+            dashboard_path = output_dir / f"{base_name}_psychoanalysis_dashboard.html"
+
+            generator.generate_dashboard(result, dashboard_path)
+
+            self._log(f"   ✅ Dashboard gespeichert: {dashboard_path.name}\n")
+
+            # Open in browser
+            self._log("🌐 Öffne Dashboard im Browser...")
+            webbrowser.open(f"file://{dashboard_path.absolute()}")
+
+            self._log(f"\n{'='*60}")
+            self._log("✅ DASHBOARD GENERATION ABGESCHLOSSEN")
+            self._log(f"{'='*60}\n")
+
+            messagebox.showinfo(
+                "Dashboard erstellt",
+                f"Psychoanalysis Dashboard erfolgreich erstellt!\n\n"
+                f"Datei: {dashboard_path.name}\n\n"
+                f"Das Dashboard wurde im Browser geöffnet."
+            )
+
+        except Exception as e:
+            logger.error(f"Dashboard generation error: {e}", exc_info=True)
+            self._log(f"\n❌ Fehler: {e}\n")
+
+            # Check if it's an OpenAI quota error
+            error_msg = str(e)
+            if "insufficient_quota" in error_msg or "429" in error_msg:
+                messagebox.showerror(
+                    "OpenAI API Quota erschöpft",
+                    "Ihr OpenAI API-Guthaben ist aufgebraucht.\n\n"
+                    "Bitte gehen Sie zu:\n"
+                    "https://platform.openai.com/account/billing/overview\n\n"
+                    "um Ihr Guthaben aufzuladen.\n\n"
+                    "Das Psychoanalysis Dashboard benötigt GPT-4 API-Zugriff."
+                )
+            else:
+                messagebox.showerror(
+                    "Fehler",
+                    f"Dashboard-Generierung fehlgeschlagen:\n\n{str(e)}"
+                )
+
     def _stop_transcription(self):
         """Stop transcription"""
         self.is_processing = False
@@ -693,19 +1037,14 @@ class SemanticVoiceTranscriberGUI:
                             f"Clipping: {quality_metrics['clipping_ratio']:.2%}"
                         ))
 
-                        # Select optimal model based on quality
-                        if quality_score < 0.4:
-                            optimal_model = "large"
-                            self.progress_queue.put(('log', "    🎯 Niedrige Qualität → large Modell + aggressives Preprocessing"))
-                        elif quality_score < 0.6:
+                        # Select optimal model based on quality (MEMORY-OPTIMIZED)
+                        # Always use small model except for extremely poor quality
+                        if quality_score < 0.3:
                             optimal_model = "medium"
-                            self.progress_queue.put(('log', "    🎯 Mittlere Qualität → medium Modell + moderates Preprocessing"))
-                        elif quality_score < 0.8:
-                            optimal_model = "medium"
-                            self.progress_queue.put(('log', "    🎯 Gute Qualität → medium Modell ohne Preprocessing"))
+                            self.progress_queue.put(('log', "    🎯 Sehr niedrige Qualität → medium Modell + aggressives Preprocessing"))
                         else:
                             optimal_model = "small"
-                            self.progress_queue.put(('log', "    🎯 Sehr gute Qualität → small Modell (schneller)"))
+                            self.progress_queue.put(('log', "    🎯 Small Modell (memory-optimized)"))
 
                     # Transcribe
                     self.progress_queue.put(('log', f"    🎤 Transkribiere mit {optimal_model} Modell..."))
@@ -718,7 +1057,11 @@ class SemanticVoiceTranscriberGUI:
                         quality_score=quality_score,
                         quality_analyzer=self.quality_analyzer if use_intelligent else None,
                         audio_preprocessor=self.audio_preprocessor if use_intelligent else None,
-                        extract_prosody=settings.get('enable_prosody', False)
+                        extract_prosody=settings.get('enable_prosody', False),
+                        enable_diarization=settings.get('enable_diarization', False),
+                        use_audio_chunking=settings.get('use_audio_chunking', True),
+                        chunk_duration=settings.get('chunk_duration', 300.0),
+                        overlap_duration=settings.get('overlap_duration', 5.0)
                     )
 
                     # Analyze emotion if enabled
@@ -804,21 +1147,44 @@ class SemanticVoiceTranscriberGUI:
         )
 
         if has_prosody:
-            # Use new OutputFormatter for annotated Markdown + JSON sidecar
+            # Use new OutputFormatter for annotated Markdown + JSON sidecar + HTML + PDF
             try:
+                # Add ATO marker detection to segments
+                if self.ato_integration.is_available():
+                    logger.info("🔍 Detecting ATO semantic markers...")
+                    result['segments'] = self.ato_integration.add_markers_to_segments(
+                        result['segments'],
+                        combine_adjacent=False
+                    )
+                    marker_summary = self.ato_integration.get_marker_summary(result['segments'])
+                    logger.info(f"   Found {marker_summary['total']} markers ({marker_summary['unique']} unique)")
+                else:
+                    logger.info("⚠️ ATO marker detection not available")
+
                 # Remove .md extension from output_path for base path
                 base_output_path = output_path.with_suffix('')
 
-                files = self.output_formatter.format_transcript(
+                # Generate ALL formats (Markdown, JSON, HTML, PDF, Enhanced HTML)
+                files = self.output_formatter.format_all(
                     result,
                     audio_file.name,
                     base_output_path,
-                    include_prosody_markers=True
+                    include_prosody_markers=True,
+                    generate_html=True,
+                    generate_pdf=True,
+                    generate_csv=False,
+                    generate_enhanced_html=True
                 )
 
-                logger.info(f"✅ Saved annotated transcript with prosody:")
+                logger.info(f"✅ Saved annotated transcript with FusionDynamics features:")
                 logger.info(f"   - Markdown: {files['markdown']}")
                 logger.info(f"   - JSON: {files['json']}")
+                if files.get('html'):
+                    logger.info(f"   - HTML: {files['html']}")
+                if files.get('html_enhanced'):
+                    logger.info(f"   - Enhanced HTML: {files['html_enhanced']}")
+                if files.get('pdf'):
+                    logger.info(f"   - PDF: {files['pdf']}")
 
             except Exception as e:
                 logger.error(f"Error using OutputFormatter: {e}")

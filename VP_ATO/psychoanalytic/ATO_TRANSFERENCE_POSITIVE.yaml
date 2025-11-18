@@ -1,0 +1,24 @@
+id: ATO_TRANSFERENCE_POSITIVE
+frame:
+  signal:
+    - pattern: '\b(Sie sind so|Sie verstehen mich|nur Sie)\b'
+      flags: IGNORECASE
+    - pattern: '\b(wunderbar|fantastisch|perfekt) (Therapeut|Arzt)\b'
+      flags: IGNORECASE
+    - pattern: '\b(niemand sonst|endlich jemand|dankbar)\b'
+      flags: IGNORECASE
+  concept: "Idealisierung des Therapeuten als Übertragungsphänomen"
+  pragmatics: "Positive Übertragung früherer Beziehungsmuster"
+  narrative: "Kann therapeutische Allianz stärken, birgt aber Enttäuschungsrisiko"
+examples:
+  - "Sie sind so verständnisvoll, niemand sonst versteht mich."
+  - "Sie sind der beste Therapeut, den ich je hatte."
+  - "Endlich jemand, der mir wirklich zuhört."
+  - "Ich bin Ihnen so dankbar, Sie haben mein Leben verändert."
+  - "Nur Sie können mir helfen."
+  - "Sie sind perfekt, ich wünschte, Sie wären mein Vater gewesen."
+category: transference
+severity: medium
+co_occurs_with:
+  - ATO_DEFENSE_REGRESSION
+  - high_valence

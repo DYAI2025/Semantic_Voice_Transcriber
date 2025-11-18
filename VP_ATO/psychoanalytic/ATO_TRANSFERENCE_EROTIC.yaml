@@ -1,0 +1,23 @@
+id: ATO_TRANSFERENCE_EROTIC
+frame:
+  signal:
+    - pattern: '\b(attraktiv|anziehend|schön|hübsch) (sind Sie|finde ich Sie)\b'
+      flags: IGNORECASE
+    - pattern: '\b(romantisch|verliebt|Gefühle für Sie)\b'
+      flags: IGNORECASE
+    - pattern: '\b(Partnerschaft|Beziehung) (mit Ihnen)\b'
+      flags: IGNORECASE
+  concept: "Erotisierte Übertragung auf den Therapeuten"
+  pragmatics: "Sexualisierung als Abwehr oder Wiederholung früher Muster"
+  narrative: "Erfordert professionelle Grenzsetzung und Bearbeitung"
+examples:
+  - "Ich finde Sie sehr attraktiv."
+  - "Ich habe romantische Gefühle für Sie entwickelt."
+  - "Könnten wir nicht auch außerhalb der Therapie etwas unternehmen?"
+  - "Sie sind so anziehend, ich denke oft an Sie."
+  - "Ich wünschte, wir könnten eine Beziehung haben."
+category: transference
+severity: high
+co_occurs_with:
+  - ATO_TRANSFERENCE_POSITIVE
+  - ATO_THEME_ABANDONMENT

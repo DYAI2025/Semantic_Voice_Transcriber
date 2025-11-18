@@ -1,0 +1,23 @@
+id: ATO_RESISTANCE_LATE_CANCEL
+frame:
+  signal:
+    - pattern: '\b(wollte (nicht|eigentlich nicht) kommen)\b'
+      flags: IGNORECASE
+    - pattern: '\b(fast abgesagt|beinahe nicht gekommen)\b'
+      flags: IGNORECASE
+    - pattern: '\b(hatte überlegt zu absagen)\b'
+      flags: IGNORECASE
+  concept: "Ambivalenz zur Therapie durch erwähnte Absageabsicht"
+  pragmatics: "Indiziert Widerstand gegen therapeutischen Prozess"
+  narrative: "Zeigt Nähe-Distanz-Konflikt zur therapeutischen Beziehung"
+examples:
+  - "Ich wollte eigentlich nicht kommen heute."
+  - "Hatte fast abgesagt, war mir nicht sicher."
+  - "Beinahe nicht gekommen, fühlte mich nicht danach."
+  - "Hatte überlegt zu absagen, aber dann..."
+  - "Wollte nicht kommen, aber ich bin ja doch hier."
+category: resistance
+severity: medium
+co_occurs_with:
+  - ATO_TRANSFERENCE_NEGATIVE
+  - ATO_THEME_SEPARATION_ANXIETY

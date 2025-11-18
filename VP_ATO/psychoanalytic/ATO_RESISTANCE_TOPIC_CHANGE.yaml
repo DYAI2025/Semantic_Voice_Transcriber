@@ -1,0 +1,24 @@
+id: ATO_RESISTANCE_TOPIC_CHANGE
+frame:
+  signal:
+    - pattern: '\b(übrigens|apropos|eigentlich wollte ich)\b'
+      flags: IGNORECASE
+    - pattern: '\b(aber|anderes Thema|lassen wir das)\b'
+      flags: IGNORECASE
+    - pattern: '\b(zurück zu|sprechen wir über)\b'
+      flags: IGNORECASE
+  concept: "Abrupter Themenwechsel zur Vermeidung unangenehmer Inhalte"
+  pragmatics: "Indiziert Ausweichen vor emotional schwierigen Bereichen"
+  narrative: "Häufig wenn Gespräch in Richtung Kernsymptomatik geht"
+examples:
+  - "Übrigens, gestern ist mir etwas Lustiges passiert..."
+  - "Apropos, ich wollte noch etwas anderes erzählen."
+  - "Aber eigentlich... lassen wir das Thema."
+  - "Anderes Thema: Wie geht es Ihnen?"
+  - "Zurück zu dem, was ich vorher sagen wollte..."
+  - "Können wir über etwas Angenehmeres sprechen?"
+category: resistance
+severity: low
+co_occurs_with:
+  - ATO_DEFENSE_RATIONALIZATION
+  - high_arousal
