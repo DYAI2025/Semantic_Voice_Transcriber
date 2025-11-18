@@ -9,7 +9,6 @@ detect and annotate therapeutic markers in transcript text.
 
 import logging
 from typing import Dict, List, Any
-from pathlib import Path
 
 # Import ATO Marker Detector
 try:
