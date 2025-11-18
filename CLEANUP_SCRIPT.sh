@@ -387,7 +387,7 @@ if [[ $PHASE == "5" ]] || [[ $PHASE == "A" ]] || [[ $PHASE == "a" ]]; then
     print_step "5.6 Committe Änderungen..."
     git add -A 2>/dev/null || true
     git status --short
-    read -p "$(echo -e ${YELLOW}Phase 5 committen? [y/N]: ${NC})" -n 1 -r
+    read -p "$(printf '%b' "${YELLOW}Phase 5 committen? [y/N]: ${NC}")" -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if git diff --cached --quiet; then
