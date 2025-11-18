@@ -988,6 +988,7 @@ def transcribe_with_whisper(
                 torch.cuda.empty_cache()
                 logger.debug("Cleared CUDA cache after transcription")
         except ImportError:
+            # torch is not installed; skipping CUDA cache cleanup
             pass
 
         logger.debug("Whisper model deleted and memory cleaned")
