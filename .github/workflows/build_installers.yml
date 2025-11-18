@@ -44,11 +44,12 @@ jobs:
       - name: Build app bundle
         run: |
           bash installer/macos/build_app.sh
+          hdiutil create -volname SVT -srcfolder dist/SVT.app -ov -format UDZO dist/SVT.dmg
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: svt-macos-app
-          path: dist/SVT.app
+          name: svt-macos-dmg
+          path: dist/SVT.dmg
 
   build-linux:
     runs-on: ubuntu-latest
@@ -65,8 +66,15 @@ jobs:
       - name: Build AppDir
         run: |
           bash installer/linux/build_appimage.sh
-      - name: Upload AppDir
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          ./appimagetool-x86_64.AppImage dist/SVT.AppDir dist/SVT.AppImage
+          bash installer/linux/build_deb.sh
+          dpkg-deb --build dist/svt-deb dist/svt.deb
+      - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: svt-appdir
-          path: dist/SVT.AppDir
+          name: svt-linux-artifacts
+          path: |
+            dist/SVT.AppImage
+            dist/svt.deb

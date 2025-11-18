@@ -20,4 +20,3 @@ cd /usr/share/svt
 ./svt_env/bin/python3 scripts/setup_local_stack.py --env /usr/share/svt/.env --overwrite-env || true
 POST
 chmod 755 "$PKGDIR/DEBIAN/postinst"
-echo "Run dpkg-deb --build dist/svt-deb to create package"
