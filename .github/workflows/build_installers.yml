@@ -1,0 +1,72 @@
+name: Build Installers
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/professional-quality-enhancement
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Build NSIS installer
+        run: |
+          choco install nsis -y
+          makensis installer\windows\svt_lite.nsi
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: svt-lite-installer
+          path: SVT-Lite-Setup.exe
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Build app bundle
+        run: |
+          bash installer/macos/build_app.sh
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: svt-macos-app
+          path: dist/SVT.app
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Build AppDir
+        run: |
+          bash installer/linux/build_appimage.sh
+      - name: Upload AppDir
+        uses: actions/upload-artifact@v4
+        with:
+          name: svt-appdir
+          path: dist/SVT.AppDir
