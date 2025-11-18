@@ -269,7 +269,7 @@ if [[ $PHASE == "3" ]] || [[ $PHASE == "A" ]] || [[ $PHASE == "a" ]]; then
     print_step "3.3 Räume enhanced_components/ auf..."
     if [ -d "enhanced_components" ]; then
         # Prüfe ob Verzeichnis leer ist (außer __init__.py und __pycache__)
-        REMAINING=$(find enhanced_components -type f ! -name "__init__.py" ! -path "*/\__pycache__/*" | wc -l)
+        REMAINING=$(find enhanced_components -type f ! -name "__init__.py" ! -path "*/__pycache__/*" | wc -l)
         if [ "$REMAINING" -eq 0 ]; then
             rm -rf enhanced_components/
             print_success "Gelöscht: enhanced_components/ (leer)"
