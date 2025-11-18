@@ -494,7 +494,7 @@ mv speaker_visualizer_v2.py archive/
 mv enhanced_components/speaker_visualizer.py ./
 
 # 3. Verzeichnis aufräumen
-rmdir enhanced_components/
+rm -rf enhanced_components/
 
 # 4. Commit
 git add -A
