@@ -5,6 +5,7 @@ Semantic Voice Transcriber (SVT) - Professional one-click workflow
 High-quality transcription with prosody analysis, emotion detection, and confidence scoring
 """
 
+import os
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 from pathlib import Path
@@ -18,6 +19,15 @@ from audio_quality_analyzer import AudioQualityAnalyzer
 from audio_preprocessor import AudioPreprocessor
 from output_formatter import OutputFormatter, SpeakerConfig
 from ato_marker_integration import ATOMarkerIntegration
+
+try:
+    from openai import RateLimitError, OpenAIError  # type: ignore
+except Exception:  # pragma: no cover - openai optional at runtime
+    class OpenAIError(Exception):
+        """Fallback OpenAI error when SDK is unavailable."""
+
+    class RateLimitError(OpenAIError):
+        """Fallback rate limit error when SDK is unavailable."""
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +46,7 @@ class SemanticVoiceTranscriberGUI:
         self.progress_queue = queue.Queue()
         self.processing_thread = None
         self.is_processing = False
+        self._dashboard_retry_count = 0
 
         # Default paths
         self.input_dir = Path("Eingang")
@@ -837,6 +848,64 @@ class SemanticVoiceTranscriberGUI:
         finally:
             self.is_processing = False
 
+    def _get_dashboard_key_alias(self) -> str:
+        """Return masked alias for the currently active OpenAI API key."""
+        alias = os.environ.get("OPENAI_API_KEY_ALIAS")
+        if alias:
+            return alias
+        profile = os.environ.get("OPENAI_API_PROFILE")
+        if profile:
+            return profile
+        return "primary"
+
+    def _build_dashboard_log_context(self, pipeline: Optional[Any]) -> Dict[str, Any]:
+        """Collect logging context for dashboard API failures."""
+        provider = getattr(pipeline, "provider_name", "unknown")
+        api_client = getattr(pipeline, "api", None) if pipeline else None
+        model = None
+        alias = None
+        if api_client and hasattr(api_client, "api_key_alias"):
+            alias = getattr(api_client, "api_key_alias")
+        if api_client and hasattr(api_client, "model"):
+            model = api_client.model
+        elif pipeline and isinstance(getattr(pipeline, "config", None), dict):
+            model = pipeline.config.get("openai", {}).get("model")
+        retry_count = getattr(api_client, "last_retry_count", self._dashboard_retry_count)
+        context = {
+            "provider": provider,
+            "model": model or "unknown",
+            "key_alias": alias or self._get_dashboard_key_alias(),
+            "retry_count": retry_count
+        }
+        return context
+
+    def _handle_dashboard_error(
+        self,
+        user_message: str,
+        error: Exception,
+        pipeline: Optional[Any]
+    ) -> None:
+        """Log dashboard failures and show a GUI notification."""
+        context = self._build_dashboard_log_context(pipeline)
+        context_text = (
+            f"provider={context['provider']}"
+            f" · model={context['model']}"
+            f" · key_alias={context['key_alias']}"
+            f" · retries={context['retry_count']}"
+        )
+        logger.error(
+            "Dashboard pipeline error: %s | %s",
+            user_message,
+            context_text,
+            exc_info=error
+        )
+        self._log(f"\n❌ Dashboard-Fehler: {user_message}")
+        self._log(f"   ↳ Kontext: {context_text}\n")
+        messagebox.showerror(
+            "Dashboard-Fehler",
+            f"{user_message}\n\nDetails: {context_text}"
+        )
+
     def _check_dashboard_transcription(self, expected_json: Path):
         """Check if dashboard transcription is complete"""
         if expected_json.exists():
@@ -863,6 +932,9 @@ class SemanticVoiceTranscriberGUI:
         import os
         from psychoanalysis_pipeline import PsychoanalysisPipeline
         from dashboard_generator import DashboardGenerator
+
+        pipeline = None
+        self._dashboard_retry_count = 0
 
         try:
             output_dir = Path(self.output_dir_var.get())
@@ -947,6 +1019,8 @@ class SemanticVoiceTranscriberGUI:
             # Run pipeline
             self._log("⚡ Führe Analyse durch (Cache → API → Turnpoints)...")
             result = pipeline.analyze_transcript(pipeline_input, skill_path)
+            if hasattr(pipeline, "api"):
+                self._dashboard_retry_count = getattr(pipeline.api, "last_retry_count", 0)
 
             self._log(f"   ✅ Analyse abgeschlossen")
             self._log(f"   Utterances: {len(result['utterance_states'])}")
@@ -977,7 +1051,27 @@ class SemanticVoiceTranscriberGUI:
                 f"Datei: {dashboard_path.name}\n\n"
                 f"Das Dashboard wurde im Browser geöffnet."
             )
-
+        except RateLimitError as e:
+            self._handle_dashboard_error(
+                "OpenAI-Rate-Limit erreicht. Bitte warten oder API-Profil wechseln.",
+                e,
+                pipeline
+            )
+            return
+        except OpenAIError as e:
+            self._handle_dashboard_error(
+                "OpenAI-Dashboard-Analyse fehlgeschlagen.",
+                e,
+                pipeline
+            )
+            return
+        except Exception as e:
+            self._handle_dashboard_error(
+                "Dashboard-Analyse fehlgeschlagen.",
+                e,
+                pipeline
+            )
+            return
         except Exception as e:
             logger.error(f"Dashboard generation error: {e}", exc_info=True)
             self._log(f"\n❌ Fehler: {e}\n")
