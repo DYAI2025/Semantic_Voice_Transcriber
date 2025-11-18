@@ -12,7 +12,7 @@ MEMORY_DIR = Path("Memory")
 
 def memory_availability(meta: "FeatureMetadata") -> Dict[str, str]:
     try:
-        import psychoanalysis_cache  # noqa
+        from psychoanalysis_cache import CacheManager  # noqa
         if not MEMORY_DIR.exists():
             return {"status": "warn", "details": "Memory directory missing"}
         return {"status": "ok", "details": "Memory modules importable"}
