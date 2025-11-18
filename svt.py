@@ -19,6 +19,7 @@ from audio_quality_analyzer import AudioQualityAnalyzer
 from audio_preprocessor import AudioPreprocessor
 from output_formatter import OutputFormatter, SpeakerConfig
 from ato_marker_integration import ATOMarkerIntegration
+from svt_core import health_check
 
 try:
     from openai import RateLimitError, OpenAIError  # type: ignore
@@ -47,6 +48,7 @@ class SemanticVoiceTranscriberGUI:
         self.processing_thread = None
         self.is_processing = False
         self._dashboard_retry_count = 0
+        self._health_status = ("unknown", "")
 
         # Default paths
         self.input_dir = Path("Eingang")
@@ -71,6 +73,17 @@ class SemanticVoiceTranscriberGUI:
         self._create_widgets()
         self._check_progress_queue()
 
+    def set_health_status(self, severity: str, summary: str):
+        colors = {
+            "ok": "#0f8c3f",
+            "warn": "#b38400",
+            "error": "#c62828",
+        }
+        self._health_status = (severity, summary)
+        label = f"Systemstatus: {severity.upper()}"
+        self.health_status_var.set(label)
+        self.health_label.configure(foreground=colors.get(severity, "#555555"))
+
     def _create_widgets(self):
         """Create all GUI widgets"""
 
@@ -91,6 +104,14 @@ class SemanticVoiceTranscriberGUI:
             font=("Helvetica", 10)
         )
         subtitle_label.pack()
+
+        self.health_status_var = tk.StringVar(value="Systemstatus: UNBEKANNT")
+        self.health_label = ttk.Label(
+            title_frame,
+            textvariable=self.health_status_var,
+            font=("Helvetica", 9, "italic")
+        )
+        self.health_label.pack()
 
         # Configuration frame
         config_frame = ttk.LabelFrame(self.root, text="Konfiguration", padding="10")
@@ -1365,15 +1386,34 @@ class SemanticVoiceTranscriberGUI:
 def main():
     """Main entry point"""
     root = tk.Tk()
+    root.withdraw()
+    ok, health_state = _run_health_gate(root)
+    if not ok:
+        root.destroy()
+        return
 
-    # Set theme
     style = ttk.Style()
     available_themes = style.theme_names()
     if 'clam' in available_themes:
         style.theme_use('clam')
 
+    root.deiconify()
     app = SemanticVoiceTranscriberGUI(root)
+    app.set_health_status(*health_state)
     root.mainloop()
+
+
+def _run_health_gate(root) -> tuple[bool, tuple[str, str]]:
+    results = health_check.run_all()
+    status, summary = health_check.summarize(results)
+    if status == "error":
+        messagebox.showerror("Systemcheck fehlgeschlagen", summary, parent=root)
+        return False, (status, summary)
+    if status == "warn":
+        messagebox.showwarning("Systemcheck Warnung", summary, parent=root)
+    else:
+        logger.info("Systemcheck OK:\n%s", summary)
+    return True, (status, summary)
 
 
 if __name__ == "__main__":
