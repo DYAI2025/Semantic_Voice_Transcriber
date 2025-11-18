@@ -4,6 +4,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Dict, List
 
+from audit.checks.emotion_checks import emotion_availability, emotion_smoke
+from audit.checks.prosody_checks import prosody_availability, prosody_smoke
+
 
 AvailabilityResult = Dict[str, str]
 SmokeResult = Dict[str, str]
@@ -33,12 +36,16 @@ FEATURE_REGISTRY: Dict[str, FeatureMetadata] = {
         name="Emotionale Analyse",
         modules=["auto_transcriber_v4_emotion.EmotionalAnalyzer"],
         description="Sentiment- und Marker-basierte Emotionserkennung.",
+        availability_check=emotion_availability,
+        smoke_test=emotion_smoke,
     ),
     "prosody": FeatureMetadata(
         key="prosody",
         name="Prosody Extraktion",
         modules=["prosody_extractor", "prosody_analyzer"],
         description="Pitch/Tempo/Energy Analyse pro Segment.",
+        availability_check=prosody_availability,
+        smoke_test=prosody_smoke,
     ),
     "memory_profile": FeatureMetadata(
         key="memory_profile",
