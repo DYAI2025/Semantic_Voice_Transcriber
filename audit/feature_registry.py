@@ -6,6 +6,11 @@ from typing import Callable, Dict, List
 
 from audit.checks.emotion_checks import emotion_availability, emotion_smoke
 from audit.checks.prosody_checks import prosody_availability, prosody_smoke
+from audit.checks.memory_checks import memory_availability, memory_smoke
+from audit.checks.diarization_checks import diarization_availability, diarization_smoke
+from audit.checks.turning_points_checks import turning_points_availability, turning_points_smoke
+from audit.checks.dual_marker_checks import dual_marker_availability, dual_marker_smoke
+from audit.checks.speaker_view_checks import speaker_view_availability, speaker_view_smoke
 
 
 AvailabilityResult = Dict[str, str]
@@ -52,30 +57,40 @@ FEATURE_REGISTRY: Dict[str, FeatureMetadata] = {
         name="Therapeutische Memory Profile",
         modules=["Memory", "psychoanalysis_cache"],
         description="Speicherung von YAML/SQLite Profilen.",
+        availability_check=memory_availability,
+        smoke_test=memory_smoke,
     ),
     "diarization": FeatureMetadata(
         key="diarization",
         name="Sprechertrennung",
         modules=["speaker_diarizer", "svt_core.audio.diarization_cpu"],
         description="pyannote + CPU-Fallback Diarisierung.",
+        availability_check=diarization_availability,
+        smoke_test=diarization_smoke,
     ),
     "turning_points": FeatureMetadata(
         key="turning_points",
         name="Wendepunkte-Erkennung",
         modules=["Turning_Points_in_Transcription"],
         description="TurningPointsLayer + Detector Pipeline.",
+        availability_check=turning_points_availability,
+        smoke_test=turning_points_smoke,
     ),
     "dual_markers": FeatureMetadata(
         key="dual_markers",
         name="Duale Marker",
         modules=["Turning_Points_in_Transcription.integration.dual_marker_system"],
         description="Kombination therapeutischer Marker-Ebenen.",
+        availability_check=dual_marker_availability,
+        smoke_test=dual_marker_smoke,
     ),
     "speaker_view": FeatureMetadata(
         key="speaker_view",
         name="Erweiterte Sprecherdarstellung",
         modules=["speaker_visualizer_v2"],
         description="Visualisierung von Sprecher-Timelines.",
+        availability_check=speaker_view_availability,
+        smoke_test=speaker_view_smoke,
     ),
 }
 

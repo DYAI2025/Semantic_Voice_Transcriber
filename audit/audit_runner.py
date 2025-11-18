@@ -7,11 +7,12 @@ from pathlib import Path
 from typing import Dict
 
 from .feature_registry import FEATURE_REGISTRY
+from .report_builder import build_report
 
 DEFAULT_DATASET = Path("testdata")
 
 
-def run_session(session_id: str, dataset_dir: Path = DEFAULT_DATASET) -> Dict[str, Dict[str, str]]:
+def run_session(session_id: str, dataset_dir: Path = DEFAULT_DATASET) -> Dict[str, object]:
     transcript_path = dataset_dir / "transcripts" / f"{session_id}.json"
     audio_path = dataset_dir / "audio" / f"{session_id}.wav"
     if not transcript_path.exists() or not audio_path.exists():
@@ -41,9 +42,10 @@ def cli():
     parser.add_argument("--output", default="audit_report.json")
     args = parser.parse_args()
 
-    report = run_session(args.session, Path(args.dataset))
+    raw = run_session(args.session, Path(args.dataset))
+    report = build_report(raw["features"], raw["session"])
     Path(args.output).write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(f"✅ Audit report written to {args.output}")
+    print(f"✅ JSON report written to {args.output}")
 
 
 if __name__ == "__main__":
