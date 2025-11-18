@@ -8,7 +8,7 @@ import librosa
 import soundfile as sf
 import numpy as np
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Optional
 import tempfile
 import logging
 
