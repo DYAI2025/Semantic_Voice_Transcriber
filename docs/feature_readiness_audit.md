@@ -16,3 +16,4 @@ See `docs/feature_readiness_scale.md`.
 
 ## CI Integration
 - `feature_audit.yml` runs the CLI on PRs, uploads reports, and enforces readiness >= 2 for critical features.
+- Gate logic: `scripts/check_readiness_gate.py` fails CI when emotions, prosody, or diarization readiness level < 2 or missing.
