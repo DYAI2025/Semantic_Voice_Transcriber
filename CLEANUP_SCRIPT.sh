@@ -357,7 +357,7 @@ if [[ $PHASE == "5" ]] || [[ $PHASE == "A" ]] || [[ $PHASE == "a" ]]; then
         if [ -f "$sem_file" ]; then
             mv "$sem_file" markers/sem/
             print_success "Verschoben: $sem_file → markers/sem/"
-            ((SEM_COUNT++))
+            SEM_COUNT=$((SEM_COUNT + 1))
         fi
     done
     print_success "Verschoben: $SEM_COUNT SEM-Marker"
