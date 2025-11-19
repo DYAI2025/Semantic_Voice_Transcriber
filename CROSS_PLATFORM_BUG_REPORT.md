@@ -2,6 +2,7 @@
 # Semantic Voice Transcriber (SVT)
 
 **Audit Datum**: 2025-11-13
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
 **Geprüft von**: Claude Code (Anthropic)
 **Branch**: `claude/check-install-cross-platform-01SEMBU2ponP4J3HGhjckTdE`
 **Status**: ✅ Alle kritischen Bugs behoben
