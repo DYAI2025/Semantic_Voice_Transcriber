@@ -1,5 +1,7 @@
 # Speaker Diarization (Phase 2b)
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## 🎤 Überblick
 
 Die automatische Sprechererkennung (Speaker Diarization) identifiziert verschiedene Sprecher in einer Audio-Aufnahme und kennzeichnet sie als **Speaker A**, **Speaker B**, **Speaker C**, etc.
