@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from dataclasses import dataclass
 from ato_correlation_types import (
     ProsodyFeatureVector,
@@ -41,7 +41,7 @@ class CorrelationEngine:
             if np.std(feature_col) > 0 and np.std(presence_array) > 0:
                 corr = np.corrcoef(feature_col, presence_array)[0, 1]
                 weight = self.config.feature_weights.get(feature_name, 1.0)
-                correlations[feature_name] = abs(corr) * weight
+                correlations[feature_name] = abs(corr) * weight if not np.isnan(corr) else 0.0
             else:
                 correlations[feature_name] = 0.0
 

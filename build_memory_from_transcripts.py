@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 class MemoryBuilder:
     def __init__(self, base_path=None):
         if base_path is None:
-            self.base_path = Path("/Users/benjaminpoersch/Library/CloudStorage/GoogleDrive-benjamin.poersch@diyrigent.de/Meine Ablage/MyMind/WhisperSprecherMatcher")
+            # Use current directory as default (cross-platform)
+            self.base_path = Path(__file__).parent
         else:
             self.base_path = Path(base_path)
         

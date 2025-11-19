@@ -9,7 +9,6 @@ Usage:
 import argparse
 import sys
 from pathlib import Path
-import yaml
 
 from ato_correlation_engine import CorrelationEngine
 from ato_correlation_config import CorrelationConfig
@@ -79,7 +78,7 @@ def main():
 
     # Save to memory
     output_file = args.output or Path(f"Memory/{args.speaker}.yaml")
-    output_file.parent.mkdir(exist_ok=True)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Saving correlations to: {output_file}")
     save_correlations_to_memory(output_file, memory_correlations)

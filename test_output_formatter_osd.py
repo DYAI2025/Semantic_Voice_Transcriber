@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-import pytest
 from pathlib import Path
+import tempfile
 from output_formatter import OutputFormatter
-import json
 
 
 def test_markdown_includes_overlap_marker():
@@ -90,7 +89,7 @@ def test_csv_includes_overlap_column():
         'confidence_scores': {'overall_confidence': 0.9, 'segments': []}
     }
 
-    output_path = Path('/tmp/test_osd_output')
+    output_path = Path(tempfile.gettempdir()) / 'test_osd_output'
     csv_path = formatter.generate_csv(transcription_result, output_path)
 
     # Read CSV and check header

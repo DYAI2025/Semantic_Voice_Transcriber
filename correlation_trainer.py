@@ -13,7 +13,10 @@ class CorrelationTrainer:
     def load_annotated_transcript(self, path: Path) -> Dict[str, Any]:
         """Load annotated transcript from YAML file."""
         with open(path, 'r') as f:
-            return yaml.safe_load(f)
+            try:
+                return yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                raise Exception(f"Failed to parse YAML transcript file '{path}': {e}")
 
     def train_from_transcript(self, transcript_path: Path) -> List[MarkerCorrelation]:
         """Train correlations from a single annotated transcript."""
@@ -71,7 +74,7 @@ class CorrelationTrainer:
                     if corr.marker_name not in all_correlations:
                         all_correlations[corr.marker_name] = []
                     all_correlations[corr.marker_name].append(corr)
-            except Exception as e:
+            except (yaml.YAMLError, OSError) as e:
                 print(f"Error training from {yaml_file}: {e}")
                 continue
 
