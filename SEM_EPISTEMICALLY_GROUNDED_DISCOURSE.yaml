@@ -1,0 +1,31 @@
+id: SEM_EPISTEMICALLY_GROUNDED_DISCOURSE
+version: '4.1'
+category: SEMANTIC
+description: Reflektierter, epistemisch fundierter Meta-Diskurs
+composed_of:
+- ATO_META_EPISTEMIC_STANCE
+- ATO_EPISTEMIC_HEDGE
+- ATO_DEFINITIONAL_WORK
+activation_logic: ANY 2 of 3
+window:
+  messages: 10
+examples:
+  positive:
+  - "Ich denke, wir sollten klären, was Trance für uns bedeutet. Möglicherweise ist das individuell sehr verschieden."
+  - "Meiner Ansicht nach müssen wir definieren, was Widerstand heißt. Könnte sein, dass wir unterschiedliche Konzepte haben."
+  - "Was verstehen wir unter therapeutischer Beziehung? Aus meiner Sicht gibt es da verschiedene Ebenen."
+  - "Begrifflich sollten wir abgrenzen, was Suggestion ist. Vielleicht ist unser Verständnis zu eng."
+  - "Ich finde, die Bedeutung von Utilisation ist zentral. Vermutlich braucht es hier mehr Präzision."
+  - "Wie definieren wir eigentlich Rapport? Meiner Erfahrung nach wird das oft unscharf verwendet."
+  - "Was heißt Dissoziation in diesem Kontext? Könnte sein, dass wir das unterschiedlich sehen."
+  - "Aus meiner Perspektive müssen wir klären, was Hypnose bedeutet. Möglicherweise gibt es Missverständnisse."
+  - "Ich würde sagen, die Definition von Symptom ist hier relevant. Eventuell sollten wir das präzisieren."
+  - "Meiner Meinung nach ist die Bedeutung von Ressource zentral. Wahrscheinlich verstehen wir das verschieden."
+  negative:
+  - "Das ist klar definiert." # Keine epistemische Relativierung
+  - "Widerstand bedeutet einfach..." # Zu assertiv, nicht reflektiert
+therapeutic_value: HIGH
+rationale: |
+  Zeigt hohe RF-Level und nicht-dogmatische Haltung.
+  Wichtig für Supervision und Ausbildung.
+  Unterscheidet reflektierten von oberflächlichem Diskurs.

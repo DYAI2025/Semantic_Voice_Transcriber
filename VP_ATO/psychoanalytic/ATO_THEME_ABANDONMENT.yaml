@@ -1,0 +1,25 @@
+id: ATO_THEME_ABANDONMENT
+frame:
+  signal:
+    - pattern: '\b(verlassen|im Stich gelassen|alleingelassen)\b'
+      flags: IGNORECASE
+    - pattern: '\b(zurückgewiesen|abgelehnt|nicht gewollt)\b'
+      flags: IGNORECASE
+    - pattern: '\b(niemand ist da|niemand kümmert sich)\b'
+      flags: IGNORECASE
+  concept: "Unbewusstes Thema: Verlassenwerden und Zurückweisung"
+  pragmatics: "Kernthema bei Borderline-Dynamiken und Bindungsstörungen"
+  narrative: "Prägung durch frühe Verlusterfahrungen"
+examples:
+  - "Ich fühle mich immer verlassen und alleingelassen."
+  - "Alle haben mich im Stich gelassen."
+  - "Ich werde immer zurückgewiesen und abgelehnt."
+  - "Niemand ist da, wenn ich Hilfe brauche."
+  - "Ich fühle mich nicht gewollt."
+  - "Verlassenwerden ist mein größter Schmerz."
+category: theme
+severity: high
+co_occurs_with:
+  - ATO_THEME_SEPARATION_ANXIETY
+  - ATO_TRANSFERENCE_NEGATIVE
+  - low_valence

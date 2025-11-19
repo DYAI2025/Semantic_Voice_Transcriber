@@ -1,0 +1,66 @@
+ato_correlations:
+  ATO_ANXIETY_HESITATION:
+    confidence: 1.0
+    sample_count: 3
+    contributing_features:
+      pitch_deviation: !!python/object/apply:numpy._core.multiarray.scalar
+      - &id001 !!python/object/apply:numpy.dtype
+        args:
+        - f8
+        - false
+        - true
+        state: !!python/tuple
+        - 3
+        - <
+        - null
+        - null
+        - null
+        - -1
+        - -1
+        - 0
+      - !!binary |
+        BddomC4Q7z8=
+      tempo_deviation: !!python/object/apply:numpy._core.multiarray.scalar
+      - *id001
+      - !!binary |
+        PtbpbaHa8j8=
+      energy_deviation: !!python/object/apply:numpy._core.multiarray.scalar
+      - *id001
+      - !!binary |
+        PMMdUtZJ6T8=
+      pause_frequency: !!python/object/apply:numpy._core.multiarray.scalar
+      - *id001
+      - !!binary |
+        z0tkyUmR9z8=
+      pitch_variability: !!python/object/apply:numpy._core.multiarray.scalar
+      - *id001
+      - !!binary |
+        cP1njNls9D8=
+  ATO_EPISTEMIC_HEDGE:
+    confidence: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      4deMaN5F5T8=
+    sample_count: 3
+    contributing_features:
+      pitch_deviation: !!python/object/apply:numpy._core.multiarray.scalar
+      - *id001
+      - !!binary |
+        u+JKSCEw5j8=
+      tempo_deviation: !!python/object/apply:numpy._core.multiarray.scalar
+      - *id001
+      - !!binary |
+        /3Li54Ej6T8=
+      energy_deviation: !!python/object/apply:numpy._core.multiarray.scalar
+      - *id001
+      - !!binary |
+        4Qdw7rYX4D8=
+      pause_frequency: !!python/object/apply:numpy._core.multiarray.scalar
+      - *id001
+      - !!binary |
+        vg/bYWJs3z8=
+      pitch_variability: !!python/object/apply:numpy._core.multiarray.scalar
+      - *id001
+      - !!binary |
+        6VE1u8w76z8=
+ato_correlations_updated: '2025-11-12T13:28:29.924788'

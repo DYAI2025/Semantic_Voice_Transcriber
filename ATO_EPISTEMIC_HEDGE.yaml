@@ -1,0 +1,55 @@
+id: ATO_EPISTEMIC_HEDGE
+version: '4.1'
+category: ATOMIC
+description: Epistemische Bescheidenheit - bewusste Zurückhaltung, nicht Unsicherheit
+frame:
+  signal:
+  - epistemic hedging
+  concept: epistemic modesty
+  pragmatics: non-dogmatic positioning
+  narrative: tentative stance
+pattern:
+- (?i)\b(vielleicht|möglicherweise|eventuell)\s+(ist|sind|kann|könnte|wäre)\b
+- (?i)\bkönnte\s+sein\b
+- (?i)\b(ich\s+bin|wir\s+sind)\s+nicht\s+sicher\b
+- (?i)\b(vermutlich|wahrscheinlich)\s+[a-z]+
+- (?i)\bso\s+ungefähr\b
+activation:
+  rule: ANY in 1 message
+scoring:
+  weight: 0.8
+examples:
+  positive:
+  - "Vielleicht ist es so, dass..."
+  - "Könnte sein, dass hier auch..."
+  - "Vermutlich spielt da noch was anderes eine Rolle"
+  - "Möglicherweise ist die Übertragung hier aktiviert"
+  - "Eventuell könnte eine systemische Intervention helfen"
+  - "Ich bin nicht sicher, ob das bereits ausreicht"
+  - "Vielleicht wäre hier ein langsameres Vorgehen angebracht"
+  - "Könnte sein, dass der Patient noch nicht bereit ist"
+  - "Wahrscheinlich braucht es hier mehr Vertrauen"
+  - "So ungefähr in diese Richtung könnte es gehen"
+  - "Vermutlich sind da noch andere Faktoren im Spiel"
+  - "Möglicherweise wäre eine Pause hier hilfreich"
+  - "Eventuell ist das ein Signal für Überforderung"
+  negative:
+  - "Vielleicht morgen" # Nicht epistemisch
+  - "Vielleicht du" # Grammatisch, nicht hedging
+tags:
+- atomic
+- epistemic
+- rf_indicator
+- non_dogmatic
+therapeutic_value: MEDIUM
+rationale: |
+  Unterscheidet epistemische Bescheidenheit (reflektiert) von Unsicherheit (unreflektiert).
+  Wichtig für RF-Level und therapeutische Haltung.
+  Zeigt nicht-dogmatische, explorative Haltung.
+differentiates_from:
+  ATO_HEDGING_CUE: |
+    Alte Version war zu generisch (matched auch "vielleicht morgen").
+    Neue Version nur bei epistemischem Kontext (+ Verb: ist/könnte/wäre).
+  ATO_UNCERTAINTY: |
+    UNCERTAINTY ist "ich weiß nicht", "keine Ahnung" (Wissensdefizit).
+    EPISTEMIC_HEDGE ist "vielleicht ist es..." (bewusste Relativierung).

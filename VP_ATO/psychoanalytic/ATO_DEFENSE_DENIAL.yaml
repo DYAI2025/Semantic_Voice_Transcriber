@@ -1,0 +1,25 @@
+id: ATO_DEFENSE_DENIAL
+frame:
+  signal:
+    - pattern: '\b(das stimmt nicht|niemals|auf keinen Fall|nein, das)\b'
+      flags: IGNORECASE
+      negation_guard: false
+    - pattern: '\b(kann nicht sein|unmöglich|ausgeschlossen)\b'
+      flags: IGNORECASE
+    - pattern: '\b(habe ich nie|tue ich nicht|würde ich nie)\b'
+      flags: IGNORECASE
+  concept: "Abwehrmechanismus durch Verleugnung - Ablehnung unangenehmer Realität"
+  pragmatics: "Schützt vor emotional überwältigenden Wahrheiten durch kategorische Zurückweisung"
+  narrative: "Typisch bei Konfrontation mit schmerzhaften Selbsterkenntnissen oder Verhaltensmustern"
+examples:
+  - "Das stimmt nicht, ich bin nicht so!"
+  - "Niemals habe ich das gesagt."
+  - "Nein, das kann nicht sein, das ist ausgeschlossen."
+  - "Ich würde nie jemanden verletzen."
+  - "Auf keinen Fall, das habe ich nie gemacht."
+  - "Unmöglich, ich erinnere mich nicht daran."
+category: defense
+severity: medium
+co_occurs_with:
+  - ATO_RESISTANCE_SILENCE
+  - high_arousal

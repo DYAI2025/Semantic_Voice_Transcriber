@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 import json
+import tempfile
 
 try:
     from weasyprint import HTML, CSS
@@ -822,7 +823,7 @@ if __name__ == "__main__":
     }
 
     formatter = HTMLFormatter()
-    output_path = Path('/tmp/test_transcript')
+    output_path = Path(tempfile.gettempdir()) / 'test_transcript'
 
     # Generate both HTML and PDF
     files = formatter.generate_both(mock_result, 'test.m4a', output_path)

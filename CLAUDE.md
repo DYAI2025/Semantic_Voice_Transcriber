@@ -2,365 +2,540 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Working Directory**: This CLAUDE.md is located in `Super_semantic_whisper/`, which is the main working directory for all development and operations.
+
 ## Project Overview
 
-**Super Semantic Whisper** is a multi-component system that combines WhatsApp audio transcription with deep semantic analysis. It consists of three major subsystems:
+**Semantic Voice Transcriber (SVT)** is a professional therapeutic transcription system that combines state-of-the-art speech recognition with advanced prosody analysis, emotion detection, and semantic marker recognition. Designed for therapeutic applications, it provides deep insights into spoken communication through multi-modal analysis.
 
-1. **WhisperSprecherMatcher**: Audio transcription with speaker recognition and memory-based learning
-2. **Super Semantic Processor**: Semantic analysis engine that transforms chat histories into structured semantic representations
-3. **WhatsApp Auto Transcriber**: Next-generation modular file watcher system for automatic transcription
+The system consists of interconnected components:
+- **SVT Core**: Professional transcription GUI with one-click workflow
+- **Transcription Engine**: Whisper-based STT with intelligent quality-based model selection
+- **Prosody Analysis**: Big 4 features (Tempo, Pitch, Energy, Pauses) with baseline deviation detection
+- **Speaker Diarization**: Automatic multi-speaker recognition with overlapped speech detection
+- **Emotion Detection**: Multi-modal analysis combining audio features and text sentiment
+- **Semantic Processing**: ATO marker system for behavioral and linguistic pattern recognition
+- **Memory System**: Persistent speaker profiles with learning capabilities
 
 ## Core Commands
 
-### Running the System
+### Main Entry Points
 
 ```bash
-# Main entry point - interactive launcher
-python3 start_super_semantic.py
+# SVT GUI - Professional transcription interface (RECOMMENDED)
+python3 svt.py
 
-# GUI mode (recommended for most users)
-python3 super_semantic_gui.py
-
-# Direct transcription (V3 - recommended with date/time extraction)
-python3 auto_transcriber_v3.py --local
-
-# Emotion-aware transcription (V4)
-python3 auto_transcriber_v4_emotion.py
-
-# Build speaker memory profiles from existing transcripts
-python3 build_memory_from_transcripts.py
-
-# Run semantic integration demo
-python3 demo_semantic_integration.py
-```
-
-### Therapeutic Transcription System (NEW)
-
-```bash
-# Launch professional GUI (recommended)
-python3 therapeutic_transcriber_gui.py
-
-# Run tests
-python3 -m pytest test_prosody_analyzer.py test_transcriber_v4_prosody.py test_memory_prosody.py -v
-
-# Integration tests
-python3 -m pytest test_integration_therapeutic.py -v
-
-# Direct usage (programmatic)
-python3 -c "
-from prosody_analyzer import ProsodyAnalyzer
-analyzer = ProsodyAnalyzer()
-prosody = analyzer.extract_from_file('audio.wav')
-print(prosody)
-"
+# Legacy/Alternative interfaces
+python3 auto_transcriber_v4_emotion.py  # V4 with emotion analysis
+python3 start_super_semantic.py          # Interactive launcher
+python3 super_semantic_gui.py            # Semantic analysis GUI
 ```
 
 ### Testing
 
 ```bash
-# Test person initialization
-python3 test_initialize_person.py
+# Run all prosody and integration tests
+python3 test_prosody_analyzer.py
+python3 test_prosody_pipeline.py
+python3 test_confidence_scoring.py
+python3 test_intelligent_pipeline_integration.py
+python3 test_transcriber_osd_integration.py
+python3 test_output_formatter_osd.py
 
-# Note: pytest is not currently configured in this project
+# Transcription tests
+python3 test_transcription.py
+
+# Quick validation
+python3 test_initialize_person.py
+python3 test_yaml_structure.py
+
+# Run a single test
+python3 -m pytest test_prosody_analyzer.py::test_function_name -v
+
+# CI/CD tests (fast tests without real audio/API calls)
+python3 -m pytest tests/test_ci_transcription.py -v
+python3 -m pytest tests/test_ci_pipeline.py -v
+python3 -m pytest tests/test_ci_gpt_integration.py -v
+
+# Psychoanalysis Dashboard tests
+python3 -m pytest tests/test_psychoanalysis_pipeline.py -v
+python3 -m pytest tests/test_dashboard_generator.py -v
+python3 -m pytest tests/test_e2e_psychoanalysis.py -v
 ```
 
-### Dependencies
+### Installation
 
 ```bash
-# Install all dependencies
-pip3 install -r requirements.txt
+# System dependencies (Ubuntu/Debian)
+sudo apt install python3.12 python3-pip ffmpeg portaudio19-dev python3-tk
 
-# For emotion analysis features (V4):
-pip3 install librosa textblob scikit-learn
+# Core dependencies
+pip install -r requirements.txt
 
-# GUI dependencies (manual installation required):
-# macOS: brew install python-tk
-# Ubuntu: sudo apt-get install python3-tk
+# Emotion analysis features
+pip install -r requirements_emotion.txt
+
+# Prosody analysis (critical for SVT)
+pip install praat-parselmouth librosa soundfile
 ```
+
+### Speaker Diarization Setup
+
+Speaker diarization requires a Hugging Face token:
+
+1. Create account at https://huggingface.co/join
+2. Accept user agreements:
+   - https://huggingface.co/pyannote/segmentation-3.0
+   - https://huggingface.co/pyannote/speaker-diarization-3.1
+3. Create read token at https://huggingface.co/settings/tokens
+4. Create `.env` file:
+   ```bash
+   HF_TOKEN=hf_YourTokenHere
+   ```
+
+See `SPEAKER_DIARIZATION.md` for details.
 
 ## Architecture
 
-### Directory Structure & Data Flow
+### Processing Pipeline
+
+```
+Audio Input (m4a, opus, wav, mp3)
+    ↓
+[Audio Quality Analysis] → Model Selection (tiny/base/small/medium/large)
+    ↓
+[Audio Preprocessing] → Noise reduction, normalization (optional)
+    ↓
+[Whisper Transcription] → Segments with timestamps + confidence scores
+    ↓
+[Speaker Diarization] → Speaker A, B, C labels + overlap detection
+    ↓
+[Prosody Extraction] → Tempo, Pitch, Energy, Pauses per segment
+    ↓
+[Baseline Calculation] → Global means for deviation detection
+    ↓
+[Emotion Analysis] → TextBlob sentiment + audio features
+    ↓
+[ATO Marker Detection] → Semantic pattern matching (63+ markers)
+    ↓
+[Memory Update] → Update speaker profiles with prosody patterns
+    ↓
+[Output Formatting] → MD, JSON, HTML, PDF, CSV with markers
+```
+
+### Core Module Interaction
+
+```
+svt.py (GUI)
+    ├── auto_transcriber_v4_emotion.py (orchestrates pipeline)
+    │   ├── audio_quality_analyzer.py (SNR, quality metrics)
+    │   ├── audio_preprocessor.py (noise reduction)
+    │   ├── speaker_diarizer.py (pyannote.audio)
+    │   ├── prosody_extractor.py (Parselmouth, librosa)
+    │   └── output_formatter.py (multi-format export)
+    ├── super_semantic_processor.py (ATO marker detection)
+    └── Memory/ (speaker profiles, SQLite DB)
+```
+
+### Key Components
+
+**Transcription Layer** (`auto_transcriber_v4_emotion.py`)
+- Whisper STT with multiple model sizes
+- Intelligent pipeline: quality analysis → model selection → transcription
+- Confidence scoring from Whisper's avg_logprob and no_speech_prob
+- Automatic language detection
+
+**Prosody Extraction** (`prosody_extractor.py`)
+- Parselmouth (Praat): F0 pitch extraction with jitter/shimmer
+- Librosa: Tempo (WPM), energy (RMS/dB), audio features
+- Per-segment analysis aligned with Whisper segments (3-10s)
+- Global baseline calculation for deviation detection
+- Threshold-based marker triggering: Tempo ±20%, Pitch ±15%, Energy ±25%, Pause >1s
+
+**Speaker System** (`speaker_diarizer.py`)
+- pyannote.audio 3.1 for automatic speaker segmentation
+- Overlapped Speech Detection (OSD) with duration tracking
+- Speaker labels without name assignment (A, B, C...)
+- Integration with prosody and transcription pipelines
+
+**Output System** (`output_formatter.py`)
+- Annotated Markdown: Human-readable with inline markers
+  - `[TEMPO↑]` / `[TEMPO↓]`: ±20% deviation
+  - `[PITCH↑]` / `[PITCH↓]`: ±15% deviation
+  - `[ENERGY↑]` / `[ENERGY↓]`: ±25% deviation
+  - `[PAUSE]`: >1000ms silence
+  - `[ÜBERLAPPUNG Xs]`: Overlapped speech duration
+  - `[UNSICHER:score]`: Low confidence segments
+- JSON sidecar: Structured prosody data for system processing
+- HTML/PDF: Color-coded speakers with professional layout
+- CSV: Data export for analysis
+
+**Memory System** (`Memory/*.yaml`)
+- Persistent speaker profiles with prosody patterns (pitch/tempo/energy averages)
+- Speech statistics (avg_sentence_length, sentiment ratios)
+- Topic tracking and characteristics
+- Last 50 interactions with timestamps
+- Running averages updated per transcription
+
+**Semantic Engine** (`super_semantic_processor.py`)
+- 63+ ATO (Atomic) marker categories in YAML
+- Pattern matching and correlation analysis
+- Integration with external marker systems:
+  - `../ALL_SEMANTIC_MARKER_TXT/`: Main marker repository
+  - `../Marker_assist_bot/`: FRAUSAR marker management
+  - `../MARSAP/`: CoSD drift analysis
+- Relationship mapping between messages
+
+### Directory Structure
 
 ```
 Super_semantic_whisper/
-├── Eingang/                        # INPUT: Raw audio files organized by speaker
-│   ├── ben/                        # Speaker-specific folders
-│   ├── zoe/                        # Priority processing for this folder
-│   └── schroeti/
-├── Transkripte_LLM/                # OUTPUT: LLM-optimized transcripts (.md)
-├── Memory/                         # Speaker profiles (YAML) - learning system
-│   ├── ben.yaml                    # Language patterns, sentiment, topics
-│   ├── zoe.yaml
-│   └── schroeti.yaml
-├── whisper_speaker_matcher/        # Legacy organization (fallback)
-│   ├── Eingang/
-│   └── Memory/
-└── whatsapp_auto_transcriber/      # Next-gen modular system (Phase 1)
-    ├── src/                        # Modular components
-    │   ├── file_watcher.py
-    │   ├── audio_processor.py
-    │   ├── speaker_detector.py
-    │   └── monitoring.py
-    └── config/config.yaml
+├── svt.py                          # Main GUI entry point
+├── auto_transcriber_v4_emotion.py  # V4 transcription engine
+├── prosody_extractor.py            # Prosody analysis (Phase 1)
+├── speaker_diarizer.py             # Speaker diarization + OSD
+├── output_formatter.py             # Multi-format output
+├── audio_quality_analyzer.py       # Quality analysis for model selection
+├── audio_preprocessor.py           # Audio preprocessing
+├── audio_chunker.py                # Audio segmentation utilities
+├── super_semantic_processor.py     # Semantic analysis engine
+│
+├── Eingang/                        # INPUT: Audio files (organized by speaker)
+│   └── Patient/                    # Speaker-specific folders
+├── Transkripte_LLM/                # OUTPUT: Transcripts (MD, JSON, HTML, PDF, CSV)
+├── Memory/                         # Speaker profiles (YAML + SQLite)
+│   ├── speaker_profiles.db         # SQLite speaker database
+│   ├── Unknown.yaml                # Unknown speaker profile
+│   └── *.yaml                      # Individual speaker profiles
+│
+├── VP_ATO/                         # Atomic Voice Markers (YAML)
+├── Marker_LD3.5_SSoTh/             # 4-Tier marker system (LeanDeep 3.5)
+│   └── .cursor/rules/              # Cursor IDE configuration (leandeep35.mdc)
+├── TextBlob/                       # Local TextBlob installation
+├── emotion_dynaminc-skill/         # UED emotion dynamics analysis skill
+│   └── emotion-dynamics-deep-insight/  # Claude Code skill for GPT-4 integration
+├── Emotion_marker_psychoanalysis/  # Psychoanalysis dashboard output
+│   └── output-dashboard/           # Generated HTML dashboards
+├── config/                         # Configuration files
+│   └── psychoanalysis_config.yaml  # Dashboard and API settings
+├── requirements.txt                # Core dependencies
+└── requirements_emotion.txt        # Emotion analysis dependencies
 ```
 
-### Key Processing Flow
+### Marker Directory Relationships
 
-1. **Audio Ingestion**: Audio files (.opus, .wav, .mp3, .m4a, .ogg) placed in `Eingang/{speaker}/`
-2. **Transcription**: Whisper processes audio with date/time extraction from filenames
-3. **Emotion Analysis** (V4): Librosa + TextBlob analyze audio features and text sentiment
-4. **Speaker Recognition**: Multi-method approach (filename, keywords, context, memory-based)
-5. **Memory Building**: YAML profiles updated with speech patterns, topics, sentiment ratios
-6. **Semantic Processing**: Super Semantic Processor analyzes transcripts for markers, threads, relationships
-7. **Output**: Structured JSON + human-readable Markdown summaries
+The project integrates multiple marker systems:
 
-### Component Integration
+1. **VP_ATO/**: Voice-specific atomic markers (YAML format) for prosody-triggered detection
+2. **Marker_LD3.5_SSoTh/**: LeanDeep 3.5 framework with 4-tier hierarchy (ATO→SEM→CLU→MEMA)
+   - Contains `.cursor/rules/leandeep35.mdc` with complete framework specification
+3. **External integrations** (referenced in `super_semantic_processor.py`):
+   - `../ALL_SEMANTIC_MARKER_TXT/`: Main marker repository
+   - `../Marker_assist_bot/`: FRAUSAR marker management system
+   - `../MARSAP/`: CoSD (Coherence of Self-Description) drift analysis
+4. **emotion_dynaminc-skill/**: Claude Code skill for GPT-4-based UED analysis
+   - Integrates with Psychoanalysis Dashboard feature
+   - Outputs structured JSON with VAD dimensions and discrete emotions
 
-The system integrates multiple external marker systems located in parent directories:
-
-- `../ALL_SEMANTIC_MARKER_TXT/` - Semantic marker repository (63+ markers)
-- `../Marker_assist_bot/` - FRAUSAR marker management system
-- `../Marker_assist_bot/semantic_grabber_library.yaml` - Pattern matching definitions
-- `../MARSAP/` and `../MARSAPv2/` - CoSD drift analysis
-
-These are dynamically loaded by `super_semantic_processor.py` through sys.path manipulation.
-
-### Processing Priority
-
-The transcription system prioritizes the `Zoe/` folder first, then processes other folders alphabetically. Within each folder, newest recordings are processed first.
-
-### Therapeutic Transcription Pipeline (NEW)
-
+All marker systems follow the LeanDeep 3.5 JSON schema with `id`, `frame`, `examples` (min 5), and structure fields.
 ```
-Audio Input
-    ↓
-[Whisper Transcription]
-    ├─> Text
-    ├─> Segments with timestamps
-    └─> Confidence scores (avg_logprob, no_speech_prob)
-    ↓
-[Emotion Analysis]
-    ├─> Text sentiment (TextBlob)
-    ├─> Audio emotion (Whisper audio features)
-    └─> Combined emotional assessment
-    ↓
-[Prosody Extraction]
-    ├─> Pitch (F0 mean, std, contour)
-    ├─> Tempo (BPM, speech rate)
-    └─> Energy (RMS, dynamic range)
-    ↓
-[Confidence Marking]
-    └─> Mark segments with confidence < threshold as [UNSICHER:score]
-    ↓
-[Memory Update]
-    ├─> Update speaker prosody_patterns (running averages)
-    ├─> Update statistics, topics, characteristics
-    └─> Save to Memory/{speaker}.yaml
-    ↓
-[Output: Therapeutic Transcript]
-    ├─> Markdown with all metadata
-    ├─> Prosody features summary
-    ├─> Quality warnings
-    └─> Marked low-confidence segments
-```
-
-**Key Architectural Changes:**
-- **Prosody integration**: New `prosody_analyzer.py` module extracts pitch/tempo/energy
-- **Enhanced V4**: `auto_transcriber_v4_emotion.py` now includes prosody in emotion analysis
-- **Memory enhancement**: Speaker YAML profiles now include `prosody_patterns` section
-- **Confidence scoring**: Whisper output converted to 0-1 confidence scores
-- **Quality marking**: Low-confidence segments marked inline with [UNSICHER:score]
-- **GUI**: New `therapeutic_transcriber_gui.py` provides professional one-click workflow
 
 ## Important Technical Details
 
-### Audio File Naming Convention
+### LeanDeep 3.5 Marker System
 
-WhatsApp audio files follow the pattern: `WhatsApp Audio YYYY-MM-DD at HH.MM.SS.opus`
+The project uses the LeanDeep 3.5 framework with a 4-tier marker hierarchy:
+- **ATO_** (Atomic): Primitive signals (tokens, emojis, regex patterns)
+- **SEM_** (Semantic): Combinations of 2+ ATOs forming micro-patterns
+- **CLU_** (Cluster): Thematic aggregations of SEMs over defined windows
+- **MEMA_** (Meta-Analysis): Dynamic patterns emerging from multiple CLUs
 
-The V3 and V4 transcribers extract this timestamp and use it for:
-- Output filename: `YYYY-MM-DD_HH-MM-SS_speaker_originalname_transkript.md`
-- Metadata in transcript header
-- Temporal analysis in semantic processing
+Key concepts:
+- **Intuition Markers**: CLU_INTUITION_* markers track provisional → confirmed → decayed states
+- **Resonance Framework 2.0 (RF2.0)**: Contextualizes markers by developmental stages (L1:STONE → L8:COSMOS)
+- **Matrix Rules**: RF_BRIDGE module combines level × marker-type × time × intensity
 
-### Memory System Structure
+All markers follow JSON schema with `id`, `frame` (signal/concept/pragmatics/narrative), `examples` (min 5), and structure (`pattern`/`composed_of`/`detect_class`).
 
-Speaker profiles (`Memory/*.yaml`) contain:
-- **statistics**: avg_sentence_length, most_common_words, sentiment (positive/negative/ratio)
-- **topics**: Counters for technology, business, personal, etc.
-- **characteristics**: Auto-generated descriptors (technisch_orientiert, bedächtig, präzise)
-- **interactions**: Last 50 transcriptions with timestamps
-- **metadata**: name, last_updated, total_interactions
-
-### Semantic Message Structure
-
-The `super_semantic_processor.py` creates `SemanticMessage` dataclasses with:
-- id, timestamp, sender, content, type (text/audio/image/document)
-- emotion: Dict of emotional valence scores
-- markers: List of detected semantic markers
-- semantic_scores: Numerical scores for various dimensions
-- metadata: Additional context
-
-### Emotion Detection (V4)
-
-The emotional analyzer uses a multi-source approach:
-1. Load emotional markers from existing marker system (ALL_SEMANTIC_MARKER_TXT)
-2. Extract audio features using librosa (if available): pitch, energy, tempo, spectral features
-3. Perform text sentiment analysis using TextBlob (if available)
-4. Combine audio + text features for overall emotional classification
-5. Output dominant emotion with confidence and valence score in transcript
-
-### Prosody Data Structure
-
-In Memory YAML profiles:
-
-```yaml
-prosody_patterns:
-  pitch_profile:
-    mean_pitch: 147.8          # Hz, running average
-    pitch_variability: 19.4    # Standard deviation
-    sample_count: 15           # Number of samples
-  tempo_profile:
-    mean_bpm: 118.5           # Beats per minute
-    mean_speech_rate: 4.3     # Syllables per second
-    sample_count: 15
-  energy_profile:
-    mean_energy: 0.045        # RMS energy
-    energy_variability: 0.012 # Standard deviation
-    mean_dynamic_range: 0.28  # Max - min
-    sample_count: 15
-```
+See `.cursor/rules/leandeep35.mdc` for full specification.
 
 ### Confidence Score Calculation
 
-Whisper provides:
-- `avg_logprob`: Average log probability (negative)
-- `no_speech_prob`: Probability of silence
-
-Conversion to confidence:
+Whisper provides `avg_logprob` (negative) and `no_speech_prob`. Conversion to 0-1 confidence:
 ```python
 confidence = exp(avg_logprob) * (1 - no_speech_prob)
 ```
+Segments with confidence < 0.5 are marked as `[UNSICHER:score]`.
 
-Range: 0.0 (unreliable) to 1.0 (very confident)
+### Prosody Marker Thresholds
 
-Therapeutic threshold: 0.5 (configurable)
+Configurable in `prosody_extractor.py`:
+- **TEMPO_THRESHOLD**: ±20% deviation from baseline
+- **PITCH_THRESHOLD**: ±15% deviation from baseline
+- **ENERGY_THRESHOLD**: ±25% deviation from baseline
+- **PAUSE_THRESHOLD**: 1000ms (1 second)
 
-### Transcription Output Format
+### Memory Profile Structure
 
-All transcripts are formatted as Markdown with:
-```markdown
-# WhatsApp Audio Transkription / # Transkript: {filename}
+YAML profiles include:
+```yaml
+prosody_patterns:
+  pitch_profile:
+    mean_pitch: 147.8          # Hz
+    pitch_variability: 19.4    # Std dev
+    sample_count: 15
+  tempo_profile:
+    mean_bpm: 118.5
+    mean_speech_rate: 4.3      # Syllables/sec
+  energy_profile:
+    mean_energy: 0.045         # RMS
+    energy_variability: 0.012
+    mean_dynamic_range: 0.28
 
-**Chat mit:** {speaker}
-**Aufnahme am:** DD.MM.YYYY um HH:MM:SS
-**Verarbeitet am:** DD.MM.YYYY um HH:MM:SS
-**Original-Datei:** {original_filename}
+statistics:
+  avg_sentence_length: 15.3
+  sentiment: {positive: 42, negative: 8, ratio: 5.25}
 
-[V4 only]
-**Dominante Emotion:** {emotion} {emoji}
-**Emotionale Valenz:** {score}
-
-## Zeitstempel:
-- **Aufnahme-Datum:** YYYY-MM-DD
-- **Aufnahme-Uhrzeit:** HH:MM:SS
-
-## Transkription:
-{transcribed_text}
-
-## Kontext für LLM:
-Diese Nachricht wurde am ... aufgenommen
+topics: {technology: 15, business: 8, personal: 23}
+characteristics: [technisch_orientiert, bedächtig, präzise]
+interactions: [...]  # Last 50 transcriptions
 ```
 
-This format is optimized for LLM consumption and semantic processing.
+### Audio File Naming Convention
 
-## Development Notes
+WhatsApp audio: `WhatsApp Audio YYYY-MM-DD at HH.MM.SS.opus`
 
-### FFmpeg Dependency
+Output format: `YYYY-MM-DD_HH-MM-SS_speaker_originalname_transkript.md`
 
-FFmpeg is required for audio conversion. Installation:
-- macOS: `brew install ffmpeg`
-- Ubuntu: `sudo apt install ffmpeg`
+Timestamp extracted and used for metadata and temporal analysis.
 
-Verify with: `ffmpeg -version`
+### Whisper Model Selection
 
-### Python Version
+Intelligent pipeline analyzes audio quality and selects model:
+- **tiny**: 39M params, fast, lower accuracy
+- **base**: 74M params, balanced
+- **small**: 244M params (default for testing)
+- **medium**: 769M params, high accuracy
+- **large**: 1550M params, best quality
 
-Requires Python 3.8+. Tested with Python 3.12.3.
+Selection based on:
+- SNR (Signal-to-Noise Ratio)
+- Audio duration
+- Zero-crossing rate
+- Energy distribution
 
-### Logging
+## Development Workflows
 
-Most scripts create detailed logs:
-- `transcription.log` - V3 transcriber output
-- `transcription_v4_emotion.log` - V4 with emotion analysis
-- Console output with timestamps
+### Processing Audio Files
 
-### Local vs Google Drive Mode
+1. Place audio in `Eingang/Patient/` (or speaker-specific folder)
+2. Launch SVT GUI: `python3 svt.py`
+3. Configure features:
+   - Prosody Analysis (Big 4: Tempo, Pitch, Energy, Pauses)
+   - Emotion Detection (TextBlob sentiment)
+   - Speaker Diarization (pyannote.audio)
+   - Memory Updates (speaker profiles)
+4. Click "Transkription starten" (batch) or "Quick Test" (first file only)
+5. Output appears in `Transkripte_LLM/`:
+   - `.md` - **NEW** Therapeutic format with speaker headers and metadata sidebar
+   - `.prosody.json` - Structured prosody data
+   - `.html` - Legacy HTML (color-coded speakers)
+   - `_enhanced.html` - **NEW** Therapeutic HTML (green=Patient, blue=Therapeut)
+   - `.pdf` - Professional layout
+   - `.csv` - Data export
 
-The system supports both local operation and Google Drive sync:
-- Local: Uses `./Eingang/` and `./Memory/`
-- Google Drive: Syncs with remote directories (see `google_drive_sync.py`)
-- Automatic fallback to local if Drive unavailable
+### Therapeutic Transcript Format (New in v1.0)
 
-Run with `--local` flag to force local mode: `python3 auto_transcriber_v3.py --local`
+**Speaker Labels Now Visible:**
+```markdown
+### **Therapeut** | 00:05 - 00:12
 
-### GUI vs CLI
+Wie geht es Ihnen heute?
 
-The `start_super_semantic.py` launcher provides:
-1. GUI mode - User-friendly interface for configuration
-2. CLI mode - Command-line prompts for paths
-3. Demo mode - Creates sample data and runs full pipeline
-4. Help mode - Displays usage information
+> **Metadaten:**
+> 📊 **Prosody**: Energie ↑ (+28.0%)
+```
 
-Use GUI for initial setup and configuration, CLI for automation/scripting.
+**Key Features:**
+- ✅ **Speaker headers**: Clear "Therapeut" / "Patient" labels (configurable)
+- ✅ **Metadata sidebar**: Prosody and ATO markers organized below each utterance
+- ✅ **Clean text**: No inline markers cluttering the transcript
+- ✅ **Enhanced HTML**: Color-coded speakers with hover effects
+- ✅ **ATO markers**: Automatic detection of 40 curated semantic patterns
 
-### Marker Set Selection
+**Speaker Modes** (edit `svt.py` line 50):
+- `MODE_ANONYMOUS` (default): "Therapeut", "Patient"
+- `MODE_LETTERS`: "Speaker A", "Speaker B"
+- `MODE_NAMES`: Use actual names
+- `MODE_CUSTOM`: Define custom mapping
 
-The Super Semantic Processor accepts a `marker_set` parameter to choose different marker collections:
-- `All_Markers` - Complete marker set
-- `Trauma` - Trauma-specific markers
-- Custom YAML files can be provided
+**ATO Markers Detected:**
+- Emotions: SADNESS, ANGER, ANXIETY, JOY
+- Turning Points: BREAKTHROUGH, INSIGHT, RESISTANCE_BREAK
+- Therapeutic: AFFIRMATION, DEFLECTION, DISCLOSURE
 
-This is configured in the GUI or passed to `process_everything()`.
+**See:** `THERAPEUTIC_TRANSCRIPT_FORMAT.md` for comprehensive user guide
 
-### Next-Gen Modular System
+### Generating Psychoanalysis Dashboard
 
-The `whatsapp_auto_transcriber/` directory contains a modular refactoring (Phase 1):
-- Separation of concerns: file watching, audio processing, speaker detection
-- Configuration via YAML
-- Designed for easier testing and maintenance
-- Gradually integrating V4 emotion logic
+**Psychoanalysis Dashboard** provides GPT-4-powered emotion dynamics analysis with interactive visualizations.
 
-This is a work in progress and not yet the primary entry point.
+#### One-Click Workflow (Recommended)
 
-## Common Workflows
+1. **Set OpenAI API key** (prerequisite):
+   ```bash
+   export OPENAI_API_KEY=sk-your-key-here
+   # Or create .env file with OPENAI_API_KEY=sk-your-key-here
+   ```
 
-### Adding a New Speaker
+2. **Launch SVT GUI**: `python3 svt.py`
 
-1. Create a folder in `Eingang/{new_speaker_name}/`
-2. Place audio files there
-3. Run `python3 auto_transcriber_v3.py --local`
-4. Memory profile automatically created in `Memory/{new_speaker_name}.yaml`
+3. **Click "🧠 Psychoanalysis Dashboard" button**
 
-### Custom Semantic Analysis
+4. **Select audio file** in file dialog (m4a, opus, wav, mp3, etc.)
 
-1. Prepare WhatsApp export (.txt) and/or transcripts directory
-2. Optionally create custom marker YAML
-3. Run GUI: `python3 super_semantic_gui.py`
-4. Select marker set and input/output paths
-5. Results: JSON + Markdown summary
+5. **Automatic workflow**:
+   - System checks for existing `.prosody.json` transcript
+   - **If exists**: Reuses transcript (skips transcription)
+   - **If not**: Transcribes audio asynchronously with **prosody forced ON**
+   - Runs psychoanalysis pipeline with GPT-4-Turbo
+   - Generates interactive HTML dashboard
+   - **Auto-opens in browser**
 
-### Extending Emotional Markers
+6. **Dashboard contents**:
+   - Annotated transcript with emotion states
+   - VAD trajectory charts (Valence, Arousal, Dominance)
+   - Discrete emotion frequency analysis
+   - UED metrics (Home Base, Variability, Instability, Inertia, Rise/Recovery Rates)
+   - Marker network visualization (Cytoscape.js)
+   - Therapeutic turning point annotations
 
-1. Add marker files to `../ALL_SEMANTIC_MARKER_TXT/Former_NEW_MARKER_FOLDERS/emotions/`
-2. V4 automatically loads on next run
-3. Or provide custom markers in `EmotionalAnalyzer._create_default_emotional_markers()`
+**Key Features**:
+- ✅ **Smart caching**: Reuses existing transcripts automatically
+- ✅ **Async processing**: Non-blocking GUI during transcription
+- ✅ **Prosody enforcement**: Always includes prosody data (required for dashboard)
+- ✅ **Tri-modal turnpoint detection**: Emotion + Markers + Prosody
 
-## Important Constraints
+**Configuration**: Edit `config/psychoanalysis_config.yaml` to customize:
+- OpenAI model and parameters (`gpt-4-turbo-preview` by default)
+- Turnpoint detection thresholds (valence, arousal, prosody pauses)
+- Marker weights and categories
+- Dashboard styling and output directory
 
-- The system expects parent directories for marker systems (`../ALL_SEMANTIC_MARKER_TXT/`, etc.)
-- Transcription quality depends on audio quality and FFmpeg installation
-- Speaker recognition improves over time as Memory profiles build
-- Large chat histories may take significant time to process
-- GUI requires tkinter (not always available via pip)
+**Cache System**:
+- Transcript-based caching (SHA256 hash)
+- Avoids redundant API calls
+- See `psychoanalysis_cache.py` for details
+- Manual clear: `rm -rf cache/psychoanalysis/`
+
+**See**: `PSYCHOANALYSIS_DASHBOARD.md` for comprehensive usage guide
+
+### Adding New ATO Markers
+
+1. Create YAML file: `ATO_NEW_MARKER.yaml` in project root or `VP_ATO/`
+2. Follow LeanDeep 3.5 schema:
+   ```yaml
+   id: ATO_YOUR_MARKER
+   frame:
+     signal: "regex pattern or token"
+     concept: "What it represents"
+     pragmatics: "How it's used"
+     narrative: "Why it matters"
+   examples: ["example1", "example2", ...]  # Min 5 required
+   pattern: "detection logic"
+   ```
+3. Markers auto-loaded by semantic processor on next run
+4. Test with: `python3 test_yaml_structure.py`
+
+### Running Semantic Analysis
+
+```bash
+# GUI mode (recommended)
+python3 super_semantic_gui.py
+
+# Programmatic
+python3 super_semantic_processor.py --input transcripts/ --marker-set All_Markers
+```
+
+### Extending Speaker Memory
+
+New speaker profiles created automatically on first transcription. To manually initialize:
+```bash
+python3 initialize_person.py --name "NewSpeaker"
+```
+
+Profiles stored in:
+- `Memory/speaker_profiles.db` (SQLite)
+- `Memory/<speaker_name>.yaml` (YAML backup)
+
+## Common Issues
+
+### FFmpeg Not Found
+Install FFmpeg: `sudo apt install ffmpeg` or `brew install ffmpeg`
+Verify: `ffmpeg -version`
+
+### pyannote.audio Permission Denied
+Accept Hugging Face model agreements and create token (see Speaker Diarization Setup above)
+
+### Low Transcription Quality
+- Check audio quality (SNR, noise levels)
+- Try higher Whisper model (medium/large)
+- Enable audio preprocessing
+- Review `transcription_v4_emotion.log` for quality warnings
+
+### Memory Profile Not Updating
+- Verify write permissions on `Memory/` directory
+- Check YAML syntax with `python3 test_yaml_structure.py`
+- Review logs for serialization errors
+
+## Current Development Status
+
+**Phase 2c Complete** ✅
+- ✅ Prosody extraction (Big 4 features)
+- ✅ Professional output formats (MD, JSON, HTML, PDF, CSV)
+- ✅ Speaker diarization with pyannote.audio
+- ✅ Overlapped speech detection (OSD)
+- ✅ Intelligent pipeline with quality-based model selection
+- ✅ **Psychoanalysis Dashboard with GPT-4 integration** (NEW)
+- ✅ **Interactive HTML dashboards with Chart.js and Cytoscape.js** (NEW)
+- ✅ **UED (Utterance Emotion Dynamics) analysis** (NEW)
+- ✅ **CI/CD test suite for pipeline validation** (NEW)
+
+**Phase 2d In Progress** 🔄
+- ATO marker integration with prosody triggers
+- Real-time marker detection during transcription
+- ATO → SEM → CLU → MEMA hierarchy refinement
+- GUI integration for speaker editing
+- Therapeutic turning point detection enhancement
+
+**Phase 3 Planned** 📋
+- Live streaming transcription
+- Real-time prosody visualization
+- WebSocket API for external tools
+- Real-time marker display
+- Multi-session comparative analysis
+
+## Logging
+
+- `transcription_v4_emotion.log`: Main transcription log
+- `transcription.log`: Legacy V3 log
+- Console output with timestamps for all operations
+- Quality warnings and confidence scores logged per segment
+
+## Git Workflow
+
+Current branch structure:
+- `main`: Stable releases
+- `feat/*`: Feature branches (current: `feat/professional-quality-enhancement`)
+
+When making commits:
+1. Stage changes: `git add <files>`
+2. Commit with descriptive message: `git commit -m "feat: description"`
+3. Push to remote: `git push origin <branch-name>`
+
+Commit prefixes:
+- `feat:` New features
+- `fix:` Bug fixes
+- `docs:` Documentation changes
+- `test:` Test additions/modifications
+- `refactor:` Code restructuring

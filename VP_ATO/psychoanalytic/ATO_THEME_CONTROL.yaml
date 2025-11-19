@@ -1,0 +1,25 @@
+id: ATO_THEME_CONTROL
+frame:
+  signal:
+    - pattern: '\b(Kontrolle|kontrollieren|unter Kontrolle)\b'
+      flags: IGNORECASE
+    - pattern: '\b(Macht|Ohnmacht|hilflos|ausgeliefert)\b'
+      flags: IGNORECASE
+    - pattern: '\b(Autonomie|selbstbestimmt|Freiheit)\b'
+      flags: IGNORECASE
+  concept: "Unbewusstes Thema: Macht, Kontrolle und Autonomie"
+  pragmatics: "Zentral bei Zwangsstörungen und Perfektionismus"
+  narrative: "Kompensation von Ohnmachtsgefühlen"
+examples:
+  - "Ich muss alles unter Kontrolle haben."
+  - "Ich fühle mich so ohnmächtig und ausgeliefert."
+  - "Kontrollverlust ist meine größte Angst."
+  - "Ich brauche Macht über mein Leben."
+  - "Autonomie ist mir sehr wichtig."
+  - "Hilflos zu sein, das ertrage ich nicht."
+category: theme
+severity: medium
+co_occurs_with:
+  - ATO_DEFENSE_RATIONALIZATION
+  - ATO_RESISTANCE_SILENCE
+  - low_dominance
