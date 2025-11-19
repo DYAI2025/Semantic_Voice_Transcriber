@@ -1,5 +1,7 @@
 # Feature Readiness Audit
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## CLI Usage
 ```
 python -m audit.cli --session session1 --json reports/audit.json --markdown reports/audit.md

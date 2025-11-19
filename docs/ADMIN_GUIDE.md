@@ -1,5 +1,7 @@
 # Admin Guide
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Komponenten
 - **SVT App**: installiert unter `Program Files/SVT` bzw. `/usr/share/svt`.
 - **Python Runtime**: innerhalb `svt_env/` gebündelt.
