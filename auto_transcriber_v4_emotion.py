@@ -47,7 +47,9 @@ try:
     DIARIZATION_AVAILABLE = True
 except ImportError:
     DIARIZATION_AVAILABLE = False
-    print("⚠️ Speaker Diarizer nicht gefunden. Sprechererkennung deaktiviert.")
+    print("⚠️ Speaker Diarizer nicht gefunden. Pyannote-Sprechererkennung deaktiviert.")
+
+from svt_core.audio.diarization_cpu import CPUDiarizer
 
 try:
     from textblob import TextBlob
@@ -1033,40 +1035,55 @@ def transcribe_with_whisper(
         # SPEAKER DIARIZATION (Phase 2b)
         speaker_segments = []
         aligned_segments = result.get('segments', [])
+        speaker_stats = {}
 
-        if enable_diarization and DIARIZATION_AVAILABLE:
-            try:
-                logger.info("🎤 Starte Sprechererkennung...")
-                diarizer = SpeakerDiarizer(
-                    use_auth_token=hf_token,
-                    min_speakers=1,
-                    max_speakers=10
-                )
+        if enable_diarization:
+            diarization_used = False
+            if DIARIZATION_AVAILABLE and hf_token:
+                try:
+                    logger.info("🎤 Starte Sprechererkennung (pyannote)...")
+                    diarizer = SpeakerDiarizer(
+                        use_auth_token=hf_token,
+                        min_speakers=1,
+                        max_speakers=10
+                    )
 
-                # Run diarization
-                speaker_segments = diarizer.diarize(
-                    Path(audio_path),
-                    num_speakers=num_speakers
-                )
+                    speaker_segments = diarizer.diarize(
+                        Path(audio_path),
+                        num_speakers=num_speakers
+                    )
+                    aligned_segments = diarizer.align_with_transcription(
+                        speaker_segments,
+                        result.get('segments', [])
+                    )
+                    speaker_stats = SpeakerDiarizer.get_speaker_statistics(speaker_segments)
+                    diarization_used = True
+                except Exception as e:
+                    logger.error(f"Fehler bei Sprechererkennung: {e}")
+                    logger.warning("Fortfahren ohne pyannote, versuche CPU-Fallback...")
 
-                # Align with transcription segments
-                aligned_segments = diarizer.align_with_transcription(
-                    speaker_segments,
-                    result.get('segments', [])
-                )
+            if not diarization_used:
+                try:
+                    logger.info("🎤 Starte Sprechererkennung (CPU-Fallback)...")
+                    cpu_diarizer = CPUDiarizer()
+                    speaker_segments = cpu_diarizer.diarize(Path(audio_path))
+                    aligned_segments = cpu_diarizer.align_with_transcription(
+                        speaker_segments,
+                        result.get('segments', [])
+                    )
+                    speaker_stats = cpu_diarizer.get_speaker_statistics(speaker_segments)
+                    diarization_used = True
+                except Exception as e:
+                    logger.error(f"CPU-Diarisierung fehlgeschlagen: {e}")
 
-                # Get speaker statistics
-                speaker_stats = SpeakerDiarizer.get_speaker_statistics(speaker_segments)
-
+            if diarization_used and speaker_stats:
                 logger.info(f"✅ Sprechererkennung abgeschlossen: {len(speaker_stats)} Sprecher gefunden")
                 for speaker, stats in speaker_stats.items():
                     logger.info(
                         f"  - {speaker}: {stats['total_duration']:.1f}s "
-                        f"({stats['percentage']:.1f}%) - {stats['num_segments']} Segmente"
+                        f"({stats.get('percentage', 0):.1f}%) - {stats['num_segments']} Segmente"
                     )
-
-            except Exception as e:
-                logger.error(f"Fehler bei Sprechererkennung: {e}")
+            elif enable_diarization:
                 logger.warning("Fortfahren ohne Sprechererkennung...")
 
         # OVERLAPPED SPEECH DETECTION (Phase 2c)

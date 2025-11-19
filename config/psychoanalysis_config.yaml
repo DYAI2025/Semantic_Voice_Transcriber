@@ -9,6 +9,12 @@ openai:
   max_tokens: 4096
   temperature: 0.3
 
+retries:
+  max_attempts: 3
+  base_delay: 2.0
+  max_delay: 30.0
+  jitter: 1.0
+
 # Ollama settings (FREE, runs locally)
 ollama:
   base_url: http://localhost:11434

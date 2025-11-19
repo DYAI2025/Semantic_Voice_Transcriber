@@ -1,149 +1,87 @@
 # psychoanalysis_api_ollama.py
-"""
-Ollama-based API for psychoanalytic analysis
-100% free, runs locally, no API costs
-"""
+"""Local-first psychoanalysis API built on top of the LLMProvider layer."""
+from __future__ import annotations
 
 import json
+import logging
 import yaml
-import requests
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict, List
+
+from svt_core.llm_provider.local_ollama import LocalOllamaProvider, OllamaSettings
+
+logger = logging.getLogger(__name__)
 
 
 class OllamaPsychoanalysisAPI:
-    """Ollama API client for psychoanalytic analysis - FREE and LOCAL"""
+    """Wrapper that asks a local Ollama model to analyze transcripts."""
 
-    def __init__(self, config_path="config/psychoanalysis_config.yaml"):
-        """Initialize Ollama API client with configuration"""
-        with open(config_path) as f:
+    def __init__(self, config_path: str = "config/psychoanalysis_config.yaml"):
+        with open(config_path, encoding="utf-8") as f:
             self.config = yaml.safe_load(f)
 
-        # Ollama configuration
-        self.base_url = self.config.get("ollama", {}).get("base_url", "http://localhost:11434")
-        self.model = self.config.get("ollama", {}).get("model", "qwen2.5-coder:7b")
-        self.temperature = self.config.get("ollama", {}).get("temperature", 0.7)
-        self.max_tokens = self.config.get("ollama", {}).get("max_tokens", 4000)
+        ollama_cfg = self.config.get("ollama", {})
+        self.settings = OllamaSettings(
+            base_url=ollama_cfg.get("base_url", "http://localhost:11434"),
+            model=ollama_cfg.get("model", "qwen2.5-coder:7b"),
+            temperature=ollama_cfg.get("temperature", 0.7),
+            max_tokens=ollama_cfg.get("max_tokens", 4000),
+        )
+        self.provider = LocalOllamaProvider(self.settings)
+        self._assert_local_stack()
 
-        # Test connection
-        self._test_connection()
-
-    def _test_connection(self):
-        """Test if Ollama is running"""
-        try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=5)
-            if response.status_code != 200:
-                raise ConnectionError(f"Ollama not responding: {response.status_code}")
-
-            # Check if model is available
-            models = response.json().get("models", [])
-            model_names = [m["name"] for m in models]
-
-            if self.model not in model_names:
-                print(f"⚠️ Model '{self.model}' not found. Available models: {model_names}")
-                print(f"   Download with: ollama pull {self.model}")
-                # Try to use first available model
-                if model_names:
-                    self.model = model_names[0]
-                    print(f"   Using: {self.model}")
-
-        except requests.exceptions.ConnectionError:
+    def _assert_local_stack(self) -> None:
+        health = self.provider.health_check()
+        if health["status"] == "error":
             raise ConnectionError(
-                "❌ Ollama not running! Start with: ollama serve\n"
-                "   Or install from: https://ollama.com/download"
+                "❌ Ollama not reachable. Start `ollama serve` or install from https://ollama.com/download\n"
+                f"Details: {health['details']}"
             )
+        if health["status"] == "warn":
+            logger.warning("Ollama health warning: %s", health["details"])
 
-    def build_system_prompt(self, skill_path):
-        """Build system prompt from SKILL.md"""
+    def build_system_prompt(self, skill_path: Path) -> str:
         with open(skill_path, encoding="utf-8") as f:
             skill_content = f.read()
+        return (
+            "Du bist ein Assistent für psychoanalytische Textanalyse.\n\n"
+            "Deine Aufgabe: Analysiere den gegebenen Transkript-Text mithilfe des folgenden Skills:\n\n"
+            f"{skill_content}\n\n"
+            "Zusätzlich: Erkenne psychoanalytische Marker aus folgenden Kategorien:\n"
+            "- Abwehrmechanismen (defense)\n"
+            "- Widerstand (resistance)\n"
+            "- Übertragung (transference)\n"
+            "- Unbewusste Themen (theme)\n\n"
+            "WICHTIG: Antworte NUR mit der strukturierten JSON-Ausgabe wie im Skill beschrieben."
+        )
 
-        system_prompt = f"""Du bist ein Assistent für psychoanalytische Textanalyse.
-
-Deine Aufgabe: Analysiere den gegebenen Transkript-Text mithilfe des folgenden Skills:
-
-{skill_content}
-
-Zusätzlich: Erkenne psychoanalytische Marker aus folgenden Kategorien:
-- Abwehrmechanismen (defense): Verleugnung, Projektion, Rationalisierung, Verschiebung, Regression
-- Widerstand (resistance): Schweigen, Themenwechsel, Humor, Absagen
-- Übertragung (transference): positiv, negativ, erotisch
-- Unbewusste Themen (theme): Trennungsangst, Kontrolle, Verlassenwerden, Scham/Schuld
-
-WICHTIG: Antworte NUR mit der strukturierten JSON-Ausgabe wie im Skill beschrieben.
-KEINE zusätzlichen Erklärungen, KEIN Markdown, NUR das JSON-Objekt."""
-
-        return system_prompt
-
-    def build_user_prompt(self, transcript_data):
-        """Build user prompt from transcript JSON"""
-        user_prompt = f"""Analysiere folgendes Transkript:
-
-**Metadaten:**
-- Datei: {transcript_data['transcript_meta']['file']}
-- Sprecher: {', '.join(transcript_data['transcript_meta']['speaker_labels'])}
-- Dauer: {transcript_data['transcript_meta']['duration_seconds']}s
-
-**Utterances:**
-{json.dumps(transcript_data['utterances'], indent=2, ensure_ascii=False)}
-
-Führe die vollständige Analyse durch und gib das Ergebnis im spezifizierten JSON-Format zurück.
-Antworte NUR mit dem JSON-Objekt, keine weiteren Texte."""
-
-        return user_prompt
+    def build_user_prompt(self, transcript_data: Dict[str, Any]) -> str:
+        return (
+            "Analysiere folgendes Transkript:\n\n"
+            f"**Metadaten:**\n- Datei: {transcript_data['transcript_meta']['file']}\n"
+            f"- Sprecher: {', '.join(transcript_data['transcript_meta']['speaker_labels'])}\n"
+            f"- Dauer: {transcript_data['transcript_meta']['duration_seconds']}s\n\n"
+            f"**Utterances:**\n{json.dumps(transcript_data['utterances'], indent=2, ensure_ascii=False)}\n\n"
+            "Führe die vollständige Analyse durch und gib das Ergebnis im spezifizierten JSON-Format zurück."
+            " Antworte NUR mit dem JSON-Objekt, keine weiteren Texte."
+        )
 
     def analyze_transcript(self, transcript_data: Dict[str, Any], skill_path: str) -> Dict[str, Any]:
-        """
-        Analyze transcript using Ollama
-
-        Args:
-            transcript_data: Transcript data with utterances
-            skill_path: Path to emotion-dynamics SKILL.md
-
-        Returns:
-            Analysis results as dict
-        """
-        system_prompt = self.build_system_prompt(skill_path)
+        system_prompt = self.build_system_prompt(Path(skill_path))
         user_prompt = self.build_user_prompt(transcript_data)
+        combined_prompt = f"{system_prompt}\n\n{user_prompt}"
 
-        # Combine prompts for Ollama
-        full_prompt = f"{system_prompt}\n\n{user_prompt}"
+        response = self.provider.generate(
+            combined_prompt,
+            temperature=self.settings.temperature,
+            max_tokens=self.settings.max_tokens,
+            timeout=300,
+        )
 
-        # Call Ollama API
-        try:
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": full_prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": self.temperature,
-                        "num_predict": self.max_tokens,
-                    }
-                },
-                timeout=300  # 5 minutes max
-            )
-
-            if response.status_code != 200:
-                raise RuntimeError(f"Ollama error: {response.status_code} - {response.text}")
-
-            result = response.json()
-            response_text = result.get("response", "")
-
-            # Extract JSON from response
-            json_result = self._extract_json(response_text)
-
-            return json_result
-
-        except requests.exceptions.Timeout:
-            raise TimeoutError("Ollama request timed out after 5 minutes")
-        except requests.exceptions.RequestException as e:
-            raise ConnectionError(f"Ollama connection failed: {e}")
+        json_result = self._extract_json(response.text)
+        return self._ensure_schema(json_result, transcript_data)
 
     def _extract_json(self, text: str) -> Dict[str, Any]:
-        """Extract JSON object from potentially messy response"""
-        # Try to find JSON in markdown code blocks
         if "```json" in text:
             start = text.find("```json") + 7
             end = text.find("```", start)
@@ -153,87 +91,63 @@ Antworte NUR mit dem JSON-Objekt, keine weiteren Texte."""
             end = text.find("```", start)
             text = text[start:end].strip()
 
-        # Find first { and last }
         start_idx = text.find("{")
         end_idx = text.rfind("}") + 1
-
         if start_idx == -1 or end_idx == 0:
             raise ValueError(f"No JSON found in response: {text[:200]}")
 
-        json_text = text[start_idx:end_idx]
-
         try:
-            return json.loads(json_text)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in response: {e}\n\nText: {json_text[:500]}")
+            return json.loads(text[start_idx:end_idx])
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSON in response: {exc}\nFragment: {text[:500]}")
+
+    def _ensure_schema(self, analysis: Dict[str, Any], transcript_data: Dict[str, Any]) -> Dict[str, Any]:
+        updated = dict(analysis)
+        if not isinstance(updated.get("utterance_states"), list):
+            logger.warning("Ollama response missing 'utterance_states' – generating defaults")
+            updated["utterance_states"] = self._build_default_states(transcript_data.get("utterances", []))
+
+        if "ued_metrics" not in updated or not isinstance(updated["ued_metrics"], dict):
+            logger.warning("Ollama response missing 'ued_metrics' – inserting empty metrics")
+            updated["ued_metrics"] = {
+                "home_base": {},
+                "variability": {},
+                "instability": {},
+                "rise_rate": {},
+                "recovery_rate": {},
+            }
+
+        if "marker_summary" not in updated or not isinstance(updated["marker_summary"], dict):
+            logger.warning("Ollama response missing 'marker_summary' – inserting defaults")
+            updated["marker_summary"] = {"frequencies": {}, "dominance_ranking": []}
+
+        updated.setdefault("psychological_lenses", {})
+        updated.setdefault("disclaimers", {})
+        updated.setdefault("input_meta", transcript_data.get("transcript_meta", {}))
+        return updated
+
+    def _build_default_states(self, utterances: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        defaults: List[Dict[str, Any]] = []
+        for idx, utt in enumerate(utterances):
+            defaults.append(
+                {
+                    "id": utt.get("id", idx),
+                    "speaker": utt.get("speaker", "Unknown"),
+                    "order_index": idx,
+                    "text": utt.get("text", ""),
+                    "valence": 0.5,
+                    "arousal": 0.5,
+                    "dominance": 0.5,
+                    "discrete_emotions": utt.get("prosody", {}).get("discrete_emotions", {}),
+                    "confidence": 0.0,
+                    "markers": [],
+                }
+            )
+        return defaults
 
     def get_model_info(self) -> Dict[str, str]:
-        """Get information about current model"""
-        try:
-            response = requests.get(f"{self.base_url}/api/tags")
-            models = response.json().get("models", [])
-            for model in models:
-                if model["name"] == self.model:
-                    return {
-                        "name": model["name"],
-                        "size": model.get("size", "unknown"),
-                        "modified": model.get("modified_at", "unknown")
-                    }
-        except:
-            pass
-
-        return {"name": self.model, "size": "unknown", "modified": "unknown"}
-
-
-# Standalone test
-if __name__ == "__main__":
-    print("Testing Ollama Psychoanalysis API...\n")
-
-    try:
-        api = OllamaPsychoanalysisAPI()
-
-        print(f"✅ Connected to Ollama")
-        print(f"   Model: {api.model}")
-        print(f"   Base URL: {api.base_url}")
-
-        info = api.get_model_info()
-        print(f"   Size: {info['size']}")
-        print(f"   Modified: {info['modified']}")
-
-        # Test with simple data
-        test_data = {
-            "transcript_meta": {
-                "file": "test.m4a",
-                "speaker_labels": ["Patient", "Therapeut"],
-                "duration_seconds": 120
-            },
-            "utterances": [
-                {
-                    "id": 0,
-                    "speaker": "Patient",
-                    "text": "Ich fühle mich heute sehr traurig.",
-                    "start": 0.0,
-                    "end": 3.0
-                },
-                {
-                    "id": 1,
-                    "speaker": "Therapeut",
-                    "text": "Können Sie mir mehr darüber erzählen?",
-                    "start": 3.5,
-                    "end": 5.5
-                }
-            ]
+        """Expose settings for UI display."""
+        return {
+            "name": self.settings.model,
+            "base_url": self.settings.base_url,
         }
-
-        skill_path = Path("emotion_dynaminc-skill/SKILL.md")
-        if skill_path.exists():
-            print("\n🔍 Testing analysis...")
-            result = api.analyze_transcript(test_data, skill_path)
-            print(f"✅ Analysis complete!")
-            print(f"   Keys: {list(result.keys())}")
-        else:
-            print(f"\n⚠️ Skill file not found: {skill_path}")
-            print("   Skipping analysis test")
-
-    except Exception as e:
-        print(f"❌ Error: {e}")

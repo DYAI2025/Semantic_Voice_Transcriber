@@ -1,26 +1,26 @@
 characteristics: []
-last_updated: '2025-11-13T15:12:44.472662'
+last_updated: '2025-11-18T11:56:21.205920'
 name: Unknown
 prosody_patterns:
   energy_profile:
-    energy_variability: 0.0047934409230947495
-    mean_dynamic_range: 0.3158363103866577
-    mean_energy: 0.0030215332517400384
-    sample_count: 2
+    energy_variability: 0.012093882295576966
+    mean_dynamic_range: 0.2667282171109144
+    mean_energy: 0.012160691227216055
+    sample_count: 17
   pitch_profile:
-    mean_pitch: 203.4003974850827
-    pitch_variability: 105.72232145140424
-    sample_count: 2
+    mean_pitch: 226.83993258429223
+    pitch_variability: 111.61600178896504
+    sample_count: 17
   tempo_profile:
-    mean_bpm: 126.42045454545455
-    mean_speech_rate: 0.8767875797029593
-    sample_count: 2
+    mean_bpm: 123.76719519238416
+    mean_speech_rate: 1.9912978379286945
+    sample_count: 17
 statistics:
-  avg_sentence_length: 9.454209748892172
+  avg_sentence_length: 10.667289719626169
   most_common_words: {}
   sentiment:
     negative: 0
     positive: 0
     ratio: 0
 topics: {}
-total_interactions: 2
+total_interactions: 17

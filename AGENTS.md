@@ -1,22 +1,22 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`svt.py` orchestrates the GUI workflow, while `auto_transcriber_v4_emotion.py`, `prosody_extractor.py`, `speaker_diarizer.py`, and `super_semantic_processor.py` anchor transcription, prosody, diarization, and semantic fusion. Source audio belongs in `Eingang/`, derived transcripts land in `Transkripte_LLM/`, and regression fixtures live in `fixtures/`. Persist long-term therapeutic memory inside `Memory/` (YAML plus SQLite), and keep marker grammars within `VP_ATO/` and `Marker_LD3.5_SSoTh/`. Reference docs stay under `docs/`, with fusion specs inside `FusionEngine_ProjectSpec.md/`.
+`svt.py` orchestrates the GUI and routes sessions through `auto_transcriber_v4_emotion.py`, `prosody_extractor.py`, `speaker_diarizer.py`, and `super_semantic_processor.py`. Raw WAVs land in `Eingang/`, curated samples mirror in `fixtures/`, and generated transcripts are archived in `Transkripte_LLM/`. Therapeutic memories (YAML plus SQLite) sit in `Memory/`, while symbolic grammars and narrative templates remain in `VP_ATO/` and `Marker_LD3.5_SSoTh/`. Keep research briefs and design notes inside `docs/` or `FusionEngine_ProjectSpec.md` for quick reference.
 
 ## Build, Test, and Development Commands
-- `pip install -r requirements.txt` – core runtime deps; append `requirements_emotion.txt` for prosody/emotion experiments.
-- `python3 svt.py` – production launcher; `python3 start_super_semantic.py` opens the interactive pipeline controller.
-- `python3 auto_transcriber_v4_emotion.py --audio Eingang/Patient/demo.wav` – drives ingest → diarization → semantic emit end-to-end.
-- `python3 -m pytest tests -v` – primary regression harness; add focused runs like `python3 test_prosody_pipeline.py` or `python3 -m pytest tests/test_full_integration.py -v` when touching cross-layer flows.
+- `pip install -r requirements.txt` installs the baseline runtime; append `-r requirements_emotion.txt` when exploring prosody or affect modeling.
+- `python3 svt.py` launches the production therapist console, while `python3 start_super_semantic.py` exposes the controller UI plus debugging toggles.
+- `python3 auto_transcriber_v4_emotion.py --audio Eingang/Patient/demo.wav` exercises the ingest → diarization → semantic pipeline on a fixture clip.
+- `python3 -m pytest tests -v` runs the regression pack; scope down with `python3 test_prosody_pipeline.py` or `python3 -m pytest tests/test_full_integration.py -v` before shipping multi-layer work.
 
 ## Coding Style & Naming Conventions
-Target Python 3.12, 4-space indentation, and type hints on every public function. Docstrings must capture therapeutic intent rather than pure mechanics. Modules stay `snake_case.py`, classes use `CamelCase`, and YAML markers follow the `ATO_*`/`SEM_*` prefixes already present. Centralize reusable helpers (e.g., `audio_preprocessor.normalize_levels`) and keep critical thresholds or config constants near the top of each module.
+Target Python 3.12, 4-space indentation, and type hints on every public function. Docstrings should describe therapeutic intent, not just mechanics. Modules stay `snake_case.py`, classes use `CamelCase`, YAML marker IDs start with `ATO_` or `SEM_`, and shared thresholds belong near the top of each module. Prefer extracting helpers into `audio_preprocessor.py` or `utilities/` instead of duplicating logic.
 
 ## Testing Guidelines
-Prefer `pytest` plus the supplied fixtures; mirror any new audio samples inside `fixtures/` instead of `Eingang/`. Add regression tests whenever you modify prosody thresholds, diarization heuristics, or YAML schemas, and assert required keys as shown in `tests/test_yaml_structure.py`. Multi-layer edits require at least one integration test (`tests/test_full_integration.py`) before merging.
+Pytest is mandatory. Place any new audio artifacts in `fixtures/` and replicate the schema expectations shown in `tests/test_yaml_structure.py`. Add or update integration checks (`tests/test_full_integration.py`, `test_intelligent_pipeline_integration.py`) whenever changes touch transcription, diarization, or semantic orchestration simultaneously.
 
 ## Commit & Pull Request Guidelines
-Write short, imperative commits (`feat:`, `fix:`, `chore:`) and branch by work type (`feat/<topic>`). Every PR must cite the relevant spec or issue, summarize UX impact, call out config/env updates, and paste the exact test commands plus outcomes. Include screenshots or transcript snippets whenever UI elements, Markdown exports, or JSON payloads change.
+Use imperative subjects with prefixes like `feat:`, `fix:`, or `chore:` and branch by workstream (e.g., `feat/prosody-calibration`). Pull requests must reference the driving spec or issue, summarize clinician impact, list configuration or env changes, and paste the exact test commands plus outcomes. Attach screenshots or transcript excerpts whenever UI, Markdown exports, or JSON payloads shift so reviewers can validate behavior quickly.
 
 ## Security & Configuration Tips
-Load OpenAI/Hugging Face tokens from `.env` via `os.getenv` and keep the file untracked. Never commit PHI: stash patient media under `Eingang/` or `Output/` locally and scrub them before pushing. Redact speaker identifiers and marker payloads in logs, and spot-check sensitive YAML within `VP_ATO/` for inadvertent PII before publishing.
+Load OpenAI or Hugging Face secrets from `.env` via `os.getenv`, keep the file untracked, and scrub PHI before sharing artifacts. Store raw patient media under `Eingang/` or `Output/`, redact speaker names inside logs, and audit YAML in `VP_ATO/` for inadvertent identifiers prior to release.

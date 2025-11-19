@@ -1,3 +1,7 @@
 {
-  "approvalMode": "yolo"
+  "tools": {
+    "approvalMode": "yolo"
+  },
+  "maxOutputTokens": 16000,
+  "$version": 2
 }

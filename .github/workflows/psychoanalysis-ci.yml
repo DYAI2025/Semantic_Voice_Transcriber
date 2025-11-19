@@ -1,0 +1,109 @@
+name: Psychoanalysis Dashboard CI
+
+on:
+  push:
+    branches: [ main, feat/professional-quality-enhancement ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg portaudio19-dev
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-mock
+
+    - name: Run Psychoanalysis Config Tests
+      run: |
+        pytest tests/test_psychoanalysis_config.py -v
+
+    - name: Run Psychoanalytic Markers Tests
+      run: |
+        pytest tests/test_psychoanalytic_markers.py -v
+
+    - name: Run Cache Manager Tests
+      run: |
+        pytest tests/test_psychoanalysis_cache.py -v
+
+    - name: Run Turnpoint Detector Tests
+      run: |
+        pytest tests/test_turnpoint_detector.py -v
+
+    - name: Run Dashboard Generator Tests
+      run: |
+        pytest tests/test_dashboard_generator.py -v
+
+    - name: Run Pipeline Tests (without API key)
+      run: |
+        pytest tests/test_psychoanalysis_pipeline.py -v
+
+    - name: Run API Client Tests (mocked)
+      run: |
+        pytest tests/test_psychoanalysis_api.py -v
+
+    - name: Run E2E Integration Tests
+      run: |
+        pytest tests/test_e2e_psychoanalysis.py -v
+
+    - name: Run GitHub Actions specific tests
+      run: |
+        pytest tests/test_ci_pipeline.py -v
+        pytest tests/test_ci_transcription.py -v
+        pytest tests/test_ci_gpt_integration.py -v
+
+    - name: Generate Coverage Report
+      run: |
+        pytest tests/test_psychoanalysis*.py tests/test_turnpoint*.py tests/test_dashboard*.py tests/test_e2e*.py tests/test_ci*.py --cov=. --cov-report=xml --cov-report=term
+
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  test-with-api-key:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg portaudio19-dev
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-mock
+
+    - name: Run API Integration Tests (with real API key)
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        pytest tests/test_psychoanalysis_api.py tests/test_psychoanalysis_pipeline.py -v --maxfail=1
+      continue-on-error: true

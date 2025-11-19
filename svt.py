@@ -5,6 +5,7 @@ Semantic Voice Transcriber (SVT) - Professional one-click workflow
 High-quality transcription with prosody analysis, emotion detection, and confidence scoring
 """
 
+import os
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 from pathlib import Path
@@ -18,6 +19,19 @@ from audio_quality_analyzer import AudioQualityAnalyzer
 from audio_preprocessor import AudioPreprocessor
 from output_formatter import OutputFormatter, SpeakerConfig
 from ato_marker_integration import ATOMarkerIntegration
+from svt_core import health_check
+from svt_core.llm_provider.factory import build_default_manager, build_provider_from_profile
+from svt_core.config.settings import SettingsStore, ProviderProfile
+from svt_core.ui.provider_dialog import ProviderDialog
+
+try:
+    from openai import RateLimitError, OpenAIError  # type: ignore
+except Exception:  # pragma: no cover - openai optional at runtime
+    class OpenAIError(Exception):
+        """Fallback OpenAI error when SDK is unavailable."""
+
+    class RateLimitError(OpenAIError):
+        """Fallback rate limit error when SDK is unavailable."""
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +50,8 @@ class SemanticVoiceTranscriberGUI:
         self.progress_queue = queue.Queue()
         self.processing_thread = None
         self.is_processing = False
+        self._dashboard_retry_count = 0
+        self._health_status = ("unknown", "")
 
         # Default paths
         self.input_dir = Path("Eingang")
@@ -57,11 +73,32 @@ class SemanticVoiceTranscriberGUI:
             max_markers_per_segment=5
         )
 
+        self.settings_store = SettingsStore()
+        self.provider_manager = build_default_manager()
+        self._apply_provider_profile(self.settings_store.get_provider_profile())
+
         self._create_widgets()
         self._check_progress_queue()
 
+    def set_health_status(self, severity: str, summary: str):
+        colors = {
+            "ok": "#0f8c3f",
+            "warn": "#b38400",
+            "error": "#c62828",
+        }
+        self._health_status = (severity, summary)
+        label = f"Systemstatus: {severity.upper()}"
+        self.health_status_var.set(label)
+        self.health_label.configure(foreground=colors.get(severity, "#555555"))
+
     def _create_widgets(self):
         """Create all GUI widgets"""
+
+        menubar = tk.Menu(self.root)
+        settings_menu = tk.Menu(menubar, tearoff=0)
+        settings_menu.add_command(label="Provider-Einstellungen", command=self._open_provider_dialog)
+        menubar.add_cascade(label="Einstellungen", menu=settings_menu)
+        self.root.config(menu=menubar)
 
         # Title
         title_frame = ttk.Frame(self.root, padding="10")
@@ -80,6 +117,14 @@ class SemanticVoiceTranscriberGUI:
             font=("Helvetica", 10)
         )
         subtitle_label.pack()
+
+        self.health_status_var = tk.StringVar(value="Systemstatus: UNBEKANNT")
+        self.health_label = ttk.Label(
+            title_frame,
+            textvariable=self.health_status_var,
+            font=("Helvetica", 9, "italic")
+        )
+        self.health_label.pack()
 
         # Configuration frame
         config_frame = ttk.LabelFrame(self.root, text="Konfiguration", padding="10")
@@ -425,6 +470,8 @@ class SemanticVoiceTranscriberGUI:
             'chunk_duration': self.chunk_duration_var.get(),
             'overlap_duration': 5.0  # Fixed at 5 seconds for now
         }
+
+        settings['provider'] = self.provider_manager.describe_active()
 
         self._log(f"\n{'='*60}")
         self._log(f"🚀 Starte Transkription von {len(selected_files)} Datei(en)")
@@ -837,6 +884,64 @@ class SemanticVoiceTranscriberGUI:
         finally:
             self.is_processing = False
 
+    def _get_dashboard_key_alias(self) -> str:
+        """Return masked alias for the currently active OpenAI API key."""
+        alias = os.environ.get("OPENAI_API_KEY_ALIAS")
+        if alias:
+            return alias
+        profile = os.environ.get("OPENAI_API_PROFILE")
+        if profile:
+            return profile
+        return "primary"
+
+    def _build_dashboard_log_context(self, pipeline: Optional[Any]) -> Dict[str, Any]:
+        """Collect logging context for dashboard API failures."""
+        provider = getattr(pipeline, "provider_name", "unknown")
+        api_client = getattr(pipeline, "api", None) if pipeline else None
+        model = None
+        alias = None
+        if api_client and hasattr(api_client, "api_key_alias"):
+            alias = getattr(api_client, "api_key_alias")
+        if api_client and hasattr(api_client, "model"):
+            model = api_client.model
+        elif pipeline and isinstance(getattr(pipeline, "config", None), dict):
+            model = pipeline.config.get("openai", {}).get("model")
+        retry_count = getattr(api_client, "last_retry_count", self._dashboard_retry_count)
+        context = {
+            "provider": provider,
+            "model": model or "unknown",
+            "key_alias": alias or self._get_dashboard_key_alias(),
+            "retry_count": retry_count
+        }
+        return context
+
+    def _handle_dashboard_error(
+        self,
+        user_message: str,
+        error: Exception,
+        pipeline: Optional[Any]
+    ) -> None:
+        """Log dashboard failures and show a GUI notification."""
+        context = self._build_dashboard_log_context(pipeline)
+        context_text = (
+            f"provider={context['provider']}"
+            f" · model={context['model']}"
+            f" · key_alias={context['key_alias']}"
+            f" · retries={context['retry_count']}"
+        )
+        logger.error(
+            "Dashboard pipeline error: %s | %s",
+            user_message,
+            context_text,
+            exc_info=error
+        )
+        self._log(f"\n❌ Dashboard-Fehler: {user_message}")
+        self._log(f"   ↳ Kontext: {context_text}\n")
+        messagebox.showerror(
+            "Dashboard-Fehler",
+            f"{user_message}\n\nDetails: {context_text}"
+        )
+
     def _check_dashboard_transcription(self, expected_json: Path):
         """Check if dashboard transcription is complete"""
         if expected_json.exists():
@@ -863,6 +968,9 @@ class SemanticVoiceTranscriberGUI:
         import os
         from psychoanalysis_pipeline import PsychoanalysisPipeline
         from dashboard_generator import DashboardGenerator
+
+        pipeline = None
+        self._dashboard_retry_count = 0
 
         try:
             output_dir = Path(self.output_dir_var.get())
@@ -947,6 +1055,8 @@ class SemanticVoiceTranscriberGUI:
             # Run pipeline
             self._log("⚡ Führe Analyse durch (Cache → API → Turnpoints)...")
             result = pipeline.analyze_transcript(pipeline_input, skill_path)
+            if hasattr(pipeline, "api"):
+                self._dashboard_retry_count = getattr(pipeline.api, "last_retry_count", 0)
 
             self._log(f"   ✅ Analyse abgeschlossen")
             self._log(f"   Utterances: {len(result['utterance_states'])}")
@@ -977,7 +1087,27 @@ class SemanticVoiceTranscriberGUI:
                 f"Datei: {dashboard_path.name}\n\n"
                 f"Das Dashboard wurde im Browser geöffnet."
             )
-
+        except RateLimitError as e:
+            self._handle_dashboard_error(
+                "OpenAI-Rate-Limit erreicht. Bitte warten oder API-Profil wechseln.",
+                e,
+                pipeline
+            )
+            return
+        except OpenAIError as e:
+            self._handle_dashboard_error(
+                "OpenAI-Dashboard-Analyse fehlgeschlagen.",
+                e,
+                pipeline
+            )
+            return
+        except Exception as e:
+            self._handle_dashboard_error(
+                "Dashboard-Analyse fehlgeschlagen.",
+                e,
+                pipeline
+            )
+            return
         except Exception as e:
             logger.error(f"Dashboard generation error: {e}", exc_info=True)
             self._log(f"\n❌ Fehler: {e}\n")
@@ -1262,6 +1392,24 @@ class SemanticVoiceTranscriberGUI:
         # Schedule next check
         self.root.after(100, self._check_progress_queue)
 
+    def _apply_provider_profile(self, profile: ProviderProfile):
+        if profile.key == "local":
+            self.provider_manager.set_active("local")
+            return
+        provider = build_provider_from_profile(profile)
+        self.provider_manager.register(profile.key, provider)
+        self.provider_manager.set_active(profile.key)
+
+    def _open_provider_dialog(self):
+        def _on_save(profile: ProviderProfile):
+            try:
+                self._apply_provider_profile(profile)
+            except Exception as exc:
+                messagebox.showerror("Provider", f"Konfiguration fehlgeschlagen: {exc}")
+
+        dialog = ProviderDialog(self.root, self.provider_manager, self.settings_store, on_save=_on_save)
+        dialog.grab_set()
+
     def _log(self, message: str):
         """Add message to log"""
         self.log_text.insert(tk.END, message + "\n")
@@ -1271,15 +1419,34 @@ class SemanticVoiceTranscriberGUI:
 def main():
     """Main entry point"""
     root = tk.Tk()
+    root.withdraw()
+    ok, health_state = _run_health_gate(root)
+    if not ok:
+        root.destroy()
+        return
 
-    # Set theme
     style = ttk.Style()
     available_themes = style.theme_names()
     if 'clam' in available_themes:
         style.theme_use('clam')
 
+    root.deiconify()
     app = SemanticVoiceTranscriberGUI(root)
+    app.set_health_status(*health_state)
     root.mainloop()
+
+
+def _run_health_gate(root) -> tuple[bool, tuple[str, str]]:
+    results = health_check.run_all()
+    status, summary = health_check.summarize(results)
+    if status == "error":
+        messagebox.showerror("Systemcheck fehlgeschlagen", summary, parent=root)
+        return False, (status, summary)
+    if status == "warn":
+        messagebox.showwarning("Systemcheck Warnung", summary, parent=root)
+    else:
+        logger.info("Systemcheck OK:\n%s", summary)
+    return True, (status, summary)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,29 @@
+# VAD Affect State Layer Configuration
+
+# Feature weights
+weights:
+  arousal:
+    energy: 0.5
+    f0_range: 0.3
+    tempo: 0.2
+  valence:
+    lexical: 0.6
+    prosody_pitch_mean: 0.4
+  dominance:
+    interruption: 0.4
+    loudness_delta: 0.4
+    hedges: 0.2
+
+# Thresholds
+thresholds:
+  grad_threshold: 0.15  # Turning point gradient
+  persistence_min: 3.0  # Seconds
+  hysteresis: 0.05
+
+# Smoothing
+smoothing:
+  lambda: 0.3  # EMA factor
+
+# Latency SLA
+latency:
+  target_95p_ms: 500

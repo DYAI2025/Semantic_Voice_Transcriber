@@ -11,11 +11,14 @@ With robust error handling and graceful degradation:
 """
 
 import logging
+import multiprocessing as mp
+import threading
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 import torch
 from functools import wraps
+from pyannote.core import Annotation, Segment
 
 try:
     from pyannote.audio import Pipeline
@@ -25,6 +28,58 @@ except ImportError:
     logging.warning("pyannote.audio not available. Speaker diarization disabled.")
 
 logger = logging.getLogger(__name__)
+
+_FORKED_PIPELINE = None
+
+
+def _set_forked_pipeline(pipeline):
+    global _FORKED_PIPELINE
+    _FORKED_PIPELINE = pipeline
+
+
+def _serialize_annotation(annotation: Annotation) -> List[Dict[str, Any]]:
+    tracks: List[Dict[str, Any]] = []
+    for turn, _, speaker in annotation.itertracks(yield_label=True):
+        tracks.append({
+            "start": turn.start,
+            "end": turn.end,
+            "speaker": speaker
+        })
+    return tracks
+
+
+def _deserialize_annotation(tracks: List[Dict[str, Any]]) -> Annotation:
+    annotation = Annotation()
+    for track in tracks:
+        annotation[Segment(track["start"], track["end"])] = track["speaker"]
+    return annotation
+
+
+def _forked_diarization_worker(audio_path: str, diarization_kwargs: Dict[str, Any], queue):
+    try:
+        if _FORKED_PIPELINE is None:
+            raise RuntimeError("Forked pipeline not initialized")
+        annotation = _FORKED_PIPELINE(audio_path, **diarization_kwargs)
+        queue.put(("ok", _serialize_annotation(annotation)))
+    except Exception as exc:  # pragma: no cover - worker errors logged upstream
+        queue.put(("error", repr(exc)))
+
+
+def _spawned_diarization_worker(config: Dict[str, Any], audio_path: str,
+                                diarization_kwargs: Dict[str, Any], queue):
+    try:
+        from pyannote.audio import Pipeline
+
+        device = torch.device(config["device"])
+        pipeline = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-3.1",
+            token=config.get("token")
+        )
+        pipeline.to(device)
+        annotation = pipeline(audio_path, **diarization_kwargs)
+        queue.put(("ok", _serialize_annotation(annotation)))
+    except Exception as exc:  # pragma: no cover - worker errors logged upstream
+        queue.put(("error", repr(exc)))
 
 
 class DiarizationError(Exception):
@@ -131,6 +186,11 @@ class SpeakerDiarizer:
         # Pipeline will be loaded on first use
         self.pipeline = None
         self.osd_pipeline = None
+        self._mp_start_method = (
+            "fork" if "fork" in mp.get_all_start_methods() else "spawn"
+        )
+        self.fallback_invocations = 0
+        self.fallback_timeouts = 0
 
     def _load_pipeline(self):
         """Load pyannote.audio pipeline (lazy loading)"""
@@ -199,6 +259,13 @@ class SpeakerDiarizer:
         Raises:
             DiarizationTimeoutError: If diarization exceeds timeout
         """
+        if threading.current_thread() is not threading.main_thread():
+            logger.info(
+                "Thread-safe fallback diarization activated (worker=%s)",
+                self._mp_start_method
+            )
+            return self._run_fallback_diarization(audio_path, diarization_kwargs)
+
         import signal
 
         def timeout_handler(signum, frame):
@@ -221,9 +288,75 @@ class SpeakerDiarizer:
 
         except AttributeError:
             # Windows doesn't support signal.SIGALRM
-            # Fall back to simple execution without timeout
             logger.warning("Timeout not supported on this platform - running without timeout")
             return self.pipeline(str(audio_path), **diarization_kwargs)
+
+    def _run_fallback_diarization(
+        self,
+        audio_path: Path,
+        diarization_kwargs: Dict[str, Any]
+    ):
+        """Execute diarization in a separate worker with join timeout."""
+        ctx = mp.get_context(self._mp_start_method)
+        result_queue = ctx.Queue()
+        start_time = time.time()
+        self.fallback_invocations += 1
+
+        logger.info(
+            "Using fallback diarization worker (%s) for %s",
+            self._mp_start_method,
+            audio_path.name
+        )
+
+        if self._mp_start_method == "fork":
+            _set_forked_pipeline(self.pipeline)
+            process = ctx.Process(
+                target=_forked_diarization_worker,
+                args=(str(audio_path), diarization_kwargs, result_queue)
+            )
+        else:
+            worker_config = {
+                "token": self.use_auth_token,
+                "device": str(self.device)
+            }
+            process = ctx.Process(
+                target=_spawned_diarization_worker,
+                args=(worker_config, str(audio_path), diarization_kwargs, result_queue)
+            )
+
+        process.start()
+        process.join(self.timeout_seconds)
+
+        if process.is_alive():
+            self.fallback_timeouts += 1
+            process.terminate()
+            process.join()
+            logger.error(
+                "Fallback diarization timeout after %.1fs on %s worker",
+                self.timeout_seconds,
+                self._mp_start_method
+            )
+            raise DiarizationTimeoutError(
+                f"Fallback diarization exceeded timeout of {self.timeout_seconds}s"
+            )
+
+        if result_queue.empty():
+            logger.error("Fallback diarization worker returned no result")
+            raise DiarizationError("Fallback worker returned no result")
+
+        status, payload = result_queue.get()
+        duration = time.time() - start_time
+
+        if status == "ok":
+            logger.info(
+                "Fallback diarization finished in %.2fs (%s)",
+                duration,
+                self._mp_start_method
+            )
+            return _deserialize_annotation(payload)
+
+        logger.error("Fallback diarization worker failed: %s", payload)
+        raise DiarizationError(payload)
 
     def detect_overlapped_speech(
         self,
