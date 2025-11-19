@@ -1,0 +1,23 @@
+id: ATO_DEFENSE_DISPLACEMENT
+frame:
+  signal:
+    - pattern: '\b(ich war wütend auf .+, obwohl eigentlich)\b'
+      flags: IGNORECASE
+    - pattern: '\b(statt .+ habe ich .+ beschuldigt)\b'
+      flags: IGNORECASE
+    - pattern: '\b(an .+ ausgelassen)\b'
+      flags: IGNORECASE
+  concept: "Verschiebung von Emotionen auf ein sichereres Ziel"
+  pragmatics: "Umleitung von Gefühlen auf weniger bedrohliche Objekte"
+  narrative: "Oft bei unterdrückter Wut gegenüber Autoritätspersonen"
+examples:
+  - "Ich war wütend auf meinen Kollegen, obwohl eigentlich mein Chef schuld war."
+  - "Statt meinem Partner habe ich meinen Hund angeschrien."
+  - "Ich habe meine Frustration an den Kindern ausgelassen."
+  - "Eigentlich bin ich auf meine Mutter wütend, aber ich streite mit meiner Schwester."
+  - "An meinem Team ausgelassen, was der Chef mir angetan hat."
+category: defense
+severity: medium
+co_occurs_with:
+  - ATO_THEME_CONTROL
+  - high_arousal

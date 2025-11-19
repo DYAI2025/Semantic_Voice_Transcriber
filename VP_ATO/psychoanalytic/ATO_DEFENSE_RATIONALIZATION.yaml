@@ -1,0 +1,24 @@
+id: ATO_DEFENSE_RATIONALIZATION
+frame:
+  signal:
+    - pattern: '\b(logisch betrachtet|rational gesehen|objektiv)\b'
+      flags: IGNORECASE
+    - pattern: '\b(man muss verstehen|im Grunde genommen|theoretisch)\b'
+      flags: IGNORECASE
+    - pattern: '\b(es gibt Gründe|wissenschaftlich|eigentlich)\b'
+      flags: IGNORECASE
+  concept: "Intellektualisierung zur Vermeidung emotionaler Konfrontation"
+  pragmatics: "Übermäßige Rationalisierung verhindert emotionalen Zugang"
+  narrative: "Typisch bei hochgebildeten Personen oder in angstbesetzten Themen"
+examples:
+  - "Logisch betrachtet macht das alles Sinn."
+  - "Man muss verstehen, dass es Gründe gab."
+  - "Rational gesehen ist das die beste Lösung."
+  - "Objektiv betrachtet habe ich nichts falsch gemacht."
+  - "Im Grunde genommen war es unvermeidlich."
+  - "Theoretisch hätte ich anders handeln können, aber..."
+category: defense
+severity: low
+co_occurs_with:
+  - ATO_RESISTANCE_TOPIC_CHANGE
+  - low_arousal

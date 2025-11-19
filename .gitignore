@@ -316,3 +316,7 @@ markers/
 FusionEngine_ProjectSpec.md/
 Turning_Points_in_Transcription/
 Turning_Points_in_Transcription/**
+
+# Specific files to ignore
+Memory/Unknown.yaml
+QWEN.md

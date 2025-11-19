@@ -1,0 +1,24 @@
+id: ATO_DEFENSE_REGRESSION
+frame:
+  signal:
+    - pattern: '\b(ich kann das nicht|ich bin zu schwach|helfen Sie mir)\b'
+      flags: IGNORECASE
+    - pattern: '\b(ich schaffe das nicht alleine|ich brauche jemanden)\b'
+      flags: IGNORECASE
+    - pattern: '\b(wie ein Kind|hilflos|überfordert)\b'
+      flags: IGNORECASE
+  concept: "Rückfall auf kindliches Verhaltensmuster bei Überforderung"
+  pragmatics: "Hilfsuchende Regression zur Entlastung von Verantwortung"
+  narrative: "Tritt bei Stress oder emotionaler Überwältigung auf"
+examples:
+  - "Ich kann das nicht, ich bin zu schwach."
+  - "Helfen Sie mir, ich schaffe das nicht alleine."
+  - "Ich fühle mich wie ein Kind, völlig hilflos."
+  - "Ich brauche jemanden, der mir sagt, was ich tun soll."
+  - "Ich bin so überfordert, ich will nur noch weinen."
+  - "Können Sie das für mich machen?"
+category: defense
+severity: high
+co_occurs_with:
+  - ATO_THEME_ABANDONMENT
+  - low_dominance

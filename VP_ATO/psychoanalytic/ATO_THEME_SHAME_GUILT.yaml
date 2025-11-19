@@ -1,0 +1,26 @@
+id: ATO_THEME_SHAME_GUILT
+frame:
+  signal:
+    - pattern: '\b(schäme mich|Scham|peinlich|beschämt)\b'
+      flags: IGNORECASE
+    - pattern: '\b(Schuld|schuldig|Schuldgefühle)\b'
+      flags: IGNORECASE
+    - pattern: '\b(unwürdig|wertlos|minderwertig)\b'
+      flags: IGNORECASE
+  concept: "Unbewusstes Thema: Scham- und Schulddynamiken"
+  pragmatics: "Zentral bei depressiven Störungen und Traumafolgen"
+  narrative: "Internalisierte negative Selbstbilder"
+examples:
+  - "Ich schäme mich so sehr für mich selbst."
+  - "Die Schuldgefühle zerfressen mich."
+  - "Das ist mir so peinlich, ich fühle mich beschämt."
+  - "Ich fühle mich schuldig, auch wenn ich nichts getan habe."
+  - "Ich bin unwürdig und wertlos."
+  - "Minderwertigkeitsgefühle begleiten mich immer."
+category: theme
+severity: high
+co_occurs_with:
+  - ATO_DEFENSE_DENIAL
+  - ATO_RESISTANCE_SILENCE
+  - low_valence
+  - low_dominance

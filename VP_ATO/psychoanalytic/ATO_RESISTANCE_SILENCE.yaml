@@ -1,0 +1,23 @@
+id: ATO_RESISTANCE_SILENCE
+frame:
+  signal:
+    - pattern: '\b(weiß nicht|kann nicht sagen|keine Ahnung|schweigen|still)\b'
+      flags: IGNORECASE
+      negation_guard: true
+    - pattern: '\.\.\.'
+    - pattern: '\[PAUSE\]'
+  concept: "Therapeutischer Widerstand durch Schweigen oder Vermeidung"
+  pragmatics: "Indiziert Abwehr gegen emotional belastende Themen"
+  narrative: "Typisch in Phasen hoher innerer Anspannung oder Nähe zu unbewussten Konflikten"
+examples:
+  - "Ich weiß nicht, was ich sagen soll..."
+  - "Darüber kann ich nicht sprechen."
+  - "..."
+  - "[PAUSE] Keine Ahnung."
+  - "Ich will jetzt nicht darüber reden."
+  - "Schweigen ist besser."
+category: resistance
+severity: medium
+co_occurs_with:
+  - ATO_THEME_ABANDONMENT
+  - high_arousal

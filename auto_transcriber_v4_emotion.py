@@ -449,7 +449,8 @@ def generate_correlation_explanation(prediction) -> str:
 class WhisperSpeakerMatcherV4:
     def __init__(self, base_path=None, use_faster_whisper=True):
         if base_path is None:
-            self.base_path = Path("/Users/benjaminpoersch/Library/CloudStorage/GoogleDrive-benjamin.poersch@diyrigent.de/Meine Ablage/MyMind/WhisperSprecherMatcher")
+            # Use current directory as default (cross-platform)
+            self.base_path = Path(__file__).parent
         else:
             self.base_path = Path(base_path)
 
@@ -865,7 +866,10 @@ def transcribe_with_whisper(
     hf_token: Optional[str] = None,
     num_speakers: Optional[int] = None,
     enable_overlap_detection: bool = False,
-    osd_min_duration: float = 0.5
+    osd_min_duration: float = 0.5,
+    use_audio_chunking: bool = True,  # NEW PARAMETER
+    chunk_duration: float = 300.0,    # NEW PARAMETER (5 minutes default)
+    overlap_duration: float = 5.0     # NEW PARAMETER (5 seconds default)
 ) -> Dict[str, Any]:
     """
     Transkribiert Audio mit Whisper und extrahiert Confidence Scores
@@ -884,6 +888,9 @@ def transcribe_with_whisper(
         num_speakers: Fixed number of speakers (None for auto-detect)
         enable_overlap_detection: Enable overlapped speech detection
         osd_min_duration: Minimum duration (seconds) for overlap regions
+        use_audio_chunking: Enable chunking for large files to reduce memory usage
+        chunk_duration: Duration of each chunk in seconds (when chunking enabled)
+        overlap_duration: Duration of overlap between chunks in seconds (when chunking enabled)
 
     Returns:
         Dict mit text, segments, confidence_scores, prosody_features/baseline,
@@ -895,6 +902,48 @@ def transcribe_with_whisper(
         import soundfile as sf
         import tempfile
         from pathlib import Path
+
+        # Check if the audio file is large and should be chunked to reduce memory usage
+        audio_duration = librosa.get_duration(path=audio_path)
+        
+        # Only apply chunking if enabled and the audio is longer than the chunk size
+        if use_audio_chunking and audio_duration > chunk_duration:
+            logger.info(f"Audio file is {audio_duration:.2f}s long, using chunking (chunk size: {chunk_duration}s)")
+            
+            # Import the chunker
+            from audio_chunker import process_large_audio_with_chunking
+            
+            # Prepare the transcribe function with all parameters except the audio path
+            def chunk_transcribe_func(chunk_path, **kwargs):
+                # Call current function but disable chunking for the chunks
+                return transcribe_with_whisper(
+                    chunk_path,
+                    model_size=model_size,
+                    language=language,
+                    use_intelligent_pipeline=use_intelligent_pipeline,
+                    quality_score=quality_score,
+                    quality_analyzer=quality_analyzer,
+                    audio_preprocessor=audio_preprocessor,
+                    extract_prosody=extract_prosody,
+                    enable_diarization=enable_diarization,
+                    hf_token=hf_token,
+                    num_speakers=num_speakers,
+                    enable_overlap_detection=enable_overlap_detection,
+                    osd_min_duration=osd_min_duration,
+                    use_audio_chunking=False,  # Disable chunking for chunks
+                    chunk_duration=chunk_duration,
+                    overlap_duration=overlap_duration,
+                    **kwargs
+                )
+            
+            # Process the large audio file using chunking
+            return process_large_audio_with_chunking(
+                audio_path,
+                chunk_transcribe_func,
+                chunk_duration=chunk_duration,
+                overlap_duration=overlap_duration,
+                cleanup_memory=True  # Enable memory cleanup between chunks
+            )
 
         # Apply intelligent preprocessing if enabled
         audio_file_to_transcribe = audio_path
@@ -927,6 +976,24 @@ def transcribe_with_whisper(
             word_timestamps=True  # Enable word-level timestamps
         )
 
+        # Clean up model from memory to reduce memory consumption
+        del model
+        import gc
+        gc.collect()
+        gc.collect()  # Run twice for thorough cleanup
+
+        # Clear PyTorch CUDA cache if available
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                logger.debug("Cleared CUDA cache after transcription")
+        except ImportError:
+            # torch is not installed; skipping CUDA cache cleanup
+            pass
+
+        logger.debug("Whisper model deleted and memory cleaned")
+        
         # Clean up temp file if created
         if temp_file_created:
             try:

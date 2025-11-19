@@ -1,0 +1,25 @@
+id: ATO_TRANSFERENCE_NEGATIVE
+frame:
+  signal:
+    - pattern: '\b(Sie verstehen (mich|das) nicht|Sie helfen mir nicht)\b'
+      flags: IGNORECASE
+    - pattern: '\b(nutzlos|sinnlos|bringt nichts)\b'
+      flags: IGNORECASE
+    - pattern: '\b(wie alle anderen|genau wie)\b'
+      flags: IGNORECASE
+  concept: "Entwertung des Therapeuten als Übertragungsphänomen"
+  pragmatics: "Negative Übertragung früherer frustrierender Beziehungen"
+  narrative: "Wichtig für Bearbeitung früher Enttäuschungserfahrungen"
+examples:
+  - "Sie verstehen mich nicht, wie alle anderen."
+  - "Das bringt alles nichts, Sie helfen mir nicht."
+  - "Nutzlos, diese Therapie."
+  - "Sie sind genau wie mein Vater, distanziert und kalt."
+  - "Sinnlos, mit Ihnen zu reden."
+  - "Sie interessieren sich gar nicht für mich."
+category: transference
+severity: high
+co_occurs_with:
+  - ATO_RESISTANCE_SILENCE
+  - low_valence
+  - high_arousal
