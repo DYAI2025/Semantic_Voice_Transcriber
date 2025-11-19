@@ -2,6 +2,7 @@
 # Semantic Voice Transcriber (SVT)
 
 **Dokumentiert**: 2025-11-13
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
 **Version**: 1.0
 **Status**: Alle kritischen Bugs behoben ✅
 

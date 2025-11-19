@@ -1,5 +1,7 @@
 # Repository Guidelines
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Project Structure & Module Organization
 `svt.py` orchestrates the GUI and routes sessions through `auto_transcriber_v4_emotion.py`, `prosody_extractor.py`, `speaker_diarizer.py`, and `super_semantic_processor.py`. Raw WAVs land in `Eingang/`, curated samples mirror in `fixtures/`, and generated transcripts are archived in `Transkripte_LLM/`. Therapeutic memories (YAML plus SQLite) sit in `Memory/`, while symbolic grammars and narrative templates remain in `VP_ATO/` and `Marker_LD3.5_SSoTh/`. Keep research briefs and design notes inside `docs/` or `FusionEngine_ProjectSpec.md` for quick reference.
 

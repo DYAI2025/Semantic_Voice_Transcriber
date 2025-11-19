@@ -1,5 +1,7 @@
 # Installer Matrix
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Windows (Lite)
 - NSIS script: `installer/windows/svt_lite.nsi`
 - Copies repo to `$INSTDIR`, runs `scripts\setup_local_stack.py`, creates desktop shortcut.

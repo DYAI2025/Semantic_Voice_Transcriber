@@ -1,5 +1,7 @@
 # SVT Installation (Endnutzer)
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 1. **Installer herunterladen** (z. B. `SVT-Lite-Setup.exe`, `SVT.dmg`, `SVT.AppImage`)
 2. **Installationsprogramm starten**
    - Windows: Standard-Setup folgt; am Ende entsteht eine Desktop-Verknüpfung.

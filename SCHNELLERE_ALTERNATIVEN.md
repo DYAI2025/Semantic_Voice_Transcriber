@@ -1,5 +1,7 @@
 # Schnellere Alternativen zu OpenAI Whisper
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## 🚀 Übersicht der Alternativen
 
 ### 1. **faster-whisper** (Empfohlen!)
@@ -104,4 +106,4 @@ Mehrere Dateien gleichzeitig verarbeiten für bessere Effizienz.
 ### Hardware-Beschleunigung
 - Apple Silicon: Metal Performance Shaders
 - NVIDIA: CUDA
-- AMD: ROCm 
+- AMD: ROCm  

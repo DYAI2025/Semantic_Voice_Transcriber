@@ -1,6 +1,8 @@
 # Installation & Setup Guide
 ## Cross-Platform Installation für Semantic Voice Transcriber (SVT)
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 Diese Anleitung hilft Ihnen, SVT auf **Windows**, **macOS** oder **Linux** zu installieren und zu starten.
 
 ---

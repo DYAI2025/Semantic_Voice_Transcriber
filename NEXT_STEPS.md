@@ -2,8 +2,9 @@
 # Semantic Voice Transcriber (SVT)
 
 **Stand**: 2025-11-01
-**Aktueller Status**: Phase 2b Complete ✅
-**Nächste Phase**: Phase 2c - ATO-Marker-Integration
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+**Aktueller Status**: Phase 2c Complete ✅
+**Nächste Phase**: Phase 2d - Further enhancements
 
 ---
 

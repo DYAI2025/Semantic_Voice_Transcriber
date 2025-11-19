@@ -1,5 +1,7 @@
 # Intelligent Pipeline
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Overview
 
 The Intelligent Pipeline automatically analyzes audio quality and adapts transcription settings for optimal accuracy. No manual tuning required.

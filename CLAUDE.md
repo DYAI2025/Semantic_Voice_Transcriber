@@ -1,8 +1,10 @@
 # CLAUDE.md
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**Working Directory**: This CLAUDE.md is located in `Super_semantic_whisper/`, which is the main working directory for all development and operations.
+**Working Directory**: This CLAUDE.md is located in `Semantic_Voice_Transcriber/`, which is the main working directory for all development and operations.
 
 ## Project Overview
 

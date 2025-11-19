@@ -1,5 +1,7 @@
 # Psychoanalysis Dashboard
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Überblick
 
 Das **Psychoanalysis Dashboard** ist ein professionelles System zur psychoanalytischen Analyse therapeutischer Transkripte. Es kombiniert moderne KI-Technologie (GPT-4-Turbo) mit etablierten psychoanalytischen Konzepten und generiert interaktive HTML-Dashboards für die therapeutische Reflexion.

@@ -1,5 +1,7 @@
 # Cross-Platform Compatibility Fixes
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Übersicht
 
 Dieses Dokument beschreibt alle identifizierten Cross-Platform-Probleme und die durchgeführten Fixes für Windows, macOS und Linux Kompatibilität.
