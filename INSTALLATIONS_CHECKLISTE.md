@@ -1,5 +1,7 @@
 # ✅ INSTALLATIONS-CHECKLISTE
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## SOFORT durchführen BEVOR Sie das System der Kundin geben!
 
 ---
