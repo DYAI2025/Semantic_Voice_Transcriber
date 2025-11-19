@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class MemoryBuilder:
     def __init__(self, base_path=None):
         if base_path is None:
-            # Use current directory as default (cross-platform)
+            # Default base path is the script's directory, not the current working directory.
             self.base_path = Path(__file__).parent
         else:
             self.base_path = Path(base_path)
