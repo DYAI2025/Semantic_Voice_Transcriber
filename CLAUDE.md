@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+**Last Updated:** 2025-11-20 | **Verified against commit:** 39ed3ff
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -18,6 +18,21 @@ The system consists of interconnected components:
 - **Emotion Detection**: Multi-modal analysis combining audio features and text sentiment
 - **Semantic Processing**: ATO marker system for behavioral and linguistic pattern recognition
 - **Memory System**: Persistent speaker profiles with learning capabilities
+- **LLM Integration**: Dual provider support (OpenAI GPT-4 + FREE local Ollama)
+- **Health Monitoring**: Real-time system status and provider health checks
+- **Audit System**: Feature readiness tracking and quality assurance
+
+### Codebase Statistics
+
+- **164** Python files (17,509 lines in root)
+- **58** Test files (42 in tests/, 16 in root)
+- **57** Documentation files
+- **37** Marker definition files (18 ATO, 3 SEM, 16 in VP_ATO/)
+- **5** Audio format support (.opus, .m4a, .wav, .mp3, .ogg)
+- **5** Whisper model sizes (tiny → large)
+- **2** LLM providers (OpenAI, Ollama)
+- **4** Prosody features ("Big 4": Tempo, Pitch, Energy, Pauses)
+- **7** Output formats (MD, JSON, HTML, Enhanced HTML, PDF, CSV, Dashboard)
 
 ## Core Commands
 
@@ -129,13 +144,37 @@ Audio Input (m4a, opus, wav, mp3)
 
 ```
 svt.py (GUI)
+    ├── svt_core/ (modular architecture)
+    │   ├── health_check.py (system status monitoring)
+    │   ├── llm_provider/ (provider abstraction)
+    │   │   ├── factory.py (build providers)
+    │   │   ├── manager.py (provider management)
+    │   │   ├── local_ollama.py (FREE local LLM)
+    │   │   └── providers/ (OpenAI, Anthropic, etc.)
+    │   ├── config/settings.py (persistent configuration)
+    │   └── ui/provider_dialog.py (settings GUI)
+    │
     ├── auto_transcriber_v4_emotion.py (orchestrates pipeline)
     │   ├── audio_quality_analyzer.py (SNR, quality metrics)
     │   ├── audio_preprocessor.py (noise reduction)
     │   ├── speaker_diarizer.py (pyannote.audio)
     │   ├── prosody_extractor.py (Parselmouth, librosa)
     │   └── output_formatter.py (multi-format export)
-    ├── super_semantic_processor.py (ATO marker detection)
+    │
+    ├── psychoanalysis_pipeline.py (emotion dynamics)
+    │   ├── psychoanalysis_api.py (OpenAI GPT-4)
+    │   ├── psychoanalysis_api_ollama.py (local Ollama)
+    │   ├── psychoanalysis_cache.py (transcript caching)
+    │   └── dashboard_generator.py (HTML dashboards)
+    │
+    ├── ato_marker_integration.py (semantic markers)
+    │   └── super_semantic_processor.py (ATO/SEM detection)
+    │
+    ├── audit/ (feature readiness system)
+    │   ├── feature_registry.py (feature tracking)
+    │   ├── audit_runner.py (run audits)
+    │   └── report_builder.py (generate reports)
+    │
     └── Memory/ (speaker profiles, SQLite DB)
 ```
 
@@ -188,10 +227,39 @@ svt.py (GUI)
   - `../MARSAP/`: CoSD drift analysis
 - Relationship mapping between messages
 
+**LLM Provider System** (`svt_core/llm_provider/`)
+- **Provider Abstraction**: Unified interface for all LLM backends
+  - `LLMProvider` base class with `generate()`, `health_check()`, and `describe()` methods
+  - `LLMResponse` normalized response format (text, usage, metadata)
+- **Provider Factory**: Dynamic provider instantiation via `build_default_manager()`
+- **Multi-Provider Support**:
+  - **Ollama (Local)**: FREE, privacy-preserving local LLM (qwen2.5-coder:7b)
+  - **OpenAI**: GPT-4-Turbo for psychoanalysis dashboards
+  - **Anthropic**: Future support for Claude integration
+  - **Dummy**: Testing provider for CI/CD
+- **Provider Manager**: Session-based provider lifecycle management
+- **Settings Store**: Persistent configuration with `ProviderProfile` serialization
+- **GUI Integration**: `ProviderDialog` for user-friendly provider configuration
+
+**Health Check System** (`svt_core/health_check.py`)
+- Real-time system status monitoring
+- Provider health verification (Ollama connectivity, API key validation)
+- Status levels: `ok` (green), `warn` (yellow), `error` (red)
+- Integrated into SVT GUI with visual indicators
+- Automatic checks on startup and provider changes
+
+**Audit System** (`audit/`)
+- **Feature Registry**: Tracks implementation status of all features
+- **Readiness Scoring**: Quantifies feature completeness (0-100)
+- **Audit Runner**: Automated feature verification
+- **Report Builder**: Generates comprehensive audit reports
+- **CLI Interface**: `python3 -m audit.cli` for command-line audits
+- **Use Cases**: Quality assurance, documentation verification, release readiness
+
 ### Directory Structure
 
 ```
-Super_semantic_whisper/
+Semantic_Voice_Transcriber/
 ├── svt.py                          # Main GUI entry point
 ├── auto_transcriber_v4_emotion.py  # V4 transcription engine
 ├── prosody_extractor.py            # Prosody analysis (Phase 1)
@@ -202,6 +270,31 @@ Super_semantic_whisper/
 ├── audio_chunker.py                # Audio segmentation utilities
 ├── super_semantic_processor.py     # Semantic analysis engine
 │
+├── svt_core/                       # Core modular architecture (NEW)
+│   ├── audio/                      # Audio processing modules
+│   │   └── diarization_cpu.py      # CPU-optimized speaker diarization
+│   ├── llm_provider/               # LLM provider abstraction layer
+│   │   ├── base.py                 # LLMProvider interface & LLMResponse
+│   │   ├── factory.py              # Provider factory and builder
+│   │   ├── manager.py              # Provider manager
+│   │   ├── local_ollama.py         # Local Ollama integration (FREE)
+│   │   └── providers/              # Cloud provider implementations
+│   ├── config/                     # Configuration management
+│   │   └── settings.py             # Settings store and profiles
+│   ├── ui/                         # UI components
+│   │   └── provider_dialog.py      # Provider settings dialog
+│   ├── tools/                      # Utility tools
+│   └── health_check.py             # System health monitoring
+│
+├── audit/                          # Feature readiness audit system
+│   ├── audit_runner.py             # Audit execution engine
+│   ├── feature_registry.py         # Feature tracking registry
+│   ├── readiness.py                # Readiness scoring
+│   ├── report_builder.py           # Report generation
+│   ├── cli.py                      # CLI interface
+│   ├── checks/                     # Feature check modules
+│   └── schemas/                    # Validation schemas
+│
 ├── Eingang/                        # INPUT: Audio files (organized by speaker)
 │   └── Patient/                    # Speaker-specific folders
 ├── Transkripte_LLM/                # OUTPUT: Transcripts (MD, JSON, HTML, PDF, CSV)
@@ -210,16 +303,19 @@ Super_semantic_whisper/
 │   ├── Unknown.yaml                # Unknown speaker profile
 │   └── *.yaml                      # Individual speaker profiles
 │
-├── VP_ATO/                         # Atomic Voice Markers (YAML)
+├── VP_ATO/                         # Atomic Voice Markers (YAML) - 16 files
+├── ATO_*.yaml                      # Root-level ATO markers (18 files)
+├── SEM_*.yaml                      # Root-level SEM markers (3 files)
 ├── Marker_LD3.5_SSoTh/             # 4-Tier marker system (LeanDeep 3.5)
 │   └── .cursor/rules/              # Cursor IDE configuration (leandeep35.mdc)
-├── TextBlob/                       # Local TextBlob installation
-├── emotion_dynaminc-skill/         # UED emotion dynamics analysis skill
-│   └── emotion-dynamics-deep-insight/  # Claude Code skill for GPT-4 integration
-├── Emotion_marker_psychoanalysis/  # Psychoanalysis dashboard output
-│   └── output-dashboard/           # Generated HTML dashboards
 ├── config/                         # Configuration files
-│   └── psychoanalysis_config.yaml  # Dashboard and API settings
+│   └── psychoanalysis_config.yaml  # Dashboard and API settings (OpenAI/Ollama)
+├── docs/                           # Documentation (57 files)
+│   ├── architecture/               # Architecture documentation
+│   ├── plans/                      # Planning documents
+│   └── reviews/                    # Code reviews
+├── tests/                          # Test suite (42 test files)
+│   └── affect/                     # Emotion/affect tests
 ├── requirements.txt                # Core dependencies
 └── requirements_emotion.txt        # Emotion analysis dependencies
 ```
@@ -380,17 +476,40 @@ Wie geht es Ihnen heute?
 
 ### Generating Psychoanalysis Dashboard
 
-**Psychoanalysis Dashboard** provides GPT-4-powered emotion dynamics analysis with interactive visualizations.
+**Psychoanalysis Dashboard** provides LLM-powered emotion dynamics analysis with interactive visualizations. Supports both **OpenAI GPT-4** (cloud) and **Ollama** (FREE local LLM).
 
-#### One-Click Workflow (Recommended)
+#### Provider Selection
 
-1. **Set OpenAI API key** (prerequisite):
-   ```bash
-   export OPENAI_API_KEY=sk-your-key-here
-   # Or create .env file with OPENAI_API_KEY=sk-your-key-here
-   ```
+**Option 1: Ollama (FREE, Recommended)**
+```bash
+# Install Ollama (one-time setup)
+curl -fsSL https://ollama.com/install.sh | sh
 
-2. **Launch SVT GUI**: `python3 svt.py`
+# Download model (one-time)
+ollama pull qwen2.5-coder:7b
+
+# Start Ollama server
+ollama serve
+```
+
+**Option 2: OpenAI (Cloud API)**
+```bash
+export OPENAI_API_KEY=sk-your-key-here
+# Or create .env file with OPENAI_API_KEY=sk-your-key-here
+```
+
+Configure provider in `config/psychoanalysis_config.yaml`:
+```yaml
+provider: ollama  # or "openai"
+```
+
+Or use GUI: **Einstellungen → Provider-Einstellungen**
+
+#### One-Click Workflow
+
+1. **Launch SVT GUI**: `python3 svt.py`
+
+2. **Verify system status**: Check health indicator (top-right, should be green)
 
 3. **Click "🧠 Psychoanalysis Dashboard" button**
 
@@ -400,7 +519,7 @@ Wie geht es Ihnen heute?
    - System checks for existing `.prosody.json` transcript
    - **If exists**: Reuses transcript (skips transcription)
    - **If not**: Transcribes audio asynchronously with **prosody forced ON**
-   - Runs psychoanalysis pipeline with GPT-4-Turbo
+   - Runs psychoanalysis pipeline with configured LLM provider
    - Generates interactive HTML dashboard
    - **Auto-opens in browser**
 
@@ -413,13 +532,17 @@ Wie geht es Ihnen heute?
    - Therapeutic turning point annotations
 
 **Key Features**:
+- ✅ **Dual provider support**: OpenAI (cloud) or Ollama (local, FREE)
 - ✅ **Smart caching**: Reuses existing transcripts automatically
 - ✅ **Async processing**: Non-blocking GUI during transcription
 - ✅ **Prosody enforcement**: Always includes prosody data (required for dashboard)
 - ✅ **Tri-modal turnpoint detection**: Emotion + Markers + Prosody
+- ✅ **Privacy mode**: Local processing with Ollama (no data leaves machine)
 
 **Configuration**: Edit `config/psychoanalysis_config.yaml` to customize:
+- Provider selection: `ollama` or `openai`
 - OpenAI model and parameters (`gpt-4-turbo-preview` by default)
+- Ollama model and endpoint (`qwen2.5-coder:7b` by default)
 - Turnpoint detection thresholds (valence, arousal, prosody pauses)
 - Marker weights and categories
 - Dashboard styling and output directory
@@ -470,6 +593,64 @@ Profiles stored in:
 - `Memory/speaker_profiles.db` (SQLite)
 - `Memory/<speaker_name>.yaml` (YAML backup)
 
+### Running Feature Audits
+
+The audit system tracks feature implementation status and generates readiness reports:
+
+```bash
+# Run full audit
+python3 -m audit.cli
+
+# Run specific audit module
+python3 -m audit.audit_runner
+
+# Generate readiness report
+python3 -m audit.report_builder
+```
+
+Features tracked:
+- Transcription accuracy and confidence scoring
+- Prosody extraction completeness
+- Speaker diarization functionality
+- Output format generation
+- Memory system persistence
+- LLM provider health
+- GUI component availability
+
+### Configuring LLM Providers
+
+**Via GUI**:
+1. Launch SVT: `python3 svt.py`
+2. Menu: **Einstellungen → Provider-Einstellungen**
+3. Select provider (Ollama or OpenAI)
+4. Configure settings (API key, model, endpoint)
+5. Save and restart
+
+**Via Configuration File**:
+Edit `config/psychoanalysis_config.yaml`:
+```yaml
+provider: ollama  # or "openai"
+
+ollama:
+  base_url: http://localhost:11434
+  model: qwen2.5-coder:7b
+  temperature: 0.7
+
+openai:
+  api_key: ${OPENAI_API_KEY}
+  model: gpt-4-turbo-preview
+  temperature: 0.3
+```
+
+**Via Environment Variables**:
+```bash
+# OpenAI
+export OPENAI_API_KEY=sk-your-key-here
+
+# Ollama (if non-default endpoint)
+export OLLAMA_BASE_URL=http://custom-host:11434
+```
+
 ## Common Issues
 
 ### FFmpeg Not Found
@@ -490,6 +671,34 @@ Accept Hugging Face model agreements and create token (see Speaker Diarization S
 - Check YAML syntax with `python3 test_yaml_structure.py`
 - Review logs for serialization errors
 
+### Ollama Connection Failed
+**Symptoms**: Health indicator shows red, "Ollama not available" error
+**Solutions**:
+1. Install Ollama: `curl -fsSL https://ollama.com/install.sh | sh`
+2. Start Ollama server: `ollama serve`
+3. Download model: `ollama pull qwen2.5-coder:7b`
+4. Check server: `curl http://localhost:11434/api/version`
+5. Verify firewall allows port 11434
+
+### OpenAI API Key Invalid
+**Symptoms**: Health indicator shows red, "OpenAI API key not set" error
+**Solutions**:
+1. Get API key from https://platform.openai.com/api-keys
+2. Set environment variable: `export OPENAI_API_KEY=sk-your-key`
+3. Or create `.env` file with `OPENAI_API_KEY=sk-your-key`
+4. Restart SVT GUI
+5. Use **Einstellungen → Provider-Einstellungen** to verify
+
+### Psychoanalysis Dashboard Empty/Errors
+**Symptoms**: Dashboard generates but missing charts or analysis
+**Solutions**:
+1. Verify prosody data exists: Check for `.prosody.json` file
+2. Check LLM provider health (top-right indicator)
+3. Review console logs for API errors
+4. Try alternative provider (Ollama ↔ OpenAI)
+5. Clear cache: `rm -rf cache/psychoanalysis/`
+6. Check `config/psychoanalysis_config.yaml` settings
+
 ## Current Development Status
 
 **Phase 2c Complete** ✅
@@ -498,17 +707,24 @@ Accept Hugging Face model agreements and create token (see Speaker Diarization S
 - ✅ Speaker diarization with pyannote.audio
 - ✅ Overlapped speech detection (OSD)
 - ✅ Intelligent pipeline with quality-based model selection
-- ✅ **Psychoanalysis Dashboard with GPT-4 integration** (NEW)
-- ✅ **Interactive HTML dashboards with Chart.js and Cytoscape.js** (NEW)
-- ✅ **UED (Utterance Emotion Dynamics) analysis** (NEW)
-- ✅ **CI/CD test suite for pipeline validation** (NEW)
+- ✅ **Psychoanalysis Dashboard with dual provider support** (OpenAI + Ollama)
+- ✅ **Interactive HTML dashboards with Chart.js and Cytoscape.js**
+- ✅ **UED (Utterance Emotion Dynamics) analysis**
+- ✅ **CI/CD test suite for pipeline validation** (58 test files)
+- ✅ **LLM Provider abstraction layer** (svt_core/llm_provider/)
+- ✅ **Health monitoring system** (real-time provider status)
+- ✅ **Feature audit system** (readiness tracking)
+- ✅ **Modular architecture** (svt_core/ refactoring)
+- ✅ **Settings persistence** (provider profiles, user preferences)
+- ✅ **Ollama integration** (FREE local LLM alternative)
 
 **Phase 2d In Progress** 🔄
 - ATO marker integration with prosody triggers
 - Real-time marker detection during transcription
 - ATO → SEM → CLU → MEMA hierarchy refinement
-- GUI integration for speaker editing
 - Therapeutic turning point detection enhancement
+- Multi-provider LLM support expansion (Anthropic Claude, Azure OpenAI)
+- Cross-platform installer improvements
 
 **Phase 3 Planned** 📋
 - Live streaming transcription
@@ -516,6 +732,8 @@ Accept Hugging Face model agreements and create token (see Speaker Diarization S
 - WebSocket API for external tools
 - Real-time marker display
 - Multi-session comparative analysis
+- Advanced speaker memory with learning curves
+- Prosody-aware voice activity detection (VAD)
 
 ## Logging
 
@@ -527,17 +745,90 @@ Accept Hugging Face model agreements and create token (see Speaker Diarization S
 ## Git Workflow
 
 Current branch structure:
-- `main`: Stable releases
-- `feat/*`: Feature branches (current: `feat/professional-quality-enhancement`)
+- `main`: Stable releases (latest: 39ed3ff)
+- `feat/*`: Feature branches (merged into main)
+- `claude/*`: AI assistant working branches (active development)
+
+**Active branches**:
+- `claude/claude-md-mi7u4wp2t4d8ks0w-01XAdGzQSnryFHvfuNoM5CLg`: Current session
 
 When making commits:
 1. Stage changes: `git add <files>`
 2. Commit with descriptive message: `git commit -m "feat: description"`
-3. Push to remote: `git push origin <branch-name>`
+3. Push to remote: `git push -u origin <branch-name>`
 
 Commit prefixes:
 - `feat:` New features
 - `fix:` Bug fixes
-- `docs:` Documentation changes
+- `docs:` Documentation changes (include verification banner)
 - `test:` Test additions/modifications
 - `refactor:` Code restructuring
+- `chore:` Maintenance tasks (deps, config, etc.)
+
+**Documentation Verification**:
+All documentation files should include verification banners:
+```markdown
+**Last Updated:** YYYY-MM-DD | **Verified against commit:** <short-hash>
+```
+
+Recent documentation updates (PR #27):
+- Added verification banners to all 57 markdown files
+- Ensures documentation stays in sync with codebase
+- Track last verification date and commit hash
+
+## Important Notes for AI Assistants
+
+### Working Directory
+- **Always** work from `/home/user/Semantic_Voice_Transcriber/`
+- This is the root directory, not `Super_semantic_whisper/` (old name)
+
+### Key Files to Check Before Making Changes
+1. **CLAUDE.md** (this file): Overall guidance and architecture
+2. **ARCHITECTURE.md**: Detailed technical architecture
+3. **VERSION_STATUS.md**: Feature implementation status
+4. **README.md**: User-facing documentation
+
+### Testing Strategy
+- Run relevant tests before committing: `python3 test_*.py`
+- Use pytest for structured tests: `python3 -m pytest tests/`
+- CI/CD tests available for fast validation (no real audio/API calls)
+- Always test prosody extraction when modifying audio processing
+
+### Code Conventions
+- Use type hints where appropriate
+- Document complex algorithms inline
+- Follow existing patterns for consistency
+- Preserve backward compatibility with V3 and V4 transcribers
+- Add audit checks for new features in `audit/checks/`
+
+### Configuration Management
+- Never hardcode API keys or tokens
+- Use environment variables or `.env` files
+- Respect `config/psychoanalysis_config.yaml` settings
+- Provider settings stored in `svt_core/config/settings.py`
+
+### LLM Provider Integration
+- Always support both OpenAI and Ollama paths
+- Include health checks for new providers
+- Handle rate limits and network errors gracefully
+- Cache responses when appropriate (see `psychoanalysis_cache.py`)
+
+### Prosody Analysis Best Practices
+- Big 4 features are critical: Tempo, Pitch, Energy, Pauses
+- Baseline calculation must precede deviation detection
+- Align prosody segments with Whisper transcription segments (3-10s)
+- Use Parselmouth for pitch (more accurate than librosa for speech)
+- Store prosody data in JSON sidecar for LLM consumption
+
+### Marker System
+- ATO markers: Atomic patterns (18 root-level files)
+- SEM markers: Semantic combinations (3 root-level files)
+- VP_ATO: Voice-specific markers (16 files)
+- Follow LeanDeep 3.5 schema: `id`, `frame`, `examples` (min 5)
+- Test YAML syntax: `python3 test_yaml_structure.py`
+
+### Documentation Updates
+- Always update verification banner with current date and commit
+- Keep CLAUDE.md synchronized with major changes
+- Update VERSION_STATUS.md when completing features
+- Cross-reference related documentation files
