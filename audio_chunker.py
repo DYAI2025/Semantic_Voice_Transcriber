@@ -676,7 +676,8 @@ def process_large_audio_with_chunking(
                         logger.warning(f"⚠️ SWAP critically high: {memory_status['swap_percent']}%")
                     logger.info(f"Memory check OK: {memory_status['ram_free_gb']:.1f} GB free, SWAP {memory_status['swap_percent']}%")
                 except ImportError:
-                    pass
+                    # psutil is not installed; skipping memory usage check
+                    logger.debug("psutil not installed; skipping memory usage check after chunk processing.")
 
         # Merge results using selected mode
         num_chunks = len(chunk_files) if use_file_based_merge else len(chunk_results)
