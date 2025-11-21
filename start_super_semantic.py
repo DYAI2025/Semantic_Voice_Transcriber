@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 🌟 Super Semantic Starter - Die Magie beginnt mit einem Klick!
+
+⚠️  DEPRECATED: This launcher is deprecated.
+    Please use the main SVT GUI instead: python3 svt.py
 """
 
 import sys
@@ -9,10 +12,27 @@ import os
 from pathlib import Path
 import subprocess
 import logging
+import warnings
 
 # Setup Logging
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
+
+# Deprecation warning
+warnings.warn(
+    "start_super_semantic.py is deprecated. "
+    "Please use 'python3 svt.py' for the unified GUI interface.",
+    DeprecationWarning,
+    stacklevel=2
+)
+
+logger.warning("\n" + "="*60)
+logger.warning("⚠️  DEPRECATION WARNING")
+logger.warning("="*60)
+logger.warning("This launcher (start_super_semantic.py) is deprecated.")
+logger.warning("Please use the main SVT GUI instead:")
+logger.warning("  python3 svt.py")
+logger.warning("="*60 + "\n")
 
 
 def check_dependencies():

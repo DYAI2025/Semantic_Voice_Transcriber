@@ -15,8 +15,7 @@ import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
 import auto_transcriber_v4_emotion as v4
-from audio_quality_analyzer import AudioQualityAnalyzer
-from audio_preprocessor import AudioPreprocessor
+from svt_core.audio import AudioQualityAnalyzer, AudioPreprocessor
 from output_formatter import OutputFormatter, SpeakerConfig
 from ato_marker_integration import ATOMarkerIntegration
 from svt_core import health_check
