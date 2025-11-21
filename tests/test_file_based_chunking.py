@@ -148,5 +148,5 @@ def test_merge_from_files_with_running_stats():
         # Cleanup
         try:
             temp_dir.rmdir()
-        except:
+        except Exception:
             pass
