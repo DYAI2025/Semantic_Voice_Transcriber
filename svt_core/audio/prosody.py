@@ -9,7 +9,6 @@ import librosa
 import parselmouth
 from parselmouth.praat import call
 import numpy as np
-from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
 import logging
