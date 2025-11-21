@@ -120,7 +120,12 @@ def retry_on_failure(max_retries=2, delay=1.0):
                     else:
                         logger.error(f"{func.__name__} failed after {max_retries + 1} attempts")
 
-            raise last_exception
+            if last_exception is not None:
+                raise last_exception
+            else:
+                raise RuntimeError(
+                    f"{func.__name__} failed after {max_retries + 1} attempts, but no exception was captured."
+                )
 
         return wrapper
     return decorator
