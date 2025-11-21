@@ -285,7 +285,7 @@ Expected behavior:
 
 ## Implementation Files
 
-- **`audio_chunker.py`**: Core implementation (lines 288-448)
+- **`audio_chunker.py`**: Core implementation (lines 288-722)
   - `process_large_audio_with_chunking()`: Main entry point
   - `merge_chunk_results_from_files()`: Incremental merge logic
 
