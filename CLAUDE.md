@@ -504,7 +504,7 @@ Profiles stored in `Memory/speaker_profiles.db` (SQLite) + `Memory/<name>.yaml` 
 
 **Out of Memory (OOM) on Long Audio Files:**
 SVT uses file-based incremental merge for long files (>30 minutes) to prevent OOM crashes:
-- Automatic chunking at 120s with 5s overlap
+- Automatic chunking at 300s (5 minutes) with 5s overlap
 - Each chunk written to `/tmp/svt_chunks_*/` immediately after processing
 - Peak memory = single chunk size (~500MB) instead of all chunks (~5GB+)
 - If still getting OOM (exit code 137):
