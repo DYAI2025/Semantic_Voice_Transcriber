@@ -6,8 +6,6 @@ Will be removed in version 2.0.
 """
 
 import warnings
-import sys
-
 warnings.warn(
     "super_semantic_gui.py is deprecated. "
     "Import from 'svt_core.ui.semantic_gui' instead, "
