@@ -151,15 +151,15 @@ tempo_std = np.sqrt(tempo_sq_sum / feature_count - tempo_mean ** 2)
 
 ### Default Chunk Settings
 
-Defined in `audio_chunker.py`:
+Default values are set as parameters in the `process_large_audio_with_chunking()` function in `audio_chunker.py`:
 ```python
-CHUNK_DURATION = 120.0  # seconds (2 minutes)
-OVERLAP_DURATION = 5.0  # seconds
-```
-
-For very long files (>60 minutes), consider adjusting:
-- Increase `CHUNK_DURATION` to 180-300s if memory permits
-- Keep `OVERLAP_DURATION` at 5s to avoid losing content at boundaries
+def process_large_audio_with_chunking(
+    ...,
+    chunk_duration=300.0,      # seconds (5 minutes)
+    overlap_duration=5.0,      # seconds
+    ...
+):
+    ...
 
 ### Memory Safety Thresholds
 
