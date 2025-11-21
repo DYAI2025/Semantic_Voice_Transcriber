@@ -352,7 +352,6 @@ class ProsodyExtractor:
         """Extract jitter and shimmer"""
         try:
             sound = parselmouth.Sound(audio, sampling_frequency=sample_rate)
-            pitch = sound.to_pitch()
             point_process = parselmouth.praat.call(sound, "To PointProcess (periodic, cc)", 75, 600)
 
             # Calculate jitter
