@@ -9,7 +9,6 @@ import psutil
 import os
 import gc
 from pathlib import Path
-import json
 
 # Skip all tests if test audio unavailable
 TEST_AUDIO_DIR = Path(__file__).parent.parent / "Eingang"
