@@ -15,7 +15,7 @@ import multiprocessing as mp
 import threading
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Any
 import torch
 from functools import wraps
 from pyannote.core import Annotation, Segment
