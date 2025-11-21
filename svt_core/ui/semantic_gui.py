@@ -8,7 +8,6 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 import threading
 from pathlib import Path
-import json
 from datetime import datetime
 import logging
 from typing import Optional, Dict, Any
