@@ -36,14 +36,14 @@ except ImportError:
     print("⚠️ Librosa nicht installiert. Audio-Feature-Extraktion limitiert.")
 
 try:
-    from prosody_extractor import ProsodyExtractor, ProsodyFeatures, ProsodyBaseline
+    from svt_core.audio import ProsodyExtractor, ProsodyFeatures, ProsodyBaseline
     PROSODY_AVAILABLE = True
 except ImportError:
     PROSODY_AVAILABLE = False
     print("⚠️ Prosody Extractor nicht gefunden. Prosodieanalyse deaktiviert.")
 
 try:
-    from speaker_diarizer import SpeakerDiarizer
+    from svt_core.audio import SpeakerDiarizer
     DIARIZATION_AVAILABLE = True
 except ImportError:
     DIARIZATION_AVAILABLE = False
