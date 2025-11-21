@@ -10,8 +10,6 @@ import threading
 from pathlib import Path
 from datetime import datetime
 import logging
-from typing import Optional, Dict, Any
-
 from super_semantic_processor import SuperSemanticProcessor, process_everything
 
 # Vordefinierte Marker-Sets und ihre Ordnernamen. Passen Sie die Pfade bei
