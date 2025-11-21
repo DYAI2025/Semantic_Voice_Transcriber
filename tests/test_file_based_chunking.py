@@ -81,7 +81,6 @@ def test_incremental_memory_usage():
 def test_merge_from_files_with_running_stats():
     """Verify incremental merge calculates correct baseline"""
     import tempfile
-    import json
     from pathlib import Path
     from audio_chunker import AudioChunker
 
