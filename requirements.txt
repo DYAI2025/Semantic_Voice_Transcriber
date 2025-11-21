@@ -16,7 +16,7 @@ transformers>=4.20.0
 librosa>=0.11.0              # Audio feature extraction, tempo analysis
 soundfile>=0.13.1            # Audio I/O
 praat-parselmouth>=0.4.6     # Pitch extraction (F0), jitter, shimmer
-scipy>=1.16.0                # Signal processing, baseline calculations
+scipy>=1.10.0                # Signal processing, baseline calculations (Python 3.10+ compatible)
 
 # ============================================================================
 # Speaker Diarization
