@@ -286,6 +286,116 @@ class AudioChunker:
         return baseline
 
     @staticmethod
+    def merge_chunk_results_in_memory(
+        chunk_results: List[dict],
+        chunks: List[dict]
+    ) -> dict:
+        """
+        Merge chunk results stored in memory (legacy approach - may cause OOM on long files)
+
+        WARNING: This method loads all chunks in memory at once. For long audio files (>30 min),
+        use merge_chunk_results_from_files() instead to avoid Out of Memory errors.
+
+        Args:
+            chunk_results: List of transcription results from each chunk
+            chunks: List of chunk metadata (start time, duration)
+
+        Returns:
+            Merged transcription result dictionary
+        """
+        import numpy as np
+
+        logger.info("Merging chunk results using IN-MEMORY mode (legacy)")
+        logger.warning("⚠️ IN-MEMORY merge may cause OOM on long files. Consider use_file_based_merge=True")
+
+        # Initialize merged result structure
+        merged_result = {
+            'segments': [],
+            'prosody_features': [],
+            'speaker_segments': [],
+            'overlapped_speech': [],
+            'confidence_scores': {
+                'mean': 0.0,
+                'std': 0.0,
+                'min': 1.0,
+                'max': 0.0
+            },
+            'prosody_baseline': None
+        }
+
+        # Accumulate prosody features for baseline calculation
+        all_tempo = []
+        all_pitch = []
+        all_energy = []
+
+        total_confidence = 0.0
+        total_segments = 0
+
+        # Merge results from all chunks
+        for i, (chunk_result, chunk) in enumerate(zip(chunk_results, chunks)):
+            chunk_start_time = chunk['start']
+
+            # Merge segments
+            for segment in chunk_result.get('segments', []):
+                adjusted_segment = segment.copy()
+                adjusted_segment['start'] = segment.get('start', 0) + chunk_start_time
+                adjusted_segment['end'] = segment.get('end', 0) + chunk_start_time
+                merged_result['segments'].append(adjusted_segment)
+
+                # Accumulate confidence
+                if 'confidence' in segment:
+                    total_confidence += segment['confidence']
+                    total_segments += 1
+
+            # Merge prosody features
+            for feature in chunk_result.get('prosody_features', []):
+                adjusted_feature = feature.copy()
+                adjusted_feature['start'] = feature.get('start', 0) + chunk_start_time
+                adjusted_feature['end'] = feature.get('end', 0) + chunk_start_time
+                merged_result['prosody_features'].append(adjusted_feature)
+
+                # Collect for baseline
+                if 'tempo_wpm' in feature:
+                    all_tempo.append(feature['tempo_wpm'])
+                if 'pitch_mean_hz' in feature:
+                    all_pitch.append(feature['pitch_mean_hz'])
+                if 'energy_rms' in feature:
+                    all_energy.append(feature['energy_rms'])
+
+            # Merge speaker segments
+            for speaker_seg in chunk_result.get('speaker_segments', []):
+                adjusted_speaker = speaker_seg.copy()
+                adjusted_speaker['start'] = speaker_seg.get('start', 0) + chunk_start_time
+                adjusted_speaker['end'] = speaker_seg.get('end', 0) + chunk_start_time
+                merged_result['speaker_segments'].append(adjusted_speaker)
+
+            # Merge overlapped speech
+            for overlap in chunk_result.get('overlapped_speech', []):
+                adjusted_overlap = overlap.copy()
+                adjusted_overlap['start'] = overlap.get('start', 0) + chunk_start_time
+                adjusted_overlap['end'] = overlap.get('end', 0) + chunk_start_time
+                merged_result['overlapped_speech'].append(adjusted_overlap)
+
+        # Calculate overall confidence
+        if total_segments > 0:
+            merged_result['confidence_scores']['overall_confidence'] = total_confidence / total_segments
+        merged_result['confidence_scores']['total_segments'] = total_segments
+
+        # Calculate prosody baseline
+        if all_tempo and all_pitch and all_energy:
+            merged_result['prosody_baseline'] = {
+                'tempo_wpm_mean': float(np.mean(all_tempo)),
+                'tempo_wpm_std': float(np.std(all_tempo)),
+                'pitch_mean_hz': float(np.mean(all_pitch)),
+                'pitch_std_hz': float(np.std(all_pitch)),
+                'energy_rms_mean': float(np.mean(all_energy)),
+                'energy_rms_std': float(np.std(all_energy))
+            }
+
+        logger.info(f"Merged transcription contains {len(merged_result['segments'])} segments (in-memory mode)")
+        return merged_result
+
+    @staticmethod
     def merge_chunk_results_from_files(
         chunk_files: List[str],
         chunks: List[dict],
@@ -454,10 +564,11 @@ def process_large_audio_with_chunking(
     chunk_duration: float = 300.0,
     overlap_duration: float = 5.0,
     cleanup_memory: bool = True,
+    use_file_based_merge: bool = True,
     **transcribe_kwargs
 ) -> dict:
     """
-    Process a large audio file using chunking with file-based merge to reduce memory
+    Process a large audio file using chunking with optional file-based merge
 
     Args:
         audio_path: Path to audio file
@@ -465,6 +576,8 @@ def process_large_audio_with_chunking(
         chunk_duration: Duration of each chunk in seconds
         overlap_duration: Overlap between chunks in seconds
         cleanup_memory: Enable memory cleanup between chunks
+        use_file_based_merge: Use file-based incremental merge (recommended for long files).
+                              Set to False for legacy in-memory merge (may cause OOM on long files)
         **transcribe_kwargs: Additional kwargs for transcribe_func
 
     Returns:
@@ -475,12 +588,18 @@ def process_large_audio_with_chunking(
     import gc
     from pathlib import Path
 
-    logger.info(f"Processing large audio file with chunking: {audio_path}")
+    merge_mode = "file-based" if use_file_based_merge else "in-memory"
+    logger.info(f"Processing large audio file with chunking ({merge_mode} merge): {audio_path}")
 
-    # Create temp directory for chunk files
-    temp_dir = tempfile.mkdtemp(prefix="svt_chunks_")
+    # Prepare storage for chunk results
+    temp_dir = None
     chunk_files = []
+    chunk_results = []  # For in-memory mode
     chunk_paths = []  # Initialize to empty list for cleanup
+
+    if use_file_based_merge:
+        # Create temp directory for chunk files
+        temp_dir = tempfile.mkdtemp(prefix="svt_chunks_")
 
     try:
         # Split audio into overlapping chunks
@@ -507,22 +626,26 @@ def process_large_audio_with_chunking(
             logger.warning("psutil not available, skipping memory check")
             memory_status = {'ram_free_gb': 0, 'swap_percent': 0}
 
-        # Process each chunk and save to temp file
+        # Process each chunk
         for i, chunk_path in enumerate(chunk_paths):
             logger.info(f"Processing chunk {i+1}/{len(chunk_paths)}: {chunk_path}")
 
             # Transcribe chunk
             chunk_result = transcribe_func(chunk_path, **transcribe_kwargs)
 
-            # Write chunk result to temp JSON file
-            chunk_file = Path(temp_dir) / f"chunk_{i:03d}.json"
-            with open(chunk_file, 'w', encoding='utf-8') as f:
-                json.dump(chunk_result, f, ensure_ascii=False, indent=2)
+            if use_file_based_merge:
+                # File-based mode: Write chunk result to temp JSON file
+                chunk_file = Path(temp_dir) / f"chunk_{i:03d}.json"
+                with open(chunk_file, 'w', encoding='utf-8') as f:
+                    json.dump(chunk_result, f, ensure_ascii=False, indent=2)
 
-            chunk_files.append(str(chunk_file))
+                chunk_files.append(str(chunk_file))
 
-            # Clean up chunk result from memory
-            del chunk_result
+                # Clean up chunk result from memory
+                del chunk_result
+            else:
+                # In-memory mode: Store result in list (legacy behavior)
+                chunk_results.append(chunk_result)
 
             if cleanup_memory:
                 gc.collect()
@@ -555,33 +678,43 @@ def process_large_audio_with_chunking(
                 except ImportError:
                     pass
 
-        # Merge results from chunk files
-        logger.info(f"Merging results from {len(chunk_files)} audio chunks")
+        # Merge results using selected mode
+        num_chunks = len(chunk_files) if use_file_based_merge else len(chunk_results)
+        logger.info(f"Merging results from {num_chunks} audio chunks")
 
         # Create chunks metadata for merge function
         chunks = []
         effective_chunk_duration = chunk_duration - overlap_duration
-        for i in range(len(chunk_files)):
+        for i in range(num_chunks):
             chunks.append({
                 'start': i * effective_chunk_duration,
                 'duration': chunk_duration
             })
 
-        merged_result = AudioChunker.merge_chunk_results_from_files(
-            chunk_files=chunk_files,
-            chunks=chunks,
-            cleanup_files=True
-        )
+        if use_file_based_merge:
+            # File-based incremental merge (recommended for long files)
+            merged_result = AudioChunker.merge_chunk_results_from_files(
+                chunk_files=chunk_files,
+                chunks=chunks,
+                cleanup_files=True
+            )
+        else:
+            # In-memory merge (legacy - may cause OOM)
+            merged_result = AudioChunker.merge_chunk_results_in_memory(
+                chunk_results=chunk_results,
+                chunks=chunks
+            )
 
         logger.info("Successfully processed and merged all chunks")
         return merged_result
 
     finally:
-        # Clean up temp directory
-        try:
-            Path(temp_dir).rmdir()
-        except OSError:
-            logger.warning(f"Could not remove temp directory: {temp_dir}")
+        # Clean up temp directory (only if file-based merge was used)
+        if use_file_based_merge and temp_dir:
+            try:
+                Path(temp_dir).rmdir()
+            except OSError:
+                logger.warning(f"Could not remove temp directory: {temp_dir}")
 
         # Clean up temporary audio chunk files
         for chunk_path in chunk_paths:
