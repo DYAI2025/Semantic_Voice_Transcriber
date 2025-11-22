@@ -484,8 +484,12 @@ class AudioChunker:
             # Merge prosody features and update running statistics
             for feature in chunk_result.get('prosody_features', []):
                 adjusted_feature = feature.copy()
-                adjusted_feature['start_time'] = feature.get('start_time', 0) + chunk_start_time
-                adjusted_feature['end_time'] = feature.get('end_time', 0) + chunk_start_time
+                # Standardize to 'start' and 'end' fields for prosody features
+                adjusted_feature['start'] = feature.get('start', feature.get('start_time', 0)) + chunk_start_time
+                adjusted_feature['end'] = feature.get('end', feature.get('end_time', 0)) + chunk_start_time
+                # Remove any legacy 'start_time'/'end_time' fields if present
+                adjusted_feature.pop('start_time', None)
+                adjusted_feature.pop('end_time', None)
                 merged_result['prosody_features'].append(adjusted_feature)
 
                 # Update running statistics
