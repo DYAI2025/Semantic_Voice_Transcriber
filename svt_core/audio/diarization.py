@@ -613,7 +613,8 @@ class SpeakerDiarizer:
         min_duration_on: float = 0.0,
         min_duration_off: float = 0.0,
         onset: float = 0.5,
-        offset: float = 0.5
+        offset: float = 0.5,
+        auto_tune_thresholds: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Detect overlapped speech regions (multiple speakers talking simultaneously)
@@ -624,6 +625,7 @@ class SpeakerDiarizer:
             min_duration_off: Fill non-overlapped speech regions shorter than this (seconds)
             onset: Threshold for detecting speech onset (0.0-1.0)
             offset: Threshold for detecting speech offset (0.0-1.0)
+            auto_tune_thresholds: Automatically tune onset/offset based on audio quality (SNR)
 
         Returns:
             List of overlap segments with format:
@@ -632,7 +634,8 @@ class SpeakerDiarizer:
                     'start': 12.5,
                     'end': 14.2,
                     'duration': 1.7,
-                    'overlap_type': 'simultaneous_speech'
+                    'overlap_type': 'simultaneous_speech',
+                    'snr_db': 18.5  # If auto-tuning enabled
                 },
                 ...
             ]
@@ -640,6 +643,42 @@ class SpeakerDiarizer:
         self._load_osd_pipeline()
 
         logger.info(f"Running overlapped speech detection on {audio_path.name}...")
+
+        # Auto-tune thresholds based on audio quality
+        snr_db = None
+        if auto_tune_thresholds:
+            try:
+                from svt_core.audio.quality import AudioQualityAnalyzer
+
+                logger.info("Analyzing audio quality for adaptive OSD thresholds...")
+                analyzer = AudioQualityAnalyzer()
+                quality_metrics = analyzer.analyze_audio_file(str(audio_path))
+                snr_db = quality_metrics['snr_db']
+
+                # Adjust thresholds based on SNR
+                # Higher SNR (cleaner audio) → Use default/looser thresholds
+                # Lower SNR (noisier audio) → Use stricter thresholds to reduce false positives
+                if snr_db > 20:  # High quality audio
+                    onset = 0.5
+                    offset = 0.5
+                    quality_label = "high"
+                elif snr_db > 10:  # Medium quality audio
+                    onset = 0.6   # Stricter onset (reduce false positive overlaps)
+                    offset = 0.4  # Looser offset (allow easier separation)
+                    quality_label = "medium"
+                else:  # Low quality / noisy audio
+                    onset = 0.7   # Much stricter onset (minimize noise-based false overlaps)
+                    offset = 0.3  # Even looser offset (prioritize separation over overlap detection)
+                    quality_label = "low"
+
+                logger.info(
+                    f"Auto-tuned OSD thresholds based on SNR {snr_db:.1f}dB ({quality_label} quality): "
+                    f"onset={onset:.2f}, offset={offset:.2f}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to auto-tune OSD thresholds: {e}. Using defaults.")
+                # Fall back to provided or default values
+                pass
 
         # Configure hyperparameters for overlap detection
         # pyannote/segmentation-3.0 uses powerset encoding where overlaps
@@ -667,12 +706,16 @@ class SpeakerDiarizer:
             # Powerset encoding uses '+' between speaker IDs to indicate overlap
             # e.g., "SPEAKER_00+SPEAKER_01" means both speakers are talking
             if '+' in label_str:
-                overlaps.append({
+                overlap_segment = {
                     'start': segment.start,
                     'end': segment.end,
                     'duration': segment.end - segment.start,
                     'overlap_type': 'simultaneous_speech'
-                })
+                }
+                # Include SNR if auto-tuning was enabled
+                if snr_db is not None:
+                    overlap_segment['snr_db'] = snr_db
+                overlaps.append(overlap_segment)
 
         logger.info(
             f"OSD complete: Found {len(overlaps)} overlapped speech regions"
