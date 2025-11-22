@@ -1,5 +1,4 @@
 import pytest
-import tempfile
 from pathlib import Path
 from audio_chunker import process_large_audio_with_chunking
 
