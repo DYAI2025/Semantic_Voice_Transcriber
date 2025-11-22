@@ -78,8 +78,9 @@ def create_synthetic_audio(
     max_val = np.max(np.abs(audio))
     audio = audio / max_val if max_val > 0 else audio
 
-    # Save to temporary file
-    temp_file = Path(tempfile.gettempdir()) / f"test_audio_{np.random.randint(10000)}.wav"
+    # Save to temporary file using a guaranteed unique name
+    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+        temp_file = Path(tmp.name)
     sf.write(str(temp_file), audio, sample_rate)
     logger.info(f"Synthetic audio saved to: {temp_file}")
 
