@@ -75,7 +75,8 @@ def create_synthetic_audio(
     audio += 0.01 * np.random.randn(len(audio))
 
     # Normalize
-    audio = audio / np.max(np.abs(audio))
+    max_val = np.max(np.abs(audio))
+    audio = audio / max_val if max_val > 0 else audio
 
     # Save to temporary file
     temp_file = Path(tempfile.gettempdir()) / f"test_audio_{np.random.randint(10000)}.wav"
