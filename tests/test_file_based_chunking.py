@@ -63,7 +63,7 @@ def test_incremental_memory_usage():
             'confidence_scores': {'segments': [], 'low_confidence_segments': []}
         }
 
-    result = process_large_audio_with_chunking(
+    process_large_audio_with_chunking(
         test_audio,
         mock_transcribe,
         chunk_duration=2.0,
