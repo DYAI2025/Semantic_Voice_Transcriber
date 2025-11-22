@@ -623,7 +623,13 @@ def process_large_audio_with_chunking(
             logger.info(f"Memory check OK: {memory_status['ram_free_gb']:.1f} GB free, SWAP {memory_status['swap_percent']}%")
 
             if memory_status['swap_percent'] > 80:
-                logger.warning(f"⚠️ SWAP critically high: {memory_status['swap_percent']}%")
+                message = (
+                    f"⚠️ SWAP critically high: {memory_status['swap_percent']}%. "
+                    "Processing aborted to prevent out-of-memory (OOM) errors. "
+                    "Please free up memory, increase system RAM, or reduce the size of the audio file/chunk duration before retrying."
+                )
+                logger.error(message)
+                raise RuntimeError(message)
         except ImportError:
             logger.warning("psutil not available, skipping memory check")
             memory_status = {'ram_free_gb': 0, 'swap_percent': 0}
