@@ -142,7 +142,7 @@ def test_merge_from_files_with_running_stats():
         assert baseline['tempo_wpm_mean'] > 0
 
         # Verify temp files cleaned up
-        assert not chunk_files[0].exists() if hasattr(chunk_files[0], 'exists') else not Path(chunk_files[0]).exists()
+        assert not Path(chunk_files[0]).exists()
 
     finally:
         # Cleanup
