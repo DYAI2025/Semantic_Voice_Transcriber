@@ -448,7 +448,9 @@ class AudioChunker:
             chunk_path = Path(chunk_file)
 
             # Get chunk start time
-            chunk_start_time = chunks[i].get('start', i * chunks[i].get('duration', 0)) if i < len(chunks) else 0
+            if i >= len(chunks):
+                raise ValueError(f"Chunk metadata missing for chunk {i}/{len(chunk_files)}")
+            chunk_start_time = chunks[i].get('start', i * chunks[i].get('duration', 0))
 
             # Load chunk result from file
             with open(chunk_path, 'r', encoding='utf-8') as f:
