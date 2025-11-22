@@ -1,6 +1,6 @@
 # Sprechertrennung - Analyse & Improvement Sprint
 
-**Datum:** 2025-11-22
+**Datum:** 2025-11-15
 **Analysiert:** pyannote.audio Integration in SVT Core
 **Branch:** claude/test-speaker-separation-01Ez1hVdjtqBpv7fGpnvqSqZ
 
