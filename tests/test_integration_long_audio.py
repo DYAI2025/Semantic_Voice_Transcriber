@@ -6,7 +6,6 @@ These tests require actual audio files and may be skipped in CI.
 """
 import pytest
 import psutil
-import os
 import gc
 from pathlib import Path
 
