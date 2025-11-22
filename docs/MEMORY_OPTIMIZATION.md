@@ -138,6 +138,7 @@ tempo_mean = tempo_sum / feature_count
 tempo_std = np.sqrt(tempo_sq_sum / feature_count - tempo_mean ** 2)
 ```
 
+**Note:** The in-memory and file-based merge modes handle `confidence_scores` differently: the in-memory mode computes simple statistics (mean, std, min, max), while the file-based mode accumulates lists of segments and low-confidence segments. Current tests only verify equivalence of prosody baselines, not the full structure of `confidence_scores`. If strict equivalence is required, further harmonization of implementations and tests is needed.
 ### Memory Comparison
 
 | Metric | Old Approach | New Approach |
