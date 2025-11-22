@@ -279,12 +279,12 @@ class TestSpeakerEmbeddingExtractor:
         temp_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
         import soundfile as sf
         sf.write(temp_file.name, audio, sample_rate)
-
-        yield Path(temp_file.name)
-
-        # Cleanup
-        Path(temp_file.name).unlink()
-
+        temp_file.close()
+        try:
+            yield Path(temp_file.name)
+        finally:
+            # Cleanup
+            Path(temp_file.name).unlink()
     def test_extractor_initialization(self, extractor):
         """Test extractor initialization"""
         assert extractor.model is None  # Lazy loading
