@@ -65,10 +65,15 @@ def test_long_audio_memory_usage():
             'speaker_segments': [],
             'overlapped_speech': [],
             'confidence_scores': {
-                'mean': 0.95,
-                'std': 0.02,
-                'min': 0.90,
-                'max': 0.98
+                'segments': [
+                    {
+                        'id': 0,
+                        'start': 0.0,
+                        'end': 5.0,
+                        'confidence': 0.95
+                    }
+                ],
+                'low_confidence_segments': []
             }
         }
 
