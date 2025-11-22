@@ -158,7 +158,8 @@ class SpeakerDiarizer:
         max_speakers: int = 10,
         timeout_seconds: int = 600,
         enable_graceful_degradation: bool = True,
-        max_audio_duration_minutes: int = 120
+        max_audio_duration_minutes: int = 120,
+        enable_embedding_extraction: bool = False  # NEW: Sprint 1 - disabled by default
     ):
         """
         Initialize Speaker Diarizer
@@ -171,6 +172,8 @@ class SpeakerDiarizer:
             timeout_seconds: Maximum time for diarization (default: 600s = 10min)
             enable_graceful_degradation: If True, return empty list on failure instead of raising
             max_audio_duration_minutes: Maximum audio duration to process (default: 120min = 2h)
+            enable_embedding_extraction: If True, extract and save speaker embeddings for
+                                        cross-session recognition (NEW in Sprint 1)
         """
         if not PYANNOTE_AVAILABLE:
             raise ImportError(
@@ -184,6 +187,7 @@ class SpeakerDiarizer:
         self.timeout_seconds = timeout_seconds
         self.enable_graceful_degradation = enable_graceful_degradation
         self.max_audio_duration_minutes = max_audio_duration_minutes
+        self.enable_embedding_extraction = enable_embedding_extraction
 
         # Auto-detect device
         if device is None:
@@ -195,6 +199,7 @@ class SpeakerDiarizer:
         logger.info(f"  Graceful degradation: {enable_graceful_degradation}")
         logger.info(f"  Timeout: {timeout_seconds}s")
         logger.info(f"  Max audio duration: {max_audio_duration_minutes}min")
+        logger.info(f"  Embedding extraction: {enable_embedding_extraction}")
 
         # Pipeline will be loaded on first use
         self.pipeline = None
@@ -204,6 +209,39 @@ class SpeakerDiarizer:
         )
         self.fallback_invocations = 0
         self.fallback_timeouts = 0
+
+        # Speaker embedding system (NEW in Sprint 1)
+        self.embedding_extractor = None
+        self.embedding_db = None
+
+        if self.enable_embedding_extraction:
+            try:
+                from svt_core.audio.speaker_embeddings import SpeakerEmbeddingExtractor
+                from svt_core.audio.speaker_embedding_db import SpeakerEmbeddingDB
+
+                logger.info("Initializing Speaker Embedding System...")
+                self.embedding_extractor = SpeakerEmbeddingExtractor(
+                    use_auth_token=use_auth_token,
+                    device=str(self.device)
+                )
+                self.embedding_db = SpeakerEmbeddingDB()
+                logger.info("Speaker Embedding System initialized")
+
+            except ImportError as e:
+                logger.warning(
+                    f"Failed to initialize Speaker Embedding System: {e}. "
+                    "Continuing without embedding extraction."
+                )
+                self.enable_embedding_extraction = False
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize Speaker Embedding System: {e}"
+                )
+                if not self.enable_graceful_degradation:
+                    raise
+                else:
+                    logger.warning("Disabling embedding extraction due to initialization error")
+                    self.enable_embedding_extraction = False
 
     def _validate_hf_token(self, token: str) -> bool:
         """
@@ -777,6 +815,47 @@ class SpeakerDiarizer:
                 f"  {label}: {len(speaker_segs)} segments, "
                 f"avg_confidence={speaker_conf:.2f}"
             )
+
+        # Extract and save speaker embeddings (NEW in Sprint 1)
+        if self.enable_embedding_extraction and segments:
+            try:
+                logger.info("Extracting speaker embeddings...")
+
+                embeddings_by_speaker = self.embedding_extractor.extract_from_diarization(
+                    audio_path,
+                    segments
+                )
+
+                # Save to database
+                total_saved = 0
+                for speaker_id, embeddings in embeddings_by_speaker.items():
+                    for emb in embeddings:
+                        try:
+                            self.embedding_db.save_embedding(emb)
+                            total_saved += 1
+                        except Exception as e:
+                            logger.warning(f"Failed to save embedding: {e}")
+                            continue
+
+                logger.info(
+                    f"Saved {total_saved} speaker embeddings to database "
+                    f"({len(embeddings_by_speaker)} speakers)"
+                )
+
+                # Log database statistics
+                stats = self.embedding_db.get_statistics()
+                logger.debug(
+                    f"Database stats: {stats['total_embeddings']} total embeddings, "
+                    f"{stats['total_speakers']} unique speakers, "
+                    f"{stats['database_size_mb']:.2f}MB"
+                )
+
+            except Exception as e:
+                logger.error(f"Speaker embedding extraction failed: {e}")
+                if not self.enable_graceful_degradation:
+                    raise
+                else:
+                    logger.warning("Continuing without speaker embeddings")
 
         return segments
 
