@@ -1,0 +1,54 @@
+{
+  "audio_file": "test_3speakers_clear.wav",
+  "duration": 30.0,
+  "sample_rate": 16000,
+  "num_speakers": 3,
+  "speakers": [
+    "Speaker A",
+    "Speaker B",
+    "Speaker C"
+  ],
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 4.0,
+      "speaker": "Speaker A",
+      "duration": 4.0
+    },
+    {
+      "start": 4.5,
+      "end": 8.5,
+      "speaker": "Speaker B",
+      "duration": 4.0
+    },
+    {
+      "start": 9.0,
+      "end": 13.0,
+      "speaker": "Speaker C",
+      "duration": 4.0
+    },
+    {
+      "start": 13.5,
+      "end": 17.5,
+      "speaker": "Speaker A",
+      "duration": 4.0
+    },
+    {
+      "start": 18.0,
+      "end": 22.0,
+      "speaker": "Speaker B",
+      "duration": 4.0
+    },
+    {
+      "start": 22.5,
+      "end": 26.5,
+      "speaker": "Speaker C",
+      "duration": 4.0
+    }
+  ],
+  "metadata": {
+    "synthetic": true,
+    "noise_level_db": null,
+    "generation_method": "sine_wave"
+  }
+}

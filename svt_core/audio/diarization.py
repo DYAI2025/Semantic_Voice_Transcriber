@@ -15,10 +15,18 @@ import multiprocessing as mp
 import threading
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import torch
 from functools import wraps
 from pyannote.core import Annotation, Segment
+
+# Optional psutil for memory monitoring
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+    logging.debug("psutil not available - memory monitoring disabled")
 
 try:
     from pyannote.audio import Pipeline
@@ -197,10 +205,71 @@ class SpeakerDiarizer:
         self.fallback_invocations = 0
         self.fallback_timeouts = 0
 
+    def _validate_hf_token(self, token: str) -> bool:
+        """
+        Pre-validate Hugging Face token before expensive pipeline load
+
+        Args:
+            token: HF token to validate
+
+        Returns:
+            True if token is valid, False otherwise
+        """
+        if not token or not token.startswith('hf_'):
+            logger.error("HF token invalid: must start with 'hf_'")
+            return False
+
+        try:
+            import requests
+
+            logger.debug("Validating HF token...")
+            response = requests.get(
+                "https://huggingface.co/api/whoami-v2",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=5
+            )
+
+            if response.status_code == 200:
+                user_info = response.json()
+                logger.info(f"✅ HF token validated successfully (user: {user_info.get('name', 'unknown')})")
+                return True
+            elif response.status_code == 401:
+                logger.error("❌ HF token invalid or expired")
+                return False
+            else:
+                logger.warning(f"HF token validation returned status {response.status_code}")
+                return False
+
+        except requests.exceptions.Timeout:
+            logger.warning("HF token validation timed out - proceeding without validation")
+            return True  # Don't block on network timeout
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"HF token validation failed (network error): {e}")
+            return True  # Don't block on network errors
+        except Exception as e:
+            logger.warning(f"HF token validation failed: {e}")
+            return True  # Don't block on unexpected errors
+
     def _load_pipeline(self):
         """Load pyannote.audio pipeline (lazy loading)"""
         if self.pipeline is not None:
             return
+
+        # Validate token before expensive pipeline load
+        if not self._validate_hf_token(self.use_auth_token):
+            error_msg = (
+                "Invalid Hugging Face token. Setup instructions:\n\n"
+                "1. Create account: https://huggingface.co/join\n"
+                "2. Accept model user agreements:\n"
+                "   - https://huggingface.co/pyannote/segmentation-3.0\n"
+                "   - https://huggingface.co/pyannote/speaker-diarization-3.1\n"
+                "3. Create token: https://huggingface.co/settings/tokens (Type: Read)\n"
+                "4. Add to .env file: HF_TOKEN=hf_YourTokenHere\n"
+                "5. Restart application\n\n"
+                "See SPEAKER_DIARIZATION.md for detailed setup guide."
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
         try:
             logger.info("Loading pyannote speaker-diarization-3.1 pipeline...")
@@ -213,13 +282,11 @@ class SpeakerDiarizer:
         except Exception as e:
             logger.error(f"Failed to load pipeline: {e}")
             logger.error(
-                "You may need to:\n"
-                "1. Accept pyannote/segmentation-3.0 user agreement at: "
-                "https://huggingface.co/pyannote/segmentation-3.0\n"
-                "2. Accept pyannote/speaker-diarization-3.1 user agreement at: "
-                "https://huggingface.co/pyannote/speaker-diarization-3.1\n"
-                "3. Create a token at: https://huggingface.co/settings/tokens\n"
-                "4. Pass token via use_auth_token parameter"
+                "Common issues:\n"
+                "- Model agreements not accepted (see links above)\n"
+                "- Token expired or revoked\n"
+                "- Network connection issues\n"
+                "- Insufficient disk space for model download (~500MB)"
             )
             raise
 
@@ -363,6 +430,115 @@ class SpeakerDiarizer:
         logger.error("Fallback diarization worker failed: %s", payload)
         raise DiarizationError(payload)
 
+    def _check_memory(self, audio_path: Path) -> Tuple[str, Dict[str, Any]]:
+        """
+        Check available memory and recommend processing mode
+
+        Args:
+            audio_path: Path to audio file
+
+        Returns:
+            Tuple of (recommended_mode, memory_info)
+            where mode is 'gpu', 'cpu', or 'minimal'
+        """
+        if not PSUTIL_AVAILABLE:
+            return 'gpu' if torch.cuda.is_available() else 'cpu', {}
+
+        mem = psutil.virtual_memory()
+        available_gb = mem.available / (1024**3)
+        percent_used = mem.percent
+
+        # Estimate memory needed (rough heuristic)
+        try:
+            import librosa
+            audio_duration_minutes = librosa.get_duration(path=str(audio_path)) / 60
+            # pyannote uses ~50-100MB per minute on CPU, ~200-500MB per minute on GPU
+            estimated_mb = audio_duration_minutes * 200  # Conservative estimate
+        except Exception:
+            estimated_mb = 500  # Default estimate
+
+        memory_info = {
+            'total_gb': mem.total / (1024**3),
+            'available_gb': available_gb,
+            'percent_used': percent_used,
+            'estimated_needed_mb': estimated_mb
+        }
+
+        # Decision logic
+        if percent_used > 90:
+            logger.warning(
+                f"⚠️ CRITICAL: RAM usage at {percent_used:.1f}% "
+                f"(Available: {available_gb:.1f}GB)"
+            )
+            logger.warning("Switching to MINIMAL mode (CPU energy-based fallback)")
+            return 'minimal', memory_info
+
+        elif percent_used > 85:
+            logger.warning(
+                f"⚠️ HIGH: RAM usage at {percent_used:.1f}% "
+                f"(Available: {available_gb:.1f}GB)"
+            )
+            if self.device.type == 'cuda':
+                logger.warning("Switching to CPU mode to reduce memory pressure")
+                return 'cpu', memory_info
+            else:
+                return 'cpu', memory_info
+
+        elif available_gb < estimated_mb / 1024 * 1.5:  # Need 1.5x estimated memory
+            logger.warning(
+                f"⚠️ Low available memory: {available_gb:.1f}GB "
+                f"(Estimated need: {estimated_mb/1024:.1f}GB)"
+            )
+            logger.warning("Switching to CPU mode")
+            return 'cpu', memory_info
+
+        else:
+            # Sufficient memory
+            logger.info(
+                f"Memory check: {percent_used:.1f}% used, "
+                f"{available_gb:.1f}GB available"
+            )
+            return 'gpu' if torch.cuda.is_available() else 'cpu', memory_info
+
+    def _estimate_segment_confidence(self, duration: float) -> float:
+        """
+        Estimate confidence score for a diarization segment
+
+        Uses heuristics based on segment duration.
+        Longer segments generally indicate more confident speaker attribution.
+
+        Note: This is a placeholder until we implement proper embedding-based
+        confidence scoring in Sprint 2.
+
+        Args:
+            duration: Segment duration in seconds
+
+        Returns:
+            Confidence score between 0.0 and 1.0
+        """
+        # Heuristic confidence based on duration
+        # Very short segments (<0.5s) are less reliable
+        # Optimal segments (2-10s) have high confidence
+        # Very long segments (>30s) might be multiple turns
+
+        if duration < 0.5:
+            # Very short - low confidence
+            confidence = 0.5 + (duration / 0.5) * 0.2  # 0.5-0.7
+        elif duration < 2.0:
+            # Short - medium confidence
+            confidence = 0.7 + ((duration - 0.5) / 1.5) * 0.15  # 0.7-0.85
+        elif duration < 10.0:
+            # Optimal - high confidence
+            confidence = 0.85 + ((duration - 2.0) / 8.0) * 0.10  # 0.85-0.95
+        elif duration < 30.0:
+            # Long - slightly decreasing confidence
+            confidence = 0.95 - ((duration - 10.0) / 20.0) * 0.10  # 0.95-0.85
+        else:
+            # Very long - medium confidence (might be multiple turns)
+            confidence = 0.80
+
+        return round(confidence, 3)
+
     def detect_overlapped_speech(
         self,
         audio_path: Path,
@@ -484,6 +660,30 @@ class SpeakerDiarizer:
         except Exception as e:
             logger.warning(f"Could not determine audio duration: {e}")
 
+        # Check memory and select processing mode
+        recommended_mode, memory_info = self._check_memory(audio_path)
+
+        if recommended_mode == 'minimal':
+            # Use CPU energy-based fallback
+            logger.warning(
+                "⚠️ Insufficient memory - using CPU energy-based diarization fallback"
+            )
+            if self.enable_graceful_degradation:
+                from svt_core.audio.diarization_cpu import CPUDiarizer
+                cpu_diarizer = CPUDiarizer()
+                logger.info("Using CPUDiarizer (energy-based segmentation)")
+                return cpu_diarizer.diarize(audio_path, num_speakers=num_speakers)
+            else:
+                raise DiarizationError(
+                    f"Insufficient memory: {memory_info['percent_used']:.1f}% used, "
+                    f"{memory_info['available_gb']:.1f}GB available"
+                )
+
+        elif recommended_mode == 'cpu' and self.device.type == 'cuda':
+            # Switch from GPU to CPU
+            logger.info("Switching from GPU to CPU mode due to memory constraints")
+            self.device = torch.device('cpu')
+
         # Load pipeline with error handling
         try:
             self._load_pipeline()
@@ -542,47 +742,81 @@ class SpeakerDiarizer:
                 speaker_mapping[speaker] = f"Speaker {speaker_label}"
                 next_speaker_index += 1
 
+            # Calculate confidence score heuristic
+            # Note: pyannote.audio 3.1 doesn't provide per-segment confidence directly
+            # We use a heuristic based on segment duration and consistency
+            segment_duration = turn.end - turn.start
+            confidence = self._estimate_segment_confidence(segment_duration)
+
             segments.append({
                 'start': turn.start,
                 'end': turn.end,
                 'speaker': speaker_mapping[speaker],
-                'speaker_id': speaker
+                'speaker_id': speaker,
+                'confidence': confidence  # NEW: Confidence score (0.0-1.0)
             })
+
+        # Calculate average confidence
+        avg_confidence = sum(seg['confidence'] for seg in segments) / len(segments) if segments else 0.0
+        low_conf_count = sum(1 for seg in segments if seg['confidence'] < 0.7)
 
         logger.info(
             f"Diarization complete: Found {len(speaker_mapping)} speakers, "
             f"{len(segments)} segments"
         )
+        logger.info(
+            f"  Confidence: avg={avg_confidence:.2f}, "
+            f"low_conf_segments={low_conf_count} (<0.7)"
+        )
+
+        # Log per-speaker confidence
+        for speaker, label in speaker_mapping.items():
+            speaker_segs = [s for s in segments if s['speaker_id'] == speaker]
+            speaker_conf = sum(s['confidence'] for s in speaker_segs) / len(speaker_segs)
+            logger.debug(
+                f"  {label}: {len(speaker_segs)} segments, "
+                f"avg_confidence={speaker_conf:.2f}"
+            )
 
         return segments
 
     def align_with_transcription(
         self,
         diarization_segments: List[Dict[str, Any]],
-        transcription_segments: List[Dict[str, Any]]
+        transcription_segments: List[Dict[str, Any]],
+        overlap_weight: float = 0.7,
+        confidence_weight: float = 0.3
     ) -> List[Dict[str, Any]]:
         """
         Align speaker diarization with Whisper transcription segments
 
+        Uses weighted scoring: overlap duration + confidence score
+        to select the best matching speaker for each transcription segment.
+
         Args:
-            diarization_segments: Output from diarize()
+            diarization_segments: Output from diarize() with 'confidence' field
             transcription_segments: Whisper segments with 'start', 'end', 'text'
+            overlap_weight: Weight for overlap duration in scoring (default: 0.7)
+            confidence_weight: Weight for confidence score in scoring (default: 0.3)
 
         Returns:
-            Transcription segments with added 'speaker' field
+            Transcription segments with added 'speaker' and 'speaker_confidence' fields
         """
         aligned = []
 
         for trans_seg in transcription_segments:
             trans_start = trans_seg['start']
             trans_end = trans_seg['end']
+            trans_duration = trans_end - trans_start
             trans_mid = (trans_start + trans_end) / 2
 
-            # Find overlapping speaker segment
-            # Strategy: Use speaker at midpoint of transcription segment
+            # Find best matching speaker using weighted scoring
             best_speaker = "Speaker A"  # Default fallback
-            max_overlap = 0
+            best_speaker_id = None
+            best_score = -1
+            best_confidence = 0.5
 
+            # Score all overlapping diarization segments
             for dia_seg in diarization_segments:
                 dia_start = dia_seg['start']
                 dia_end = dia_seg['end']
@@ -590,20 +824,42 @@ class SpeakerDiarizer:
                 # Calculate overlap
                 overlap_start = max(trans_start, dia_start)
                 overlap_end = min(trans_end, dia_end)
-                overlap = max(0, overlap_end - overlap_start)
+                overlap_duration = max(0, overlap_end - overlap_start)
 
-                if overlap > max_overlap:
-                    max_overlap = overlap
-                    best_speaker = dia_seg['speaker']
+                if overlap_duration > 0:
+                    # Normalize overlap by transcription duration (0.0-1.0)
+                    overlap_ratio = overlap_duration / trans_duration
 
-                # Alternative: Check if midpoint is within diarization segment
-                if dia_start <= trans_mid <= dia_end:
-                    best_speaker = dia_seg['speaker']
-                    break
+                    # Get confidence score (0.0-1.0)
+                    dia_confidence = dia_seg.get('confidence', 0.5)
+
+                    # Weighted score
+                    score = (overlap_weight * overlap_ratio) + (confidence_weight * dia_confidence)
+
+                    if score > best_score:
+                        best_score = score
+                        best_speaker = dia_seg['speaker']
+                        best_speaker_id = dia_seg['speaker_id']
+                        best_confidence = dia_confidence
+
+            # Fallback: Check midpoint (backward compatibility)
+            if best_score < 0.3:  # Very low score, try midpoint
+                for dia_seg in diarization_segments:
+                    if dia_seg['start'] <= trans_mid <= dia_seg['end']:
+                        best_speaker = dia_seg['speaker']
+                        best_speaker_id = dia_seg['speaker_id']
+                        best_confidence = dia_seg.get('confidence', 0.5)
+                        logger.debug(
+                            f"Used midpoint fallback for segment at {trans_start:.1f}s"
+                        )
+                        break
 
             # Add speaker to transcription segment
             aligned_seg = trans_seg.copy()
             aligned_seg['speaker'] = best_speaker
+            aligned_seg['speaker_id'] = best_speaker_id
+            aligned_seg['speaker_confidence'] = round(best_confidence, 3)
+            aligned_seg['alignment_score'] = round(best_score, 3)
             aligned.append(aligned_seg)
 
         return aligned
