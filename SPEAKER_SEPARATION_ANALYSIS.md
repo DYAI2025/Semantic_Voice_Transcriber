@@ -428,13 +428,14 @@ def transcribe_with_speaker_context(audio, speaker_label):
 | Metrik | Aktuell | Ziel Sprint 1 | Ziel Sprint 2 |
 |--------|---------|---------------|---------------|
 | **Speaker ID Accuracy** | ~75% (geschätzt) | 85% | 92% |
-| **DER (Diarization Error Rate)** | Unknown | 12% | 8% |
+| **DER (Diarization Error Rate)** | Unknown | 12% | <10% |
 | **Cross-Session Re-ID** | 0% | 70% | 85% |
 | **Crash Rate** | <1% | 0% | 0% |
 | **WER Improvement (speaker-aware)** | 0% | +3% | +5% |
 | **Diarization Speed (GPU)** | 0.3x RT | 0.25x RT | 0.15x RT |
 | **Long Audio Success (>60min)** | ~60% | 85% | 95% |
 
+> **Hinweis:** Das Ziel "<10%" für DER (Diarization Error Rate) gilt für Sprint 2. Sprint 1 ist ein Zwischenschritt mit einem realistischen Ziel von 12%.
 ### Qualitative Metriken
 
 - [ ] **User Experience:** 95% der User verstehen Fehlermeldungen
