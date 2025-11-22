@@ -634,7 +634,7 @@ SVT uses file-based incremental merge for long files (>30 minutes) to prevent OO
   - Monitor SWAP usage: `watch -n 1 free -h` (should stay < 80%)
   - Check temp directory space: `df -h /tmp` (need ~100MB for chunk files)
   - Review detailed guide: `docs/MEMORY_OPTIMIZATION.md`
-  - Increase chunk duration to reduce chunk count: edit `CHUNK_DURATION` in `audio_chunker.py`
+  - Increase chunk duration to reduce chunk count: pass a different `chunk_duration` value to the `process_large_audio_with_chunking()` function in `audio_chunker.py` (e.g., `process_large_audio_with_chunking(..., chunk_duration=600.0)`)
 
 **Memory Profile Not Updating:**
 - Check write permissions on `Memory/` directory
