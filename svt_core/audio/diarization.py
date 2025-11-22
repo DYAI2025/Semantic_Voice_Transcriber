@@ -548,10 +548,7 @@ class SpeakerDiarizer:
             )
             if self.device.type == 'cuda':
                 logger.warning("Switching to CPU mode to reduce memory pressure")
-                return 'cpu', memory_info
-            else:
-                return 'cpu', memory_info
-
+            return 'cpu', memory_info
         elif available_gb < estimated_mb / 1024 * 1.5:  # Need 1.5x estimated memory
             logger.warning(
                 f"⚠️ Low available memory: {available_gb:.1f}GB "
