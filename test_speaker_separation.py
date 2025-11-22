@@ -139,69 +139,65 @@ def test_speaker_diarizer_basic(hf_token: str):
     logger.info("TEST 3: Basic Speaker Diarization")
     logger.info("=" * 80)
 
+    audio_file = create_synthetic_audio(duration=10.0, num_speakers=2)
     try:
-        from svt_core.audio.diarization import SpeakerDiarizer
+        try:
+            from svt_core.audio.diarization import SpeakerDiarizer
 
-        # Create synthetic audio
-        audio_file = create_synthetic_audio(duration=10.0, num_speakers=2)
+            # Initialize diarizer
+            logger.info("Initializing SpeakerDiarizer...")
+            diarizer = SpeakerDiarizer(
+                use_auth_token=hf_token,
+                min_speakers=1,
+                max_speakers=3,
+                timeout_seconds=60,
+                enable_graceful_degradation=True
+            )
 
-        # Initialize diarizer
-        logger.info("Initializing SpeakerDiarizer...")
-        diarizer = SpeakerDiarizer(
-            use_auth_token=hf_token,
-            min_speakers=1,
-            max_speakers=3,
-            timeout_seconds=60,
-            enable_graceful_degradation=True
-        )
+            # Run diarization
+            logger.info("Running diarization...")
+            segments = diarizer.diarize(audio_file)
 
-        # Run diarization
-        logger.info("Running diarization...")
-        segments = diarizer.diarize(audio_file)
+            # Check results
+            if len(segments) > 0:
+                logger.info(f"✅ Diarization successful: {len(segments)} segments detected")
 
-        # Check results
-        if len(segments) > 0:
-            logger.info(f"✅ Diarization successful: {len(segments)} segments detected")
+                # Get statistics
+                stats = SpeakerDiarizer.get_speaker_statistics(segments)
+                logger.info(f"✅ Detected {len(stats)} unique speakers")
 
-            # Get statistics
-            stats = SpeakerDiarizer.get_speaker_statistics(segments)
-            logger.info(f"✅ Detected {len(stats)} unique speakers")
+                # Print segments
+                logger.info("\nDetected segments:")
+                for seg in segments[:10]:  # Show first 10
+                    logger.info(
+                        f"  [{seg['start']:6.2f}s - {seg['end']:6.2f}s] "
+                        f"{seg['speaker']:12s} (ID: {seg['speaker_id']})"
+                    )
 
-            # Print segments
-            logger.info("\nDetected segments:")
-            for seg in segments[:10]:  # Show first 10
-                logger.info(
-                    f"  [{seg['start']:6.2f}s - {seg['end']:6.2f}s] "
-                    f"{seg['speaker']:12s} (ID: {seg['speaker_id']})"
-                )
+                if len(segments) > 10:
+                    logger.info(f"  ... and {len(segments) - 10} more segments")
 
-            if len(segments) > 10:
-                logger.info(f"  ... and {len(segments) - 10} more segments")
+                # Print statistics
+                logger.info("\nSpeaker statistics:")
+                for speaker, data in sorted(stats.items()):
+                    logger.info(
+                        f"  {speaker:12s}: {data['total_duration']:6.2f}s "
+                        f"({data['percentage']:5.1f}%) - {data['num_segments']} segments"
+                    )
 
-            # Print statistics
-            logger.info("\nSpeaker statistics:")
-            for speaker, data in sorted(stats.items()):
-                logger.info(
-                    f"  {speaker:12s}: {data['total_duration']:6.2f}s "
-                    f"({data['percentage']:5.1f}%) - {data['num_segments']} segments"
-                )
+                return True, segments
+            else:
+                logger.warning("⚠️ Diarization returned no segments")
+                return False, []
 
-            # Cleanup
-            audio_file.unlink()
-
-            return True, segments
-        else:
-            logger.warning("⚠️ Diarization returned no segments")
-            audio_file.unlink()
+        except Exception as e:
+            logger.error(f"❌ Diarization failed: {e}")
+            import traceback
+            traceback.print_exc()
             return False, []
-
-    except Exception as e:
-        logger.error(f"❌ Diarization failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False, []
-
-
+    finally:
+        if audio_file.exists():
+            audio_file.unlink()
 def test_cpu_fallback():
     """Test 4: CPU fallback diarization"""
     logger.info("\n" + "=" * 80)
