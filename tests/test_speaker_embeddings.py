@@ -26,7 +26,6 @@ from svt_core.audio.speaker_embedding_db import SpeakerEmbeddingDB
 try:
     import torch
     import torchaudio
-    from pyannote.audio import Model
     DEPENDENCIES_AVAILABLE = True
 except ImportError:
     DEPENDENCIES_AVAILABLE = False
