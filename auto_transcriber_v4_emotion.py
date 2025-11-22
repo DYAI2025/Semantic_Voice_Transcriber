@@ -87,6 +87,168 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
+# SPEAKER-AWARE CONTEXT FUNCTIONS (Sprint 2 Tag 10-11)
+# ============================================================================
+
+def load_speaker_context(speaker_label: str) -> str:
+    """
+    Load speaker profile and build context prompt for Whisper
+
+    Uses speaker characteristics, topics, and speech patterns from
+    Memory/*.yaml profiles to provide context for improved transcription.
+
+    Args:
+        speaker_label: Speaker label (e.g., "Therapeut", "Patient A", "Speaker A")
+
+    Returns:
+        Context string for Whisper initial_prompt, or empty string if no profile exists
+
+    Example:
+        >>> context = load_speaker_context("Therapeut")
+        >>> # Returns: "Speaking style: empathisch, ruhig | Common topics: therapy, emotions"
+    """
+    # Map speaker labels to profile filenames
+    profile_path = Path(f"Memory/{speaker_label}.yaml")
+
+    if not profile_path.exists():
+        logger.debug(f"No profile found for {speaker_label} at {profile_path}")
+        return ""
+
+    try:
+        with open(profile_path, 'r', encoding='utf-8') as f:
+            profile = yaml.safe_load(f)
+
+        if not profile:
+            return ""
+
+        # Build context string from profile
+        context_parts = []
+
+        # Add speaking characteristics
+        if 'characteristics' in profile and profile['characteristics']:
+            chars = profile['characteristics']
+            if isinstance(chars, list):
+                # Limit to top 3 characteristics
+                context_parts.append(f"Speaking style: {', '.join(chars[:3])}")
+
+        # Add common topics
+        if 'topics' in profile and profile['topics']:
+            topics = profile['topics']
+            if isinstance(topics, dict):
+                # Sort by frequency and take top 3
+                top_topics = sorted(topics.items(), key=lambda x: x[1], reverse=True)[:3]
+                topic_names = [t[0] for t in top_topics]
+                context_parts.append(f"Common topics: {', '.join(topic_names)}")
+
+        # Add prosody patterns (optional - helps with transcription consistency)
+        if 'prosody_patterns' in profile:
+            prosody = profile['prosody_patterns']
+            if 'tempo_profile' in prosody:
+                tempo = prosody['tempo_profile']
+                if 'mean_speech_rate' in tempo:
+                    rate = tempo['mean_speech_rate']
+                    if rate > 5.0:
+                        context_parts.append("fast speaker")
+                    elif rate < 3.0:
+                        context_parts.append("slow speaker")
+
+        context = " | ".join(context_parts)
+
+        if context:
+            logger.debug(f"Loaded context for {speaker_label}: {context}")
+
+        return context
+
+    except Exception as e:
+        logger.warning(f"Failed to load speaker context for {speaker_label}: {e}")
+        return ""
+
+
+def transcribe_segment_with_context(
+    audio_path: Path,
+    start: float,
+    end: float,
+    speaker_label: str,
+    model,
+    language: str = 'de'
+) -> Dict[str, Any]:
+    """
+    Transcribe a single segment with speaker-aware context
+
+    This function is designed for re-transcription of segments after
+    diarization and speaker matching. It uses speaker profiles to provide
+    context to Whisper via the initial_prompt parameter.
+
+    Args:
+        audio_path: Path to audio file
+        start: Segment start time (seconds)
+        end: Segment end time (seconds)
+        speaker_label: Known speaker label (e.g., "Therapeut", "Patient A")
+        model: Loaded Whisper model
+        language: Language code (default: 'de')
+
+    Returns:
+        Whisper transcription result dict with 'text', 'segments', etc.
+
+    Note:
+        This function requires torchaudio and extracts a temporary segment.
+        Currently not used in main pipeline but available for future enhancements.
+    """
+    try:
+        import librosa
+        import soundfile as sf
+        import tempfile
+
+        # Extract segment from audio
+        audio, sr = librosa.load(str(audio_path), sr=16000, mono=True)
+        start_sample = int(start * sr)
+        end_sample = int(end * sr)
+        segment_audio = audio[start_sample:end_sample]
+
+        # Save segment to temporary file
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
+            tmp_path = tmp_file.name
+            sf.write(tmp_path, segment_audio, sr)
+
+        # Build initial prompt with speaker context
+        context = load_speaker_context(speaker_label)
+        initial_prompt = f"[{speaker_label}] {context}" if context else None
+
+        logger.debug(
+            f"Transcribing segment {start:.1f}s-{end:.1f}s "
+            f"for {speaker_label} with context: {context}"
+        )
+
+        # Transcribe with context
+        result = model.transcribe(
+            tmp_path,
+            initial_prompt=initial_prompt,
+            language=language,
+            verbose=False
+        )
+
+        # Clean up temporary file
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
+
+        logger.debug(f"Transcribed {speaker_label}: {result.get('text', '')[:50]}...")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to transcribe segment with context: {e}")
+        raise
+
+
+# ============================================================================
+# END SPEAKER-AWARE CONTEXT FUNCTIONS
+# ============================================================================
+
+
 class EmotionalAnalyzer:
     """Analysiert emotionale Sprachfärbung aus Audio und Text"""
     

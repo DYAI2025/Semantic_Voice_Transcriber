@@ -81,9 +81,23 @@ class CPUDiarizer:
 
     def _segment(self, start: float, end: float, idx: int) -> Dict[str, Any]:
         speaker_label = chr(ord('A') + idx)
+        duration = end - start
+
+        # Simple confidence heuristic for CPU fallback
+        # Energy-based diarization is less accurate, so lower confidence
+        if duration < 0.5:
+            confidence = 0.4
+        elif duration < 2.0:
+            confidence = 0.5
+        elif duration < 10.0:
+            confidence = 0.6
+        else:
+            confidence = 0.55
+
         return {
             'start': float(start),
             'end': float(end),
             'speaker': f"Speaker {speaker_label}",
             'speaker_id': f"CPU_{idx:02d}",
+            'confidence': float(confidence)  # NEW: Lower confidence for CPU fallback
         }

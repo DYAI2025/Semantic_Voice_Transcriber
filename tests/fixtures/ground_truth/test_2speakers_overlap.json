@@ -1,0 +1,65 @@
+{
+  "audio_file": "test_2speakers_overlap.wav",
+  "duration": 30.0,
+  "sample_rate": 16000,
+  "num_speakers": 2,
+  "speakers": [
+    "Speaker A",
+    "Speaker B"
+  ],
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 5.0,
+      "speaker": "Speaker A",
+      "duration": 5.0
+    },
+    {
+      "start": 4.5,
+      "end": 9.0,
+      "speaker": "Speaker B",
+      "duration": 4.5
+    },
+    {
+      "start": 9.5,
+      "end": 14.0,
+      "speaker": "Speaker A",
+      "duration": 4.5
+    },
+    {
+      "start": 13.5,
+      "end": 18.0,
+      "speaker": "Speaker B",
+      "duration": 4.5
+    },
+    {
+      "start": 18.5,
+      "end": 23.0,
+      "speaker": "Speaker A",
+      "duration": 4.5
+    }
+  ],
+  "metadata": {
+    "synthetic": true,
+    "noise_level_db": null,
+    "generation_method": "sine_wave"
+  },
+  "overlaps": [
+    {
+      "start": 4.5,
+      "end": 5.0,
+      "speakers": [
+        "Speaker A",
+        "Speaker B"
+      ]
+    },
+    {
+      "start": 13.5,
+      "end": 14.0,
+      "speakers": [
+        "Speaker A",
+        "Speaker B"
+      ]
+    }
+  ]
+}

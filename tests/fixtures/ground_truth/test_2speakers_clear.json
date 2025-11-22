@@ -1,0 +1,47 @@
+{
+  "audio_file": "test_2speakers_clear.wav",
+  "duration": 30.0,
+  "sample_rate": 16000,
+  "num_speakers": 2,
+  "speakers": [
+    "Speaker A",
+    "Speaker B"
+  ],
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 5.0,
+      "speaker": "Speaker A",
+      "duration": 5.0
+    },
+    {
+      "start": 5.5,
+      "end": 10.0,
+      "speaker": "Speaker B",
+      "duration": 4.5
+    },
+    {
+      "start": 10.5,
+      "end": 15.0,
+      "speaker": "Speaker A",
+      "duration": 4.5
+    },
+    {
+      "start": 15.5,
+      "end": 20.0,
+      "speaker": "Speaker B",
+      "duration": 4.5
+    },
+    {
+      "start": 20.5,
+      "end": 25.0,
+      "speaker": "Speaker A",
+      "duration": 4.5
+    }
+  ],
+  "metadata": {
+    "synthetic": true,
+    "noise_level_db": null,
+    "generation_method": "sine_wave"
+  }
+}
