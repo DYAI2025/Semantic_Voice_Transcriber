@@ -441,7 +441,7 @@ def generate_test_report(results: Dict[str, bool]):
     logger.info("=" * 80)
 
     total_tests = len(results)
-    passed_tests = sum(1 for v in results.values() if v)
+    passed_tests = sum(bool(v)
 
     logger.info(f"\nTotal Tests: {total_tests}")
     logger.info(f"Passed: {passed_tests}")
