@@ -159,7 +159,9 @@ class SpeakerDiarizer:
         timeout_seconds: int = 600,
         enable_graceful_degradation: bool = True,
         max_audio_duration_minutes: int = 120,
-        enable_embedding_extraction: bool = False  # NEW: Sprint 1 - disabled by default
+        enable_embedding_extraction: bool = False,  # Sprint 1
+        enable_speaker_matching: bool = False,  # NEW: Sprint 2 - cross-session recognition
+        speaker_matching_threshold: float = 0.85  # NEW: Similarity threshold for matching
     ):
         """
         Initialize Speaker Diarizer
@@ -173,7 +175,10 @@ class SpeakerDiarizer:
             enable_graceful_degradation: If True, return empty list on failure instead of raising
             max_audio_duration_minutes: Maximum audio duration to process (default: 120min = 2h)
             enable_embedding_extraction: If True, extract and save speaker embeddings for
-                                        cross-session recognition (NEW in Sprint 1)
+                                        cross-session recognition (Sprint 1)
+            enable_speaker_matching: If True, match speakers to known profiles from previous
+                                    sessions (Sprint 2, requires enable_embedding_extraction=True)
+            speaker_matching_threshold: Cosine similarity threshold for speaker matching (0.0-1.0)
         """
         if not PYANNOTE_AVAILABLE:
             raise ImportError(
@@ -188,6 +193,8 @@ class SpeakerDiarizer:
         self.enable_graceful_degradation = enable_graceful_degradation
         self.max_audio_duration_minutes = max_audio_duration_minutes
         self.enable_embedding_extraction = enable_embedding_extraction
+        self.enable_speaker_matching = enable_speaker_matching
+        self.speaker_matching_threshold = speaker_matching_threshold
 
         # Auto-detect device
         if device is None:
@@ -200,6 +207,7 @@ class SpeakerDiarizer:
         logger.info(f"  Timeout: {timeout_seconds}s")
         logger.info(f"  Max audio duration: {max_audio_duration_minutes}min")
         logger.info(f"  Embedding extraction: {enable_embedding_extraction}")
+        logger.info(f"  Speaker matching: {enable_speaker_matching} (threshold: {speaker_matching_threshold})")
 
         # Pipeline will be loaded on first use
         self.pipeline = None
@@ -213,6 +221,7 @@ class SpeakerDiarizer:
         # Speaker embedding system (NEW in Sprint 1)
         self.embedding_extractor = None
         self.embedding_db = None
+        self.speaker_matcher = None  # NEW: Sprint 2
 
         if self.enable_embedding_extraction:
             try:
@@ -227,12 +236,26 @@ class SpeakerDiarizer:
                 self.embedding_db = SpeakerEmbeddingDB()
                 logger.info("Speaker Embedding System initialized")
 
+                # Initialize speaker matcher if enabled (Sprint 2)
+                if self.enable_speaker_matching:
+                    from svt_core.audio.speaker_matching import SpeakerMatcher
+
+                    logger.info("Initializing Speaker Matcher...")
+                    self.speaker_matcher = SpeakerMatcher(
+                        embedding_db=self.embedding_db,
+                        similarity_threshold=self.speaker_matching_threshold,
+                        min_embeddings_for_match=1,
+                        use_average_embedding=True
+                    )
+                    logger.info(f"Speaker Matcher initialized (threshold: {self.speaker_matching_threshold})")
+
             except ImportError as e:
                 logger.warning(
                     f"Failed to initialize Speaker Embedding System: {e}. "
                     "Continuing without embedding extraction."
                 )
                 self.enable_embedding_extraction = False
+                self.enable_speaker_matching = False
             except Exception as e:
                 logger.error(
                     f"Failed to initialize Speaker Embedding System: {e}"
@@ -242,6 +265,13 @@ class SpeakerDiarizer:
                 else:
                     logger.warning("Disabling embedding extraction due to initialization error")
                     self.enable_embedding_extraction = False
+                    self.enable_speaker_matching = False
+        elif self.enable_speaker_matching:
+            logger.warning(
+                "Speaker matching requires embedding extraction. "
+                "Disabling speaker matching (set enable_embedding_extraction=True)."
+            )
+            self.enable_speaker_matching = False
 
     def _validate_hf_token(self, token: str) -> bool:
         """
@@ -849,6 +879,41 @@ class SpeakerDiarizer:
                     f"{stats['total_speakers']} unique speakers, "
                     f"{stats['database_size_mb']:.2f}MB"
                 )
+
+                # Match speakers to known profiles (NEW in Sprint 2)
+                if self.enable_speaker_matching and self.speaker_matcher:
+                    logger.info("Matching speakers to known profiles...")
+
+                    # Collect embeddings per speaker for matching
+                    embeddings_for_matching = {}
+                    for speaker_id, emb_list in embeddings_by_speaker.items():
+                        embeddings_for_matching[speaker_id] = [e.embedding for e in emb_list]
+
+                    # Match speakers
+                    matches = self.speaker_matcher.match_multiple_speakers(
+                        embeddings_for_matching
+                    )
+
+                    # Update segments with matched speaker labels
+                    matched_count = 0
+                    for seg in segments:
+                        speaker_id = seg['speaker_id']
+
+                        if speaker_id in matches and matches[speaker_id]:
+                            match = matches[speaker_id]
+                            seg['matched_speaker'] = match.matched_speaker_label
+                            seg['match_similarity'] = match.similarity_score
+                            seg['is_known_speaker'] = True
+                            matched_count += 1
+                        else:
+                            seg['matched_speaker'] = None
+                            seg['match_similarity'] = 0.0
+                            seg['is_known_speaker'] = False
+
+                    logger.info(
+                        f"Speaker matching complete: {matched_count}/{len(segments)} segments matched "
+                        f"({len([m for m in matches.values() if m])} unique speakers)"
+                    )
 
             except Exception as e:
                 logger.error(f"Speaker embedding extraction failed: {e}")
