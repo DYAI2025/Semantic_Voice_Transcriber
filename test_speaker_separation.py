@@ -418,7 +418,7 @@ def test_stability_and_error_handling(hf_token: str):
         )
         audio_file = create_synthetic_audio(duration=60.0)  # Long audio
         try:
-            segments = diarizer_timeout.diarize(audio_file)
+            diarizer_timeout.diarize(audio_file)
             logger.info("✅ Timeout handling works")
             tests_passed += 1
         except Exception as e:
