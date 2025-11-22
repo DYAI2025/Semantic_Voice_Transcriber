@@ -1,5 +1,7 @@
 # Lizenz: Creative Commons BY-NC-SA 4.0
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 Diese Software steht unter der [Creative Commons Namensnennung - Nicht kommerziell - Weitergabe unter gleichen Bedingungen 4.0 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.de) Lizenz.
 
 ---

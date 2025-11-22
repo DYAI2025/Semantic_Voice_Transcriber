@@ -1,5 +1,7 @@
 # Overlapped Speech Detection (OSD) Guide
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## 🎯 Überblick
 
 Overlapped Speech Detection (OSD) identifiziert Momente, in denen mehrere Sprecher gleichzeitig sprechen. Dies ist entscheidend für therapeutische Transkripte, um Unterbrechungen, simultane Sprache und Gesprächsdynamik zu markieren.

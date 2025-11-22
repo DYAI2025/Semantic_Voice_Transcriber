@@ -1,5 +1,7 @@
 # Troubleshooting SVT Local AI
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Health Check Fehler
 - **Ollama unreachable**: Prüfen, ob `ollama serve` läuft. Unter Windows ggf. einmal neu starten. Port 11434 darf nicht blockiert sein.
 - **Directories not writable**: Installer erneut mit Admin-Rechten ausführen oder Installationspfad ändern.

@@ -1,5 +1,7 @@
 # Therapeutic Transcription System - User Guide
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Overview
 
 This system provides professional-grade audio transcription optimized for therapeutic use cases. It combines OpenAI Whisper transcription with emotion analysis, prosody extraction, and comprehensive quality assurance.

@@ -1,5 +1,7 @@
 # QWEN.md - Project Context for TransSemantic
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Project Overview
 
 The **TransSemantic** project is a comprehensive semantic voice analysis and transcription system designed primarily for therapeutic applications. It combines state-of-the-art speech-to-text technology with advanced prosody analysis, emotion detection, and semantic marker recognition to provide deep insights into spoken communication.

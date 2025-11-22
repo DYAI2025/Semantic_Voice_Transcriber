@@ -1,5 +1,7 @@
 # Pilot Rollout Plan
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 1. **Target Group**: 5–10 non-technical therapists.
 2. **Assets**: Windows Lite installer + quick start PDF.
 3. **Steps**:

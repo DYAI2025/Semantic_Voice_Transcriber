@@ -1,5 +1,7 @@
 # ATO-Prosody Correlation System Guide
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Overview
 
 The ATO-Prosody Correlation System learns statistical relationships between prosodic features and ATO markers, enabling automatic marker prediction based on voice patterns.

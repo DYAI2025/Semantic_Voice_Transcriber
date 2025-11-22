@@ -1,5 +1,7 @@
 # 📁 Ordner-Anleitung für WhatsApp Audio-Dateien
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## 🎯 Wo soll ich meine OPUS-Dateien ablegen?
 
 Die OPUS-Dateien (WhatsApp Audio) gehören in den **`Eingang/`** Ordner, organisiert nach Chatpartnern:
@@ -91,4 +93,4 @@ Schaue in den `Transkripte_LLM/` Ordner:
 - `verarbeitungs_report.md` mit Statistiken
 - Dateinamen zeigen sofort Datum, Zeit und Chatpartner
 
-**Viel Erfolg mit der Transkription! 🎉** 
+**Viel Erfolg mit der Transkription! 🎉**  

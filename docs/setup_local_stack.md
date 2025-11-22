@@ -1,5 +1,7 @@
 # Lokale SVT-Stack-Initialisierung
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 Dieses Skript automatisiert die wichtigsten Schritte, um Semantic Voice Transcriber für nicht‑technische Nutzer:innen vorzubereiten.
 
 ## Voraussetzungen

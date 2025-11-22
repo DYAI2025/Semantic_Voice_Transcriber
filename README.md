@@ -4,7 +4,9 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-[![Status](https://img.shields.io/badge/status-phase%202b%20complete-success.svg)]()
+[![Status](https://img.shields.io/badge/status-phase%202c%20complete-success.svg)]()
+
+**Letzte Aktualisierung:** 2025-11-19 | **Commit:** 75fdfbbc
 
 ---
 
@@ -46,13 +48,15 @@
 
 ### 📊 Kernstatistiken
 
-- **9.767** Zeilen Python-Code
-- **38+** Hauptkomponenten
-- **12** Test-Suites
+- **13.000+** Zeilen Python-Code
+- **50+** Hauptkomponenten
+- **58** Test-Dateien (42 in tests/, 16 in root)
+- **57** Dokumentationsdateien
 - **5** Audio-Formate (.opus, .m4a, .wav, .mp3, .ogg)
 - **5** Whisper-Modelle (tiny → large)
 - **7** Emotionale Kategorien
 - **4** Prosody-Features ("Big 4")
+- **18** ATO Marker + **3** SEM Marker
 
 ---
 

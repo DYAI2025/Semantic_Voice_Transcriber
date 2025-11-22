@@ -1,5 +1,7 @@
 # LLM Provider Interface
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 ## Concepts
 - ``LLMProvider`` is an abstract base class with three required methods:
   - ``generate(prompt: str, **kwargs) -> LLMResponse``: unified completion call.

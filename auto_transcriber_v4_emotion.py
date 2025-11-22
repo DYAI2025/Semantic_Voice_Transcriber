@@ -36,20 +36,28 @@ except ImportError:
     print("⚠️ Librosa nicht installiert. Audio-Feature-Extraktion limitiert.")
 
 try:
-    from prosody_extractor import ProsodyExtractor, ProsodyFeatures, ProsodyBaseline
+    from svt_core.audio import ProsodyExtractor
     PROSODY_AVAILABLE = True
 except ImportError:
     PROSODY_AVAILABLE = False
     print("⚠️ Prosody Extractor nicht gefunden. Prosodieanalyse deaktiviert.")
 
 try:
-    from speaker_diarizer import SpeakerDiarizer
+    from svt_core.audio import SpeakerDiarizer
     DIARIZATION_AVAILABLE = True
 except ImportError:
     DIARIZATION_AVAILABLE = False
     print("⚠️ Speaker Diarizer nicht gefunden. Pyannote-Sprechererkennung deaktiviert.")
 
 from svt_core.audio.diarization_cpu import CPUDiarizer
+
+# Import transcription debugger for detailed logging
+try:
+    from svt_core.tools.transcription_debugger import TranscriptionDebugger, log_info, log_error
+    DEBUGGER_AVAILABLE = True
+except ImportError:
+    DEBUGGER_AVAILABLE = False
+    print("⚠️ Transcription Debugger nicht verfügbar.")
 
 try:
     from textblob import TextBlob
@@ -898,6 +906,13 @@ def transcribe_with_whisper(
         Dict mit text, segments, confidence_scores, prosody_features/baseline,
         speaker_labels, und overlapped_speech
     """
+    # Initialize debugger for detailed logging
+    debugger = None
+    if DEBUGGER_AVAILABLE:
+        debugger = TranscriptionDebugger()
+        debugger.start(f"Whisper Transcription ({model_size})")
+        debugger.step("Initialization", f"File: {Path(audio_path).name}")
+
     try:
         import whisper
         import librosa
@@ -905,8 +920,14 @@ def transcribe_with_whisper(
         import tempfile
         from pathlib import Path
 
+        if debugger:
+            debugger.step("Loading Audio Duration", "Using librosa")
+
         # Check if the audio file is large and should be chunked to reduce memory usage
         audio_duration = librosa.get_duration(path=audio_path)
+
+        if debugger:
+            debugger.log(f"Audio duration: {audio_duration:.2f}s ({audio_duration/60:.1f} min)", "info")
         
         # Only apply chunking if enabled and the audio is longer than the chunk size
         if use_audio_chunking and audio_duration > chunk_duration:
@@ -952,6 +973,9 @@ def transcribe_with_whisper(
         temp_file_created = False
 
         if use_intelligent_pipeline and quality_score is not None and audio_preprocessor is not None:
+            if debugger:
+                debugger.step("Intelligent Preprocessing", f"Quality: {quality_score:.2f}")
+
             logger.info(f"Applying intelligent preprocessing (quality: {quality_score:.2f})")
 
             # Load audio
@@ -967,8 +991,15 @@ def transcribe_with_whisper(
                 audio_file_to_transcribe = tmp_path
                 temp_file_created = True
 
+        if debugger:
+            debugger.step("Loading Whisper Model", f"Model: {model_size}")
+            debugger.log("⚠️  This step may take 30-90 seconds on first run (downloading model)", "warning")
+
         logger.info(f"Lade Whisper-Modell: {model_size}")
         model = whisper.load_model(model_size)
+
+        if debugger:
+            debugger.step("Transcribing Audio", f"Language: {language}")
 
         logger.info(f"Transkribiere: {audio_path}")
         result = model.transcribe(
@@ -977,6 +1008,9 @@ def transcribe_with_whisper(
             verbose=False,
             word_timestamps=True  # Enable word-level timestamps
         )
+
+        if debugger:
+            debugger.log(f"Transcription complete: {len(result.get('segments', []))} segments", "info")
 
         # Clean up model from memory to reduce memory consumption
         del model
@@ -1003,6 +1037,9 @@ def transcribe_with_whisper(
             except Exception as e:
                 logger.warning(f"Could not delete temp file: {e}")
 
+        if debugger:
+            debugger.step("Extracting Confidence Scores")
+
         # EXTRACT CONFIDENCE SCORES
         confidence_scores = _extract_confidence_scores(result)
 
@@ -1011,6 +1048,9 @@ def transcribe_with_whisper(
         prosody_baseline = None
 
         if extract_prosody and PROSODY_AVAILABLE:
+            if debugger:
+                debugger.step("Prosody Extraction", "Big 4 features: Tempo, Pitch, Energy, Pauses")
+
             try:
                 logger.info("🎵 Extrahiere Prosodiemerkmale...")
                 extractor = ProsodyExtractor(sample_rate=16000)
@@ -1031,6 +1071,8 @@ def transcribe_with_whisper(
 
             except Exception as e:
                 logger.error(f"Fehler bei Prosodieextraktion: {e}")
+                if debugger:
+                    debugger.error(e, "Prosody Extraction")
 
         # SPEAKER DIARIZATION (Phase 2b)
         speaker_segments = []
@@ -1038,6 +1080,9 @@ def transcribe_with_whisper(
         speaker_stats = {}
 
         if enable_diarization:
+            if debugger:
+                debugger.step("Speaker Diarization", "Detecting speakers")
+
             diarization_used = False
             if DIARIZATION_AVAILABLE and hf_token:
                 try:
@@ -1120,6 +1165,9 @@ def transcribe_with_whisper(
                 logger.error(f"Fehler bei Overlapped Speech Detection: {e}")
                 logger.warning("Fortfahren ohne OSD...")
 
+        if debugger:
+            debugger.complete()
+
         return {
             'text': result['text'],
             'segments': aligned_segments,  # Use aligned segments with speaker labels
@@ -1132,6 +1180,9 @@ def transcribe_with_whisper(
 
     except Exception as e:
         logger.error(f"Fehler bei Transkription: {e}")
+        if debugger:
+            debugger.error(e, "Transcription Pipeline")
+
         return {
             'text': '',
             'segments': [],

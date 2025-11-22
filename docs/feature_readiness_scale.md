@@ -1,5 +1,7 @@
 # Feature Readiness Scale
 
+**Last Updated:** 2025-11-19 | **Verified against commit:** 75fdfbbc
+
 | Level | Label               | Beschreibung |
 | ----- | ------------------- | ------------ |
 | 0     | Not Available       | Feature oder kritische Abhängigkeit fehlt; kein Pilotbetrieb möglich. |
