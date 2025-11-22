@@ -717,8 +717,14 @@ def process_large_audio_with_chunking(
             try:
                 Path(temp_dir).rmdir()
             except OSError:
-                logger.warning(f"Could not remove temp directory: {temp_dir}")
-
+                # Check if directory still contains files and log them
+                remaining_files = list(Path(temp_dir).iterdir())
+                if remaining_files:
+                    logger.warning(
+                        f"Could not remove temp directory: {temp_dir}. Directory is not empty. Remaining files: {[str(f) for f in remaining_files]}"
+                    )
+                else:
+                    logger.warning(f"Could not remove temp directory: {temp_dir}")
         # Clean up temporary audio chunk files
         for chunk_path in chunk_paths:
             try:
