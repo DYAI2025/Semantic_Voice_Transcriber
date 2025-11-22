@@ -165,13 +165,10 @@ def process_large_audio_with_chunking(
 ### Memory Safety Thresholds
 
 Memory checks occur before each chunk:
-```python
-# Warnings triggered if:
-FREE_MEMORY_THRESHOLD = 1.0  # GB - warn if < 1GB free RAM
-SWAP_THRESHOLD = 80.0        # % - warn if SWAP > 80%
-```
+- **SWAP usage warning:** A warning is triggered if SWAP usage exceeds 80% (hardcoded in `audio_chunker.py`).
+- **Free memory:** There is currently no explicit free memory threshold check implemented.
 
-These can be adjusted in `audio_chunker.py` if your system has different constraints.
+If you need different thresholds, you can modify the relevant code in `audio_chunker.py` (e.g., change the `> 80` SWAP check). Making these thresholds configurable is a possible future improvement.
 
 ## Troubleshooting
 
