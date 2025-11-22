@@ -49,8 +49,57 @@ def check_disk_space(path: Path = DefaultPaths().output_dir, min_gb: float = 1.0
     return CheckResult("disk", "ok", f"{free_gb:.1f} GB frei")
 
 
+def check_pyannote_models() -> CheckResult:
+    """
+    Check if pyannote.audio models are cached locally
+
+    Returns:
+        CheckResult with status:
+        - ok: All 3 models cached
+        - warn: Some models missing (diarization will work but download on first use)
+        - error: Should not happen (always returns ok or warn)
+    """
+    try:
+        from svt_core.audio.download_models import check_models_cached
+
+        status_dict = check_models_cached()
+        cached_count = sum(1 for cached in status_dict.values() if cached)
+        total_count = len(status_dict)
+
+        if cached_count == total_count:
+            return CheckResult(
+                "pyannote_models",
+                "ok",
+                f"All {total_count} models cached"
+            )
+        elif cached_count > 0:
+            return CheckResult(
+                "pyannote_models",
+                "warn",
+                f"{cached_count}/{total_count} models cached. Run: python3 -m svt_core.audio.download_models"
+            )
+        else:
+            return CheckResult(
+                "pyannote_models",
+                "warn",
+                "No models cached. Run: python3 -m svt_core.audio.download_models"
+            )
+    except Exception as e:
+        # Don't fail health check if model checking fails
+        return CheckResult(
+            "pyannote_models",
+            "warn",
+            f"Could not check model cache: {e}"
+        )
+
+
 def run_all() -> List[CheckResult]:
-    results = [check_ollama(), check_directories(), check_disk_space()]
+    results = [
+        check_ollama(),
+        check_directories(),
+        check_disk_space(),
+        check_pyannote_models()
+    ]
     return results
 
 
