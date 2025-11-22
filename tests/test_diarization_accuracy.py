@@ -248,10 +248,7 @@ class DiarizationEvaluator:
 
         seg1_duration = seg1['end'] - seg1['start']
 
-        if seg1_duration > 0:
-            return overlap_duration / seg1_duration
-        else:
-            return 0
+        return overlap_duration / seg1_duration if seg1_duration > 0 else 0
 
     def generate_confusion_matrix(
         self,
