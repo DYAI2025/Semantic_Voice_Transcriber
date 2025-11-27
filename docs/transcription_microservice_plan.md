@@ -47,4 +47,4 @@
 - **Validation**: 1–2 days for automated tests plus cross-platform smoke runs.
 
 ## Expected Outcome
-- A minimal, dependency-light transcription microservice that can run independently or alongside existing semantic tooling, reducing startup errors from missing analytics packages and enabling PoseID/semantic analysis to evolve separately without risking core transcription availability.
+- A minimal, dependency-light transcription microservice that can run independently or alongside existing semantic tooling, reducing startup errors from missing analytics packages and enabling prosody/diarization/semantic analysis to evolve separately without risking core transcription availability.
