@@ -596,23 +596,23 @@ markers = marker_service.detect(transcript, prosody, emotion)
 
 **Days 1-2: Kubernetes Manifests**
 - [ ] Create namespace
-- [ ] Create ConfigMaps and Secrets
-- [ ] Create Deployments (API, Celery)
-- [ ] Create Services
-- [ ] Create Ingress
+- Create ConfigMaps and Secrets
+- Create Deployments (API, Celery)
+- Create Services
+- Create Ingress
 
 **Days 3-4: CI/CD Pipeline**
-- [ ] Create GitHub Actions workflow
-- [ ] Automated testing
-- [ ] Docker image builds
-- [ ] Kubernetes deployment
+- Create GitHub Actions workflow
+- Automated testing
+- Docker image builds
+- Kubernetes deployment
 
 **Day 5: Production Deployment**
-- [ ] Deploy to Kubernetes
-- [ ] Configure monitoring (Prometheus + Grafana)
-- [ ] Set up alerts
-- [ ] Load testing in production
-- [ ] Smoke tests
+- Deploy to Kubernetes
+- Configure monitoring (Prometheus + Grafana)
+- Set up alerts
+- Load testing in production
+- Smoke tests
 
 **Deliverables:**
 - ✅ Production Kubernetes deployment
