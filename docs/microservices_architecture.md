@@ -9,7 +9,7 @@ This document describes the decomposition of the Semantic Voice Transcriber (SVT
 ### Key Objectives
 
 1. **Service Independence**: Each service can be deployed, scaled, and updated independently
-2. **Transcription First**: Pure transcription service with highest precision, speaker separation, and word recognition
+2. **Transcription First**: Pure transcription service with the highest precision, speaker separation, and word recognition
 3. **Composability**: Services can consume other services while maintaining functional independence
 4. **API-Driven**: RESTful APIs with OpenAPI/Swagger documentation
 5. **Scalability**: Horizontal scaling for compute-intensive services (transcription, prosody, diarization)
