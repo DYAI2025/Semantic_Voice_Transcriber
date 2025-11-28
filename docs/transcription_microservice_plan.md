@@ -115,7 +115,7 @@ OUTPUT: JSON with segments, timestamps, confidence scores
 |-----------|-----------|---------|
 | API Framework | FastAPI 0.100+ | REST endpoints, async support |
 | STT Engine | openai-whisper | Speech-to-text |
-| Task Queue | Celery 5.3+ | Async job processing |
+| Task Queue | Celery 5.3.4 | Async job processing |
 | Message Broker | Redis 7.x | Queue backend |
 | Storage | MinIO/S3 | Audio file storage |
 | Database | PostgreSQL 15 | Transcription metadata |
