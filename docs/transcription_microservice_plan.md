@@ -479,7 +479,7 @@ markers = marker_service.detect(transcript, prosody, emotion)
 **Days 1-2: Repository Setup**
 - [ ] Create `transcription-service/` directory
 - [ ] Initialize Git repository
-- [ ] Set up Python virtual environment (Python 3.12)
+- [ ] Set up Python virtual environment (Python 3.13)  <!-- Updated to latest stable; verify openai-whisper compatibility -->
 - [ ] Create minimal `requirements.txt`
 - [ ] Create Docker development environment
 
