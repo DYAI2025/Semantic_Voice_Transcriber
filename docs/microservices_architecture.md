@@ -859,7 +859,7 @@ services:
 
   transcription-service:
     build: ./transcription-service
-    depends_on: [redis, postgres]
+    depends_on: [redis, postgres, minio]
 
   prosody-service:
     build: ./prosody-service
