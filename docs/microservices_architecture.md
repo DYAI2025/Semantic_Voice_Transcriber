@@ -1159,7 +1159,7 @@ services:
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Transcription WER | < 5% | Benchmark against ground truth |
+| Transcription WER | < 5% | Benchmark against ground truth (LibriSpeech, Tuda-De datasets) |
 | Processing Speed | < 0.3x real-time | Median latency for 30-min audio |
 | Service Uptime | > 99.9% | Monthly uptime (Prometheus) |
 | API Response Time | < 100ms (p95) | Gateway latency |
