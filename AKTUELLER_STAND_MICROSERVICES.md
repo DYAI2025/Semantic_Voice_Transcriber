@@ -42,7 +42,7 @@
 - **Prosody-Service:** CPU-optimiert, optional GPU-Flag; verantwortet Chunking, Big-4-Features, Baseline-Berechnung, Quality-Score-Rückmeldung.
 - **Emotion Dynamics-Service:** Fokus auf zeitlichen Verlauf; kombiniert Text + Prosodie; liefert Valence/Arousal-Kurven und Wechselpunkte.
 - **Arousal-Service:** Spezialisierte Ableitung aus Energie/Pitch/Tempo; kann als Submodul oder eigenständiger Pfad laufen, liefert Arousal-Score pro Segment.
-- **Turningpoint-Service:** Fusioniert Emotion-Dynamik, Arousal-Peaks und SEM/ATO Marker zu Wendepunkt-Ereignissen; stellt Evidenz-Objekte für UI/Formatter bereit.
+- **Turningpoint-Service:** Fusioniert Emotion-Dynamik, Arousal-Peaks und SEM/ATO-Marker zu Wendepunkt-Ereignissen; stellt Evidenz-Objekte für UI/Formatter bereit.
 - **Gemeinsame Verträge:** Einheitliche Segment-IDs, Zeitstempel-Granularität, Sprecher-Mapping; Responses enthalten Confidence + Herkunft (audio/text/model).
 
 ## Nächste konkrete Schritte (2-Wochen-Horizont)
