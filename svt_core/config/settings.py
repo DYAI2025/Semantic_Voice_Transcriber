@@ -37,3 +37,18 @@ class SettingsStore:
     def set_provider_profile(self, profile: ProviderProfile) -> None:
         self.data["provider"] = profile.__dict__
         self.save()
+
+    def get_output_formats(self) -> Dict[str, bool]:
+        defaults = {
+            "html": True,
+            "pdf": True,
+            "csv": False,
+            "enhanced_html": True,
+            "docx": True,
+        }
+        stored = self.data.get("output_formats", {})
+        return {**defaults, **stored}
+
+    def set_output_formats(self, formats: Dict[str, bool]) -> None:
+        self.data["output_formats"] = formats
+        self.save()

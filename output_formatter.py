@@ -8,12 +8,14 @@ Creates:
 2. JSON sidecar for system processing (structured prosody data)
 """
 
-import json
 import csv
+import importlib
+import json
+import logging
 import tempfile
-from pathlib import Path
-from typing import Dict, List, Any, Optional
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 try:
     from html_formatter import HTMLFormatter, WEASYPRINT_AVAILABLE
@@ -27,6 +29,12 @@ try:
     QUALITY_VALIDATOR_AVAILABLE = True
 except ImportError:
     QUALITY_VALIDATOR_AVAILABLE = False
+
+DOCX_AVAILABLE = importlib.util.find_spec("docx") is not None
+if DOCX_AVAILABLE:  # pragma: no cover - import guarded by availability check
+    from docx import Document
+
+logger = logging.getLogger(__name__)
 
 
 class SpeakerConfig:
@@ -234,10 +242,11 @@ class OutputFormatter:
         generate_pdf: bool = True,
         generate_csv: bool = True,
         generate_enhanced_html: bool = True,
-        generate_quality_report: bool = True
+        generate_quality_report: bool = True,
+        generate_docx: bool = False,
     ) -> Dict[str, Optional[Path]]:
         """
-        Generate ALL output formats: Markdown, JSON, HTML, PDF, Enhanced HTML, Quality Report
+        Generate ALL output formats: Markdown, JSON, HTML, PDF, Enhanced HTML, Quality Report, DOCX
 
         Args:
             transcription_result: Result from transcribe_with_whisper
@@ -249,10 +258,12 @@ class OutputFormatter:
             generate_csv: Whether to generate CSV
             generate_enhanced_html: Whether to generate enhanced therapeutic HTML
             generate_quality_report: Whether to generate quality validation report
+            generate_docx: Whether to generate MS Word DOCX export
 
         Returns:
             Dict with paths: {'markdown': Path, 'json': Path, 'html': Path,
-                             'html_enhanced': Path, 'pdf': Path, 'csv': Path, 'quality_report': Path}
+                             'html_enhanced': Path, 'pdf': Path, 'csv': Path,
+                             'quality_report': Path, 'docx': Path}
         """
         # Generate Markdown + JSON
         files = self.format_transcript(
@@ -306,6 +317,22 @@ class OutputFormatter:
         else:
             files['csv'] = None
 
+        # Generate DOCX if requested
+        if generate_docx:
+            try:
+                docx_path = self.generate_docx(
+                    transcription_result,
+                    audio_filename,
+                    output_path,
+                    include_prosody_markers=include_prosody_markers,
+                )
+                files['docx'] = docx_path
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.warning("DOCX export skipped: %s", exc)
+                files['docx'] = None
+        else:
+            files['docx'] = None
+
         # Generate quality report (automatic validation)
         if generate_quality_report and QUALITY_VALIDATOR_AVAILABLE:
             quality_report_path = self.generate_quality_report(
@@ -317,6 +344,97 @@ class OutputFormatter:
             files['quality_report'] = None
 
         return files
+
+    def generate_docx(
+        self,
+        transcription_result: Dict[str, Any],
+        audio_filename: str,
+        output_path: Path,
+        include_prosody_markers: bool = True,
+    ) -> Path:
+        """Generate MS Word DOCX transcript with optional prosody annotations."""
+
+        if not DOCX_AVAILABLE:
+            raise RuntimeError(
+                "python-docx is required for DOCX export. Install python-docx to enable this feature."
+            )
+
+        docx_path = output_path.with_suffix('.docx')
+        document = Document()
+
+        document.add_heading("Therapeutisches Transkript", level=0)
+        meta_paragraph = document.add_paragraph()
+        meta_paragraph.add_run(f"Original-Datei: {audio_filename}\n").bold = True
+
+        confidence_scores = transcription_result.get('confidence_scores', {})
+        overall_conf = confidence_scores.get('overall_confidence')
+        if overall_conf is not None:
+            meta_paragraph.add_run(f"Confidence: {overall_conf:.2f}\n")
+
+        document.add_paragraph(
+            "Dieses Dokument kombiniert Transkript, optionale Prosodie-Notizen und semantische Marker."
+        )
+
+        segments = transcription_result.get('segments', [])
+        prosody_features = transcription_result.get('prosody_features', {})
+
+        for idx, segment in enumerate(segments):
+            speaker_label = self.speaker_config.get_speaker_label(segment.get('speaker'))
+            start = segment.get('start', 0.0)
+            end = segment.get('end', start)
+            text = segment.get('text', '').strip()
+
+            paragraph = document.add_paragraph()
+            header_run = paragraph.add_run(f"[{start:06.2f}-{end:06.2f}] {speaker_label}: ")
+            header_run.bold = True
+            paragraph.add_run(text)
+
+            annotations: List[str] = []
+            markers = segment.get('ato_markers', []) or []
+            if markers:
+                annotations.append(f"Marker: {', '.join(markers)}")
+
+            feature_set: Optional[Dict[str, Any]]
+            if isinstance(prosody_features, dict):
+                feature_set = prosody_features.get(segment.get('id', idx))
+            elif idx < len(prosody_features):
+                feature_set = prosody_features[idx]
+            else:
+                feature_set = None
+
+            if include_prosody_markers and feature_set:
+                feature_bits: List[str] = []
+                for key, label in (
+                    ("tempo_deviation", "Tempo Δ%"),
+                    ("pitch_deviation", "Pitch Δ%"),
+                    ("energy_deviation", "Energie Δ%"),
+                    ("pause_duration", "Pause ms"),
+                ):
+                    value = feature_set.get(key)
+                    if value is not None:
+                        if isinstance(value, (int, float)):
+                            feature_bits.append(f"{label}: {value:.1f}")
+                        else:
+                            feature_bits.append(f"{label}: {value}")
+
+                if not feature_bits:
+                    feature_bits = [
+                        f"{key}: {value}"
+                        for key, value in list(feature_set.items())[:4]
+                        if isinstance(value, (int, float, str))
+                    ]
+
+                if feature_bits:
+                    annotations.append("Prosody: " + "; ".join(feature_bits))
+
+            if annotations:
+                for note in annotations:
+                    note_paragraph = document.add_paragraph(note)
+                    if note_paragraph.runs:
+                        note_paragraph.runs[0].italic = True
+
+        document.save(docx_path)
+        return docx_path
 
     def generate_quality_report(
         self,

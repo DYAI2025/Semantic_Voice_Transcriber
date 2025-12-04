@@ -75,6 +75,7 @@ class SemanticVoiceTranscriberGUI:
         self.settings_store = SettingsStore()
         self.provider_manager = build_default_manager()
         self._apply_provider_profile(self.settings_store.get_provider_profile())
+        self.output_format_settings = self.settings_store.get_output_formats()
 
         self._create_widgets()
         self._check_progress_queue()
@@ -235,10 +236,6 @@ class SemanticVoiceTranscriberGUI:
         chunk_duration_spin.grid(row=2, column=1, sticky=tk.W, pady=5, padx=5)
         ttk.Label(processing_frame, text="(Standard: 180 = 3 Min, RAM-freundlich)").grid(row=2, column=2, sticky=tk.W, pady=5)
 
-        # Update row positions for the features frame
-        features_frame = ttk.LabelFrame(self.root, text="Features", padding="10")
-        features_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
-
         # Feature toggles frame
         features_frame = ttk.LabelFrame(self.root, text="Features", padding="10")
         features_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=5)
@@ -292,6 +289,44 @@ class SemanticVoiceTranscriberGUI:
             text="Erweiterte Sprecherdarstellung",
             variable=self.enhanced_speakers_var
         ).grid(row=6, column=0, sticky=tk.W, pady=2)
+
+        output_formats_frame = ttk.LabelFrame(features_frame, text="Ausgabeformate", padding="8")
+        output_formats_frame.grid(row=0, column=1, rowspan=7, padx=20, sticky=tk.NW)
+
+        self.html_var = tk.BooleanVar(value=self.output_format_settings.get('html', True))
+        ttk.Checkbutton(
+            output_formats_frame,
+            text="HTML (klassisch)",
+            variable=self.html_var
+        ).grid(row=0, column=0, sticky=tk.W, pady=2)
+
+        self.enhanced_html_var = tk.BooleanVar(value=self.output_format_settings.get('enhanced_html', True))
+        ttk.Checkbutton(
+            output_formats_frame,
+            text="HTML (therapeutisch)",
+            variable=self.enhanced_html_var
+        ).grid(row=1, column=0, sticky=tk.W, pady=2)
+
+        self.pdf_var = tk.BooleanVar(value=self.output_format_settings.get('pdf', True))
+        ttk.Checkbutton(
+            output_formats_frame,
+            text="PDF (WeasyPrint)",
+            variable=self.pdf_var
+        ).grid(row=2, column=0, sticky=tk.W, pady=2)
+
+        self.csv_var = tk.BooleanVar(value=self.output_format_settings.get('csv', False))
+        ttk.Checkbutton(
+            output_formats_frame,
+            text="CSV Export",
+            variable=self.csv_var
+        ).grid(row=3, column=0, sticky=tk.W, pady=2)
+
+        self.docx_var = tk.BooleanVar(value=self.output_format_settings.get('docx', True))
+        ttk.Checkbutton(
+            output_formats_frame,
+            text="DOCX (MS Word)",
+            variable=self.docx_var
+        ).grid(row=4, column=0, sticky=tk.W, pady=2)
 
         # Audio file selection frame
         file_frame = ttk.LabelFrame(self.root, text="Audio-Dateien", padding="10")
@@ -420,6 +455,16 @@ class SemanticVoiceTranscriberGUI:
 
         self._log(f"✓ {len(self.audio_files)} Audio-Dateien gefunden")
 
+    def _collect_output_format_settings(self) -> Dict[str, bool]:
+        """Collect current output format preferences from the UI."""
+        return {
+            'html': self.html_var.get(),
+            'pdf': self.pdf_var.get(),
+            'csv': self.csv_var.get(),
+            'enhanced_html': self.enhanced_html_var.get(),
+            'docx': self.docx_var.get(),
+        }
+
     def _select_all_files(self):
         """Select all audio files in listbox"""
         self.file_listbox.selection_set(0, tk.END)
@@ -469,6 +514,19 @@ class SemanticVoiceTranscriberGUI:
             'chunk_duration': self.chunk_duration_var.get(),
             'overlap_duration': 5.0  # Fixed at 5 seconds for now
         }
+
+        format_settings = self._collect_output_format_settings()
+        self.settings_store.set_output_formats(format_settings)
+        self.output_format_settings = format_settings
+        settings.update(
+            {
+                'generate_html': format_settings['html'],
+                'generate_pdf': format_settings['pdf'],
+                'generate_csv': format_settings['csv'],
+                'generate_enhanced_html': format_settings['enhanced_html'],
+                'generate_docx': format_settings['docx'],
+            }
+        )
 
         settings['provider'] = self.provider_manager.describe_active()
 
@@ -1139,6 +1197,13 @@ class SemanticVoiceTranscriberGUI:
             audio_files = settings['audio_files']
             total_files = len(audio_files)
             processed_files = 0
+            format_settings = {
+                'html': settings.get('generate_html', True),
+                'pdf': settings.get('generate_pdf', True),
+                'csv': settings.get('generate_csv', False),
+                'enhanced_html': settings.get('generate_enhanced_html', True),
+                'docx': settings.get('generate_docx', False),
+            }
 
             self.progress_queue.put(('status', f"Verarbeite {total_files} Datei(en)..."))
 
@@ -1219,7 +1284,8 @@ class SemanticVoiceTranscriberGUI:
                         speaker,
                         marked_text,
                         result,
-                        emotion_data
+                        emotion_data,
+                        format_settings
                     )
 
                     # Update memory if enabled
@@ -1265,8 +1331,10 @@ class SemanticVoiceTranscriberGUI:
                         speaker: str,
                         text: str,
                         result: Dict[str, Any],
-                        emotion_data: Optional[Dict[str, Any]]):
+                        emotion_data: Optional[Dict[str, Any]],
+                        format_settings: Optional[Dict[str, bool]] = None):
         """Save transcript in therapeutic format"""
+        format_settings = format_settings or self.settings_store.get_output_formats()
 
         # Check if prosody features are available
         has_prosody = (
@@ -1293,16 +1361,17 @@ class SemanticVoiceTranscriberGUI:
                 # Remove .md extension from output_path for base path
                 base_output_path = output_path.with_suffix('')
 
-                # Generate ALL formats (Markdown, JSON, HTML, PDF, Enhanced HTML)
+                # Generate ALL formats (Markdown, JSON, HTML, PDF, Enhanced HTML, DOCX)
                 files = self.output_formatter.format_all(
                     result,
                     audio_file.name,
                     base_output_path,
                     include_prosody_markers=True,
-                    generate_html=True,
-                    generate_pdf=True,
-                    generate_csv=False,
-                    generate_enhanced_html=True
+                    generate_html=format_settings.get('html', True),
+                    generate_pdf=format_settings.get('pdf', True),
+                    generate_csv=format_settings.get('csv', False),
+                    generate_enhanced_html=format_settings.get('enhanced_html', True),
+                    generate_docx=format_settings.get('docx', False)
                 )
 
                 logger.info(f"✅ Saved annotated transcript with FusionDynamics features:")
@@ -1314,15 +1383,33 @@ class SemanticVoiceTranscriberGUI:
                     logger.info(f"   - Enhanced HTML: {files['html_enhanced']}")
                 if files.get('pdf'):
                     logger.info(f"   - PDF: {files['pdf']}")
+                if files.get('docx'):
+                    logger.info(f"   - DOCX: {files['docx']}")
 
             except Exception as e:
                 logger.error(f"Error using OutputFormatter: {e}")
                 logger.info("Falling back to legacy format...")
-                self._save_transcript_legacy(output_path, audio_file, speaker, text, result, emotion_data)
+                self._save_transcript_legacy(
+                    output_path,
+                    audio_file,
+                    speaker,
+                    text,
+                    result,
+                    emotion_data,
+                    format_settings
+                )
 
         else:
             # Use legacy format (backward compatibility)
-            self._save_transcript_legacy(output_path, audio_file, speaker, text, result, emotion_data)
+            self._save_transcript_legacy(
+                output_path,
+                audio_file,
+                speaker,
+                text,
+                result,
+                emotion_data,
+                format_settings
+            )
 
     def _save_transcript_legacy(self,
                         output_path: Path,
@@ -1330,8 +1417,11 @@ class SemanticVoiceTranscriberGUI:
                         speaker: str,
                         text: str,
                         result: Dict[str, Any],
-                        emotion_data: Optional[Dict[str, Any]]):
+                        emotion_data: Optional[Dict[str, Any]],
+                        format_settings: Optional[Dict[str, bool]] = None):
         """Legacy transcript format (pre-prosody)"""
+        format_settings = format_settings or self.settings_store.get_output_formats()
+        base_output_path = output_path.with_suffix('')
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(f"# Therapeutisches Transkript\n\n")
             f.write(f"**Sprecher:** {speaker}\n")
@@ -1363,6 +1453,18 @@ class SemanticVoiceTranscriberGUI:
 
             f.write(f"\n## Transkription\n\n")
             f.write(text)
+
+        if format_settings.get('docx', False):
+            try:
+                docx_path = self.output_formatter.generate_docx(
+                    result,
+                    audio_file.name,
+                    base_output_path,
+                    include_prosody_markers=False
+                )
+                logger.info(f"   - DOCX (legacy): {docx_path}")
+            except Exception as exc:
+                logger.warning("DOCX export skipped in legacy mode: %s", exc)
 
     def _check_progress_queue(self):
         """Check progress queue and update GUI"""
