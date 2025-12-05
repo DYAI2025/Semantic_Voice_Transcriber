@@ -175,7 +175,38 @@ esac
     # Mache ausführbar
     launcher_path.chmod(0o755)
     print(f"✅ Launcher erstellt: {launcher_path}")
-    
+
+    return True
+
+
+def create_platform_service_scripts():
+    """Prepare platform-aware startup scripts for the transcription service."""
+    service_command = f"{sys.executable} -m uvicorn services.transcription_service.api:app --host 0.0.0.0 --port 8000"
+    system = platform.system()
+
+    if system == "Windows":
+        script_path = Path("start_transcription_service.bat")
+        script_path.write_text(f"@echo off\n{service_command}\n")
+    else:
+        script_path = Path("start_transcription_service.sh")
+        script_path.write_text(f"#!/bin/bash\n{service_command}\n")
+        script_path.chmod(0o755)
+
+    print(f"✅ Service-Startskript erstellt: {script_path}")
+
+    # Add minimal permissions for macOS/Linux desktop entries
+    if system in {"Darwin", "Linux"}:
+        desktop_launcher = Path("start_transcription_service.desktop")
+        desktop_launcher.write_text(
+            "[Desktop Entry]\n"
+            "Type=Application\n"
+            "Name=Semantic Voice Transcription Service\n"
+            f"Exec={script_path}\n"
+            "Terminal=true\n"
+        )
+        desktop_launcher.chmod(0o755)
+        print(f"✅ Desktop Launcher aktualisiert: {desktop_launcher}")
+
     return True
 
 def main():
@@ -194,7 +225,8 @@ def main():
         ("Verzeichnisstruktur erstellen", setup_directory_structure),
         ("Python-Pakete installieren", install_python_packages),
         ("Installation testen", test_installation),
-        ("Launcher-Skript erstellen", create_launcher_script)
+        ("Launcher-Skript erstellen", create_launcher_script),
+        ("Plattform-Startskripte für Service erstellen", create_platform_service_scripts)
     ]
     
     for description, func in steps:
