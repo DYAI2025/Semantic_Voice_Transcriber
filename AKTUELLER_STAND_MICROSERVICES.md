@@ -1,17 +1,58 @@
 # Aktueller Stand & Microservice-Plan (Transcriber Standalone)
 
-## Aktueller Systemstand
-- **Pipelines:** GUI-gesteuerter Ablauf orchestriert `auto_transcriber_v4_emotion.py` mit Quality-Checks, Prosodie-Extraktion, Diarisierung und semantischer Auswertung gemäß der Produktarchitektur.【F:ARCHITECTURE.md†L17-L102】
-- **Subsysteme:** WhisperSpeakerMatcher, Super Semantic Processor und Prosody Voice Marker System bilden die Kernfunktionen laut Produktübersicht.【F:README.md†L15-L39】
-- **Prosodie-Status:** Phase 1 abgeschlossen mit Tempo, Pitch, Energie und Pausen, inklusive Baseline-Berechnung und Multi-Format-Export (MD/JSON/HTML/PDF/CSV).【F:README.md†L49-L104】
-- **Export & Validierung:** Post-Processing validiert Sprecher-Labels, Marker-Diversität, Prosodie-Vollständigkeit und erzeugt mehrfache Ausgabeformate (Markdown, HTML, PDF, JSON).【F:ARCHITECTURE.md†L92-L116】
-- **Technikrahmen:** Python 3.12 Ziel, modulare Clean-Architecture-Trennung, Tests via `pytest`, Konfiguration per YAML, Geheimnisse über `.env`.【F:AGENTS.md†L20-L46】
+**Last Updated:** 2025-12-07 | **Verified against commit:** c5ef26a
 
-## Beobachtete Stärken und Lücken
-- **Stärken:** Klar dokumentierte End-to-End-Pipeline mit Fehlerbehandlung, skalierbares Chunking, Caching und ressourcenschonendem Audio-Handling.【F:ARCHITECTURE.md†L9-L54】
-- **Lücken Richtung Microservices:**
-  - Komponenten sind aktuell primär prozess-intern gekoppelt; klare API-Verträge für eigenständige Services fehlen.
-  - Deployment-Angaben fokussieren auf lokale Ausführung; Containerisierung/Orchestrierung nicht spezifiziert.
+> **📋 See detailed status:** [MICROSERVICE_TRANSCRIBER_STATUS.md](MICROSERVICE_TRANSCRIBER_STATUS.md)
+
+## ✅ Completed: Core Transcription Service (Phase 1)
+
+**PR #41, Commit 2f4c869** - Successfully extracted standalone transcription microservice
+
+### What's Done
+- **Isolated Whisper Service:** Pure STT engine in `services/transcription_service/`
+  - No dependencies on prosody, emotion, or semantic analysis
+  - Clean API boundaries with adapter pattern
+  - FastAPI REST endpoints (`/transcribe`, `/health`)
+  - Backward-compatible wrappers for legacy code
+
+- **Speaker Diarization Integration:** Optional add-on in `svt_core/audio/`
+  - pyannote.audio 3.1 for automatic speaker segmentation
+  - CPU-optimized processing (no GPU required)
+  - Overlapped Speech Detection (OSD)
+  - Robust error handling with graceful degradation
+
+- **Production-Ready Features:**
+  - ✅ 5 Whisper models (tiny → large) with intelligent selection
+  - ✅ Confidence scoring per segment
+  - ✅ 100+ language support with auto-detection
+  - ✅ Long audio support (chunking with overlap)
+  - ✅ Docker containerization
+  - ✅ Environment-based configuration
+  - ✅ Comprehensive test coverage
+
+### Deployment Modes
+1. **Python Library:** Import and use programmatically
+2. **REST API:** FastAPI service at `http://localhost:8000`
+3. **CLI:** Command-line tool for batch processing
+4. **Docker:** Containerized standalone service
+
+## Aktueller Systemstand
+- **Pipelines:** GUI-gesteuerter Ablauf orchestriert `auto_transcriber_v4_emotion.py` mit Quality-Checks, Prosodie-Extraktion, Diarisierung und semantischer Auswertung gemäß der Produktarchitektur.
+- **Transcription Service:** Standalone-Mikroservice in `services/transcription_service/` mit FastAPI REST-Endpunkten, vollständiger Rückwärtskompatibilität und optionalen Adaptern für Prosodie/Diarisierung.
+- **Subsysteme:** WhisperSpeakerMatcher (jetzt als Service extrahiert), Super Semantic Processor und Prosody Voice Marker System bilden die Kernfunktionen.
+- **Prosodie-Status:** Phase 1 abgeschlossen mit Tempo, Pitch, Energie und Pausen, inklusive Baseline-Berechnung und Multi-Format-Export (MD/JSON/HTML/PDF/CSV).
+- **Export & Validierung:** Post-Processing validiert Sprecher-Labels, Marker-Diversität, Prosodie-Vollständigkeit und erzeugt mehrfache Ausgabeformate (Markdown, HTML, PDF, JSON).
+- **Technikrahmen:** Python 3.12 Ziel, modulare Clean-Architecture-Trennung, Tests via `pytest`, Konfiguration per YAML, Geheimnisse über `.env`.
+
+## Beobachtete Stärken und erreichte Meilensteine
+- **Stärken:** Klar dokumentierte End-to-End-Pipeline mit Fehlerbehandlung, skalierbares Chunking, Caching und ressourcenschonendem Audio-Handling.
+- **✅ Transcription Service extrahiert:** Vollständig unabhängiger Dienst mit REST API, keine Zwangskopplung an Semantic/Emotion-Analysen
+- **✅ Adapter-Pattern implementiert:** Optionale Integration von Prosodie/Diarisierung via Dependency Injection
+- **✅ Containerisierung:** Docker-Images mit Whisper-Modellen, docker-compose-ready
+- **Verbleibende Lücken Richtung vollständiger Microservices:**
+  - Async Job Queue (Celery + Redis) noch nicht produktiv
+  - Persistent Storage (PostgreSQL/S3) noch nicht integriert
+  - API Gateway mit Rate Limiting ausstehend
   - Emotionale Dynamik (zeitliche Verlaufserkennung), Arousal-Modellierung und explizite Wendepunkt-Erkennung sind nicht als getrennte Dienste definiert.
 
 ## Iterativer Weg zur Microservice-Architektur (Transcriber Standalone)
