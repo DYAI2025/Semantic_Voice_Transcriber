@@ -57,7 +57,7 @@ This document defines the professional RESTful API endpoints and modular plugin 
 - **API Framework**: FastAPI (async, auto-documentation, WebSocket support)
 - **Task Queue**: Celery with Redis broker (async transcription jobs)
 - **Storage**: PostgreSQL (metadata), S3/MinIO (audio files, results)
-- **Real-time**: WebSocket (Socket.IO) for progress updates
+- **Real-time**: WebSocket for progress updates
 - **Plugin System**: Dynamic module loading with dependency injection
 
 ---
