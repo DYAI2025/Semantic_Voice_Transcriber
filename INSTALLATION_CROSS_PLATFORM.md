@@ -132,30 +132,34 @@ ffmpeg -version
 python3 --version
 ```
 
-#### Schritt 3: Python-Dependencies
+#### Schritt 3: App-Bundle + Python-Umgebung automatisch erstellen
 
 ```bash
 cd Semantic_Voice_Transcriber
-pip3 install --upgrade pip
-pip3 install -r requirements.txt
-pip3 install -r requirements_emotion.txt
+bash installer/macos/build_app.sh
+open dist/SVT.app
 ```
+
+**Was passiert?**
+- Das Skript kopiert den Quellcode ohne `.git`/`dist` in ein frisches `SVT.app` Bundle.
+- Eine virtuelle Umgebung `svt_env` wird im Bundle angelegt und alle Requirements werden installiert.
+- Der Launcher startet automatisch erst `scripts/setup_local_stack.py` und danach `svt.py`.
 
 **Apple Silicon (M1/M2) Hinweise**:
 
 ```bash
 # Falls Probleme mit praat-parselmouth:
-arch -arm64 pip3 install praat-parselmouth
+arch -arm64 dist/SVT.app/Contents/Resources/svt_env/bin/pip install praat-parselmouth
 
 # Falls Probleme mit librosa:
 brew install libsndfile
-pip3 install soundfile
+dist/SVT.app/Contents/Resources/svt_env/bin/pip install soundfile
 
 # PyTorch für Apple Silicon:
-pip3 install torch torchvision torchaudio
+dist/SVT.app/Contents/Resources/svt_env/bin/pip install torch torchvision torchaudio
 ```
 
-#### Schritt 4: SVT starten
+#### Schritt 4: SVT starten (manuell ohne App-Bundle)
 
 **Option A: Terminal**
 ```bash
