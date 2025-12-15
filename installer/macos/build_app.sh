@@ -43,12 +43,12 @@ create_virtualenv() {
 
     if [[ -f "$RESOURCES_DIR/requirements.txt" ]]; then
         echo "📥 Installiere requirements.txt..."
-        "$RESOURCES_DIR/svt_env/bin/pip" install -r "$RESOURCES_DIR/requirements.txt"
+        "$RESOURCES_DIR/svt_env/bin/python3" -m pip install -r "$RESOURCES_DIR/requirements.txt"
     fi
 
     if [[ -f "$RESOURCES_DIR/requirements_emotion.txt" ]]; then
         echo "📥 Installiere requirements_emotion.txt..."
-        "$RESOURCES_DIR/svt_env/bin/pip" install -r "$RESOURCES_DIR/requirements_emotion.txt"
+        "$RESOURCES_DIR/svt_env/bin/python3" -m pip install -r "$RESOURCES_DIR/requirements_emotion.txt"
     fi
 }
 
