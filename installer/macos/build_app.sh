@@ -39,7 +39,7 @@ create_virtualenv() {
     "$PYTHON_BIN" -m venv "$RESOURCES_DIR/svt_env"
 
     echo "⬆️  Aktualisiere pip..."
-    "$RESOURCES_DIR/svt_env/bin/python3" -m pip install --upgrade pip
+    "$RESOURCES_DIR/svt_env/bin/python3" -m pip install --upgrade pip --quiet
 
     if [[ -f "$RESOURCES_DIR/requirements.txt" ]]; then
         echo "📥 Installiere requirements.txt..."
