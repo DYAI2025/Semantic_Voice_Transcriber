@@ -25,7 +25,8 @@ copy_project_sources() {
         --exclude '*.log' \
         --exclude '*.pyc' \
         --exclude '.mypy_cache' \
-        --exclude '.venv'
+        --exclude '.venv' \
+        --exclude 'tests'
 }
 
 create_virtualenv() {
