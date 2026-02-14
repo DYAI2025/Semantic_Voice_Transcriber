@@ -117,6 +117,53 @@ class SVTLocalBackend:
             },
             "supported_formats": [".mp3", ".wav", ".m4a", ".ogg", ".flac", ".mp4"]
         }
+    
+    def export_transcript(self, transcript_data: List[Dict], format: str = "pdf", 
+                        output_dir: str = "./exports", patient_name: str = ""):
+        """
+        Export transcript to PDF, DOCX, or JSON.
+        
+        Args:
+            transcript_data: List of transcript segments
+            format: Export format (pdf, docx, json)
+            output_dir: Output directory
+            patient_name: Patient name for filename
+        
+        Returns:
+            Export result with file path
+        """
+        try:
+            from svt_export_manager import ExportManager
+            
+            # Generate filename
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            if patient_name:
+                filename = f"{patient_name}_{timestamp}"
+            else:
+                filename = f"session_{timestamp}"
+            
+            # Export
+            exporter = ExportManager(output_dir=output_dir)
+            result = exporter.export(
+                transcript_data=transcript_data,
+                base_filename=filename,
+                format=format,
+                patient_name=patient_name
+            )
+            
+            return result
+            
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    
+    def get_export_stats(self, transcript_data: List[Dict]) -> Dict:
+        """Get statistics about the transcript."""
+        try:
+            from svt_export_manager import ExportManager
+            exporter = ExportManager()
+            return exporter.get_export_stats(transcript_data)
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
 
 def create_html():
@@ -464,6 +511,46 @@ def create_html():
             const m = Math.floor(seconds / 60);
             const s = Math.floor(seconds % 60);
             return m + ':' + s.toString().padStart(2, '0');
+        }
+        
+        // Export functions
+        async function exportPDF() {
+            if (!currentResults) {
+                alert('Keine Transkription zum Exportieren');
+                return;
+            }
+            const result = await pywebview.api.export_transcript(currentResults.transcript, 'pdf', './exports', '');
+            if (result.status === 'success') {
+                alert('PDF gespeichert: ' + result.path);
+            } else {
+                alert('Fehler: ' + result.message);
+            }
+        }
+        
+        async function exportDOCX() {
+            if (!currentResults) {
+                alert('Keine Transkription zum Exportieren');
+                return;
+            }
+            const result = await pywebview.api.export_transcript(currentResults.transcript, 'docx', './exports', '');
+            if (result.status === 'success') {
+                alert('DOCX gespeichert: ' + result.path);
+            } else {
+                alert('Fehler: ' + result.message);
+            }
+        }
+        
+        async function exportJSON() {
+            if (!currentResults) {
+                alert('Keine Transkription zum Exportieren');
+                return;
+            }
+            const result = await pywebview.api.export_transcript(currentResults.transcript, 'json', './exports', '');
+            if (result.status === 'success') {
+                alert('JSON gespeichert: ' + result.path);
+            } else {
+                alert('Fehler: ' + result.message);
+            }
         }
         
         // Expose start function to global scope

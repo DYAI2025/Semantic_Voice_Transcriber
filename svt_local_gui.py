@@ -207,25 +207,78 @@ class SVTLocalGUI:
     def export_pdf(self, values):
         """Export to PDF"""
         if not self.results:
+            sg.popup("Fehler", "Keine Transkription zum Exportieren")
             return
-        # Implementation would use reportlab
-        sg.popup("PDF Export", f"Ergebnisse in {values['-EXPORT-FOLDER-'] or 'current dir'} speichern")
+        
+        try:
+            from svt_export_manager import ExportManager
+            folder = values["-EXPORT-FOLDER-"] or "."
+            exporter = ExportManager(output_dir=folder)
+            
+            result = exporter.export(
+                transcript_data=self.results.get("transcript", []),
+                base_filename=f"therapie_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                format="pdf"
+            )
+            
+            if result["status"] == "success":
+                sg.popup("✓ PDF Export", f"PDF gespeichert:\n{result['path']}")
+            else:
+                sg.popup("Fehler", result.get("message", "Unbekannter Fehler"))
+        except ImportError:
+            sg.popup("Fehler", "PDF Export nicht verfügbar.\nInstallieren: pip install reportlab")
+        except Exception as e:
+            sg.popup("Fehler", str(e))
     
     def export_docx(self, values):
         """Export to DOCX"""
         if not self.results:
+            sg.popup("Fehler", "Keine Transkription zum Exportieren")
             return
-        sg.popup("DOCX Export", f"Ergebnisse in {values['-EXPORT-FOLDER-'] or 'current dir'} speichern")
+        
+        try:
+            from svt_export_manager import ExportManager
+            folder = values["-EXPORT-FOLDER-"] or "."
+            exporter = ExportManager(output_dir=folder)
+            
+            result = exporter.export(
+                transcript_data=self.results.get("transcript", []),
+                base_filename=f"therapie_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                format="docx"
+            )
+            
+            if result["status"] == "success":
+                sg.popup("✓ DOCX Export", f"DOCX gespeichert:\n{result['path']}")
+            else:
+                sg.popup("Fehler", result.get("message", "Unbekannter Fehler"))
+        except ImportError:
+            sg.popup("Fehler", "DOCX Export nicht verfügbar.\nInstallieren: pip install python-docx")
+        except Exception as e:
+            sg.popup("Fehler", str(e))
     
     def export_json(self, values):
         """Export to JSON"""
         if not self.results:
+            sg.popup("Fehler", "Keine Transkription zum Exportieren")
             return
-        folder = values["-EXPORT-FOLDER-"] or "."
-        output = os.path.join(folder, f"svt_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-        with open(output, "w", encoding="utf-8") as f:
-            json.dump(self.results, f, ensure_ascii=False, indent=2)
-        sg.popup("✓ JSON Export", f"Gespeichert: {output}")
+        
+        try:
+            from svt_export_manager import ExportManager
+            folder = values["-EXPORT-FOLDER-"] or "."
+            exporter = ExportManager(output_dir=folder)
+            
+            result = exporter.export(
+                transcript_data=self.results.get("transcript", []),
+                base_filename=f"therapie_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                format="json"
+            )
+            
+            if result["status"] == "success":
+                sg.popup("✓ JSON Export", f"JSON gespeichert:\n{result['path']}")
+            else:
+                sg.popup("Fehler", result.get("message", "Unbekannter Fehler"))
+        except Exception as e:
+            sg.popup("Fehler", str(e))
 
 
 if __name__ == "__main__":
