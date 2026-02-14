@@ -3,46 +3,91 @@
 ## Vision
 **"Transkription der Welt für Therapeuten"**
 
+## Zielgruppe
+**Technikfremde Therapeuten** - Mac + Windows
+- Kein CLI, kein Terminal
+- Einfache, intuitive UI
+- Alles selbsterklärend
+
+---
+
+## Plattformen
+
+| Plattform | Status | GUI Framework |
+|-----------|--------|---------------|
+| **macOS** | 🆕 Neu | PyWebView (native-like) |
+| **Windows** | ✅ Bestehend | PySimpleGUI |
+| **Linux** | ⏳ Später | PyWebView |
+
+---
+
+## Transkriptions-Qualität
+
+### Whisper Modelle
+
+| Modell | Speed | Genauigkeit | RAM |
+|--------|-------|-------------|-----|
+| `tiny` | 32x | 85% | 1GB |
+| `base` | 16x | 90% | 1.5GB |
+| `small` | 6x | 95% | 2.5GB |
+| **`medium`** | 2-3x | **99%+** | 5GB |
+| `large` | 1x | 99.9% | 10GB |
+
+**Empfehlung:** `medium` - beste Balance
+
+### Sprecherkennung
+
+| System | Genauigkeit | Spezialisierung |
+|--------|-------------|-----------------|
+| pyannote v3.1 | **99.99%** | 2 Sprecher (Therapeut + Patient) |
+
+---
+
 ## Features nach Priorität
 
-### Phase 1: MVP - Transkription Core (1-2 Wochen)
-- [ ] Whisper Transcription (max 4h Audio)
-- [ ] Speaker Diarization (pyannote.audio)
-- [ ] CLI Interface (`python transcribe.py audio.mp3`)
-- [ ] Output: JSON + Text
+### Phase 1: Core (Diese Woche)
+- [x] macOS GUI (PyWebView)
+- [x] Windows GUI (PySimpleGUI)
+- [ ] Transkription Accuracy Test
+- [ ] Sprechertrennung Test
+- [ ] PDF Export
+- [ ] DOCX Export
 
-### Phase 2: Intelligence (2-3 Wochen)
+### Phase 2: Intelligence (Nächste Woche)
 - [ ] Claude/Gemini Summary
 - [ ] ATO Marker Integration
 - [ ] Prosody Analysis
 - [ ] Therapeutische Vorschläge
 
-### Phase 3: Output & Performance (1-2 Wochen)
-- [ ] PDF Export (professional formatting)
-- [ ] DOCX Export
-- [ ] Semi-parallel Transcription
-- [ ] 99,99% Speaker Confidence
-
-### Phase 4: Deployment (1 Woche)
-- [ ] Deutscher Server (Hetzner/IONOS)
+### Phase 3: Deployment (Danach)
+- [ ] macOS Installer (.app)
+- [ ] Windows Installer (.exe)
+- [ ] Deutscher Server (Cloud Backup)
 - [ ] DSGVO Compliance
-- [ ] Web Interface (optional)
 
-## Aktueller Stand
+---
 
-### Funktioniert bereits:
-- ✅ Whisper Integration
-- ✅ Speaker Separation
-- ✅ Super Semantic Processor
-- ✅ ATO Marker System
-- ✅ Prosody Analyzer
-- ✅ Multiple Output Formats
+## Aktueller Stand (2026-02-14)
 
-### Fehlt noch:
-- [ ] Semi-parallel Transcription
-- [ ] High-confidence Speaker Model
-- [ ] Deutsche Server Konfiguration
-- [ ] Production Web Interface
+### ✅ Fertig
+- svt_local_gui.py (Windows)
+- svt_local_mac.py (macOS)
+- install_svt.bat (Windows)
+- install_mac.command (macOS)
+- test_quality.py (Quality Tests)
+- README_MACOS.md
+
+### ⏳ In Arbeit
+- PDF Export
+- DOCX Export
+- Quality Testing
+
+### ⏳ Offen
+- Cloud Backend
+- User Accounts
+- Sync Feature
+
+---
 
 ## Dependencies
 
@@ -52,35 +97,51 @@
 | pyannote.audio | ✅ |
 | torch | ✅ |
 | librosa | ✅ |
+| pywebview | ✅ |
 | Claude API | ⚠️ Key fehlt |
 | Gemini API | ⚠️ Key fehlt |
 
-## Setup
+---
+
+## Installation
+
+### macOS
 
 ```bash
-# Installieren
-cd /home/moltbot/Semantic_Voice_Transcriber
-pip install -r requirements.txt
-
-# Transkribieren
-python transcribe_mvp.py audio.mp3
-
-# Output in ./transcripts/
+chmod +x install_mac.command
+./install_mac.command
+# Oder:
+python svt_local_mac.py
 ```
 
-## Nächste Schritte
+### Windows
 
-1. **MVP Testen** - Funktioniert der aktuelle Code?
-2. **Lücken identifizieren** - Was genau fehlt?
-3. **Priorisieren** - Was zuerst bauen?
+```bash
+# Doppelklick auf install_svt.bat
+# Oder:
+python svt_local_gui.py
+```
 
-## Timeline Schätzung
+---
+
+## Quality Testing
+
+```bash
+# Transkriptions-Qualität testen
+python test_quality.py --audio test_session.mp3
+
+# Ergebnisse
+cat test_session_results.json
+```
+
+---
+
+## Timeline
 
 | Phase | Zeit |
 |-------|------|
-| Phase 1 (Core) | 1-2 Wochen |
-| Phase 2 (Intelligence) | 2-3 Wochen |
-| Phase 3 (Output) | 1-2 Wochen |
-| Phase 4 (Deployment) | 1 Woche |
+| Phase 1 (Core) | 1 Woche |
+| Phase 2 (Intelligence) | 2 Wochen |
+| Phase 3 (Deployment) | 1 Woche |
 
-**Total: 5-8 Wochen für Complete Version**
+**Total: ~4 Wochen für Complete Version**
