@@ -135,6 +135,16 @@ class SVTLocalGUI:
             
             [sg.HorizontalSeparator()],
             
+            [sg.Frame("Export", [
+                [sg.Button("📄 PDF exportieren", key="-EXPORT-PDF-", size=(20, 1)),
+                 sg.Button("📄 DOCX exportieren", key="-EXPORT-DOCX-", size=(20, 1)),
+                 sg.Button("📄 JSON exportieren", key="-EXPORT-JSON-", size=(20, 1))],
+                [sg.HorizontalSeparator()],
+                [sg.Button("🧠 KI-Analyse", key="-ANALYZE-", size=(20, 1), button_color=("white", "#805ad5"))],
+                [sg.Input(key="-EXPORT-FOLDER-", size=(50, 1)), 
+                 sg.FolderBrowse("Speicherort...", key="-EXPORT-BROWSE-")]
+            ])],
+            
             [sg.Text("Status: Bereit | Modelle: Nicht geladen", key="-MODEL-STATUS-", font=("Arial", 10))],
             [sg.Button("⚙️ Modelle laden", key="-LOAD-MODELS-", size=(20, 1))]
         ]
@@ -187,6 +197,8 @@ class SVTLocalGUI:
                 self.export_docx(values)
             if event == "-EXPORT-JSON-":
                 self.export_json(values)
+            if event == "-ANALYZE-":
+                self.analyze_therapy()
         
         window.close()
     
@@ -277,6 +289,61 @@ class SVTLocalGUI:
                 sg.popup("✓ JSON Export", f"JSON gespeichert:\n{result['path']}")
             else:
                 sg.popup("Fehler", result.get("message", "Unbekannter Fehler"))
+        except Exception as e:
+            sg.popup("Fehler", str(e))
+    
+    def analyze_therapy(self):
+        """Analyze transcript with Claude/Gemini."""
+        if not self.results:
+            sg.popup("Fehler", "Keine Transkription zur Analyse")
+            return
+        
+        try:
+            from svt_therapy_analyzer import TherapyAnalyzer
+            
+            # Show progress
+            sg.PopupAnimated("🔄 Analysiere mit KI...", title="Therapie Analyse")
+            
+            analyzer = TherapyAnalyzer(provider="openai")
+            transcript = self.results.get("transcript", [])
+            result = analyzer.analyze_transcript(transcript)
+            
+            sg.PopupAnimated(None)  # Hide progress
+            
+            # Build result popup
+            analysis_text = f"""
+📋 ZUSAMMENFASSUNG
+{'='*40}
+{result.summary}
+
+🎯 ATO MARKER ({len(result.ato_markers)} gefunden)
+{'='*40}
+"""
+            for m in result.ato_markers:
+                analysis_text += f"• {m['type']}: {m.get('note', 'N/A')[:100]}\n"
+            
+            analysis_text += f"""
+💡 THERAPEUTISCHE VORSCHLÄGE
+{'='*40}
+"""
+            for i, s in enumerate(result.therapeutic_suggestions[:5], 1):
+                if s.strip():
+                    analysis_text += f"{i}. {s}\n"
+            
+            analysis_text += f"""
+🏷️ THEMEN
+{'='*40}
+{', '.join(result.themes)}
+"""
+            
+            sg.popup_scrolled(
+                analysis_text,
+                title="🧠 Therapie Analyse",
+                size=(600, 500)
+            )
+            
+        except ImportError:
+            sg.popup("Fehler", "Therapie-Analyse nicht verfügbar.\nStelle sicher, dass svt_therapy_analyzer installiert ist.")
         except Exception as e:
             sg.popup("Fehler", str(e))
 

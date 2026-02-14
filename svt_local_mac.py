@@ -164,6 +164,38 @@ class SVTLocalBackend:
             return exporter.get_export_stats(transcript_data)
         except Exception as e:
             return {"status": "error", "message": str(e)}
+    
+    def analyze_therapy(self, transcript_data: List[Dict], provider: str = "openai"):
+        """
+        Analyze therapy transcript with Claude/Gemini.
+        
+        Args:
+            transcript_data: List of transcript segments
+            provider: LLM provider ("openai" or "google")
+        
+        Returns:
+            Analysis result with summary, ATO markers, suggestions
+        """
+        try:
+            from svt_therapy_analyzer import TherapyAnalyzer
+            
+            analyzer = TherapyAnalyzer(provider=provider)
+            result = analyzer.analyze_transcript(transcript_data)
+            
+            return {
+                "status": "success",
+                "summary": result.summary,
+                "ato_markers": [
+                    {"type": m.type, "description": m.description, "note": m.note}
+                    for m in result.ato_markers
+                ],
+                "suggestions": result.therapeutic_suggestions,
+                "themes": result.themes,
+                "sentiment": result.sentiment_analysis,
+                "quality": result.quality_metrics
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
 
 def create_html():
@@ -413,7 +445,12 @@ def create_html():
                 <p style="color: #a0aec0;">Sprecher-Informationen...</p>
             </div>
             <div class="output-content" id="analysisTab" style="display: none;">
-                <p style="color: #a0aec0;">Analyse erscheint hier...</p>
+                <div style="margin-bottom: 16px;">
+                    <button class="btn btn-primary" onclick="analyzeTherapy()" id="analyzeBtn">🧠 KI-Analyse starten</button>
+                </div>
+                <div id="analysisContent">
+                    <p style="color: #a0aec0;">Klicken Sie auf "KI-Analyse starten" für eine automatische Zusammenfassung mit therapeutischen Vorschlägen.</p>
+                </div>
             </div>
             
             <div class="export-section" style="margin-top: 24px;">
@@ -551,6 +588,58 @@ def create_html():
             } else {
                 alert('Fehler: ' + result.message);
             }
+        }
+        
+        // Therapy Analysis function
+        async function analyzeTherapy() {
+            if (!currentResults) {
+                alert('Keine Transkription zur Analyse');
+                return;
+            }
+            
+            document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('analyzeBtn').textContent = '🔄 Analysiere...';
+            
+            try {
+                const result = await pywebview.api.analyze_therapy(currentResults.transcript, 'openai');
+                
+                if (result.status === 'success') {
+                    let html = '<h3 style="margin-bottom: 16px;">📋 Zusammenfassung</h3>';
+                    html += '<p style="margin-bottom: 24px;">' + result.summary + '</p>';
+                    
+                    html += '<h4 style="margin-bottom: 12px;">🎯 ATO Marker (' + result.ato_markers.length + ')</h4>';
+                    if (result.ato_markers.length > 0) {
+                        html += '<ul style="margin-bottom: 24px;">';
+                        result.ato_markers.forEach(marker => {
+                            html += '<li style="margin-bottom: 8px;"><strong>' + marker.type + ':</strong> ' + (marker.note || 'Erkannt') + '</li>';
+                        });
+                        html += '</ul>';
+                    } else {
+                        html += '<p style="margin-bottom: 24px; color: #48bb78;">Keine besonderen Marker erkannt</p>';
+                    }
+                    
+                    html += '<h4 style="margin-bottom: 12px;">💡 Therapeutische Vorschläge</h4>';
+                    html += '<ul style="margin-bottom: 24px;">';
+                    result.suggestions.forEach(s => {
+                        if (s.trim()) {
+                            html += '<li style="margin-bottom: 8px;">' + s.replace(/^\d+\.\s*/, '') + '</li>';
+                        }
+                    });
+                    html += '</ul>';
+                    
+                    html += '<h4 style="margin-bottom: 12px;">🏷️ Themen</h4>';
+                    html += '<p style="margin-bottom: 24px;">' + result.themes.join(', ') + '</p>';
+                    
+                    document.getElementById('analysisContent').innerHTML = html;
+                } else {
+                    alert('Analyse-Fehler: ' + result.message);
+                }
+            } catch (e) {
+                alert('Fehler: ' + e);
+            }
+            
+            document.getElementById('analyzeBtn').disabled = false;
+            document.getElementById('analyzeBtn').textContent = '🧠 KI-Analyse starten';
         }
         
         // Expose start function to global scope
