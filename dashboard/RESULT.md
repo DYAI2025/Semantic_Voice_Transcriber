@@ -2,136 +2,133 @@
 
 ## Zusammenfassung
 
-Ich habe ein **modernes, intuitives Web-basiertes Dashboard** für den Semantic Voice Transcriber entwickelt, speziell für Therapeuten konzipiert. Das Dashboard bietet eine professionelle Benutzeroberfläche für die Analyse therapeutischer Sitzungen.
+Ich habe das **Therapeuten-Dashboard** für den Semantic Voice Transcriber umfassend verbessert. Die UX/UI-Enwicklungen konzentrieren sich auf Benutzerfreundlichkeit und die Integration in den therapeutischen Workflow.
 
 ---
 
 ## Was gemacht wurde
 
-### 1. Dashboard-Struktur (`/home/moltbot/Semantic_Voice_Transcriber/dashboard/`)
+### 1. Erweiterte CSS-Styles (`dashboard/css/styles.css`)
 
-**Erstellte Dateien:**
+**Neue Features:**
+- **Inline ATO-Marker-Hervorhebung**: Farbcodierte Markierung von therapeutischen Markern direkt im Transkript-Text
+- **Marker-Kategorien**:
+  - 🛡️ Abwehrmechanismen (Verleugnung, Projektion, Rationalisierung, Verschiebung) - Orange/Amber
+  - 🚧 Widerstand (Schweigen, Themenwechsel, Humor, Zögern) - Rot
+  - 💫 Übertragung (positiv, negativ, Abhängigkeit) - Lila
+  - 🎭 Themen (Trennungsangst, Kontrolle, Verlassenheit, Scham/Schuld) - Cyan
+- **Tooltips**: Maus-Hover zeigt klinische Beschreibungen
+- **Verbesserte Turnpoint-Timeline**: Visuelle Icons und erweiterte Darstellung
+- **Responsive Design**: Optimiert für verschiedene Bildschirmgrößen
+
+### 2. Verbesserte JavaScript-Anwendung (`dashboard/js/app.js`)
+
+**Neue Funktionen:**
+- `highlightATOMarkers()` - Markiert Marker direkt im Transkript
+- `autoDetectMarkers()` - Automatische Keyword-Erkennung für:
+  - Verleugnung, Projektion, Rationalisierung, Verschiebung
+  - Themenwechsel, Humor, Zögern
+  - Positive/negative Übertragung, Abhängigkeit
+  - Trennungsangst, Kontrollbedürfnis, Verlassenheitsangst, Scham/Schuld
+- Erweiterte `detectTurnpoints()` mit 4 Typen:
+  - Emotional (Gefühlsregungen)
+  - Resistance (Widerstand)
+  - Defense (Abwehr)
+  - Narrative (Erzählmuster)
+- Verbesserte `renderTurnpoints()` mit Icons und Kontext
+
+### 3. Erweiterte API-Integration (`dashboard/js/api.js`)
+
+**Verbesserungen:**
+- Umfassendere Marker-Erkennungsmuster
+- Klinische Beschreibungen für jeden Marker-Typ
+- Zählung der Marker-Vorkommen
+- Bessere Vorschlagsgenerierung basierend auf erkannten Mustern
+
+### 4. Dashboard-Startscript (`dashboard/dashboard_server.py`)
+
+Einfaches Python-Script zum Starten des Dashboards:
+```bash
+python dashboard/dashboard_server.py
+# Öffnet http://localhost:8080
+```
+
+---
+
+## Dateien
 
 | Datei | Beschreibung |
 |-------|-------------|
-| `index.html` | Haupt-HTML-Struktur mit 5 Views (Upload, Transkription, Analyse, Wendepunkte, Export) |
-| `css/styles.css` | Vollständiges Design-System (~1100 Zeilen CSS) |
-| `js/api.js` | API-Client für SVT-Backend-Integration |
-| `js/app.js` | Hauptanwendung mit UI-Logik (~850 Zeilen JavaScript) |
-| `README.md` | Dokumentation |
+| `dashboard/index.html` | Hauptseite mit 5 Views |
+| `dashboard/css/styles.css` | Vollständiges Design-System (~1900 Zeilen) |
+| `dashboard/js/api.js` | API-Client für Backend-Integration |
+| `dashboard/js/app.js` | Hauptanwendung mit erweiterter Logik |
+| `dashboard/dashboard_server.py` | HTTP-Server zum Starten |
+| `dashboard/README.md` | Dokumentation |
 
-### 2. Features implementiert
+---
 
-#### 🎤 Audio-Upload
-- Modernes Drag & Drop Interface
-- Validierung von Dateiformaten (MP3, WAV, M4A, OGG, FLAC)
-- Max. 500 MB Dateigröße
-- Echtzeit-Fortschrittsanzeige
+## Features des Dashboards
 
-#### 📝 Transkription
-- **Sprecherzuordnung**: Farbcodierung (Therapeut = Lila, Patient = Grün)
-- **Suche**: Volltext-Suche im Transkript
-- **Filter**: Nach Sprecher (Therapeut/Patient)
-- **ATO-Marker-Highlighting**: Visuelle Hervorhebung erkannter Marker
+### 🎤 Audio-Upload
+- Drag & Drop Interface
+- Unterstützte Formate: MP3, WAV, M4A, OGG, FLAC
+- Fortschrittsanzeige
 
-#### 🧠 Analyse-Dashboard
-- **ATO-Marker-Übersicht**: 4 Kategorien (Abwehr, Widerstand, Übertragung, Themen)
-- **Themen-Tags**: Automatische Extraktion
+### 📝 Transkription
+- **Sprecherzuordnung**: Therapeut (Lila), Patient (Grün)
+- **Inline ATO-Marker**: Farbcodierte Hervorhebung im Text
+- **Suche**: Volltextsuche mit Markierung
+- **Filter**: Nach Sprecher
+
+### 🧠 Analyse
+- **ATO-Marker-Übersicht**: 4 Kategorien mit klinischen Beschreibungen
+- **Themen-Erkennung**: Automatische Extraktion
 - **Therapeutische Vorschläge**: Kontextbasierte Empfehlungen
 - **Sprecher-Statistiken**: Redezeit-Verhältnis
-- **Sentiment-Chart**: Visualisierung des emotionalen Verlaufs
+- **Sentiment-Verlauf**: Visualisierung
 
-#### 📈 Wendepunkte
-- **Timeline-Visualisierung**: Chronologische Darstellung
+### 📈 Wendepunkte
+- **Timeline-Visualisierung**: Chronologisch sortiert
 - **4 Typen**: Emotional, Widerstand, Abwehr, Narrativ
-- **Filter**: Nach Wendepunkt-Typ
-- **Kontext-Zitate**: Originaltext zum Wendepunkt
+- **Kontext-Zitate**: Originaltext + Vorgänger-Text
 
-#### 📤 Export
-- PDF-Export (mit serverseitiger Konvertierung)
-- DOCX-Export (Word-kompatibel)
-- JSON-Export (strukturierte Daten)
-- Vorschau-Funktion
-
-### 3. Design-System
-
-**Farbschema:**
-- Primär: Indigo (#6366f1)
-- Therapeut: Lila (#6366f1)
-- Patient: Grün (#10b981)
-- Abwehr: Bernstein (#f59e0b)
-- Widerstand: Rot (#ef4444)
-- Übertragung: Violett (#8b5cf6)
-- Themen: Cyan (#06b6d4)
-
-**UI-Patterns:**
-- Sidebar-Navigation
-- Toast-Benachrichtigungen
-- Modal-Dialoge
-- Loading-Overlays
-- Responsive Design (Desktop + Tablet)
-
-### 4. Demo-Modus
-
-Das Dashboard enthält **Demo-Daten** für direkte Vorschau:
-- 16 Transkript-Einträge mit Therapeut/Patient-Dialog
-- Simulierte Analyse-Ergebnisse
-- Beispiel-Wendepunkte
+### 📤 Export
+- JSON-Export (strukturiert)
+- PDF-Export (Text)
+- DOCX-Export (Hinweis)
 
 ---
 
-## Integration mit bestehender Codebase
+## Git Commit
 
-Das Dashboard ist **unabhängig vom Backend** und kann:
-
-1. **Mit SVT-Backend** kommunizieren (via `js/api.js`)
-2. **Lokal arbeiten** mit Demo-Daten (für Präsentation)
-3. **Regelbasierte Analyse** durchführen (lokale Pattern-Erkennung)
-
-**Kompatibel mit:**
-- `svt_local_gui.py` (bestehende PySimpleGUI-Version)
-- `svt_therapy_analyzer.py` (Analyse-Modul)
-- `PSYCHOANALYSIS_DASHBOARD.md` (Spezifikation)
+**Commit-Hash:** `6b6b647`
+**Branch:** `main`
+**Repository:** https://github.com/DYAI2025/Semantic_Voice_Transcriber
 
 ---
 
-## Verwendung
+## Geplante weitere Verbesserungen
 
-### Lokal starten
-
-```bash
-cd /home/moltbot/Semantic_Voice_Transcriber/dashboard
-python3 -m http.server 8080
-```
-
-Dann im Browser öffnen: `http://localhost:8080`
+1. **Echte Backend-Integration**: Verbindung zu SVT-Python-Skripten
+2. **PDF-Export**: Serverseitige Konvertierung zu echtem PDF
+3. **DOCX-Export**: Mit vollständiger Formatierung
+4. **Mehrsprachigkeit**: Deutsche/Englische UI
+5. **Datenpersistenz**: Lokale Speicherung der Analysen
 
 ---
 
-## Dateipfade
+## Technische Details
 
-```
-/home/moltbot/Semantic_Voice_Transcriber/dashboard/
-├── index.html              (Hauptseite)
-├── README.md              (Dokumentation)
-├── css/
-│   └── styles.css         (Styles)
-└── js/
-    ├── api.js            (API-Client)
-    └── app.js            (Anwendung)
-```
+- **Frontend**: Vanilla HTML5, CSS3, JavaScript ES6+
+- **Design**: Custom CSS Variables
+- **Icons**: SVG (inline)
+- **Browser**: Chrome, Firefox, Safari, Edge (modern)
+- **Server**: Python HTTP Server (eingebaut)
 
 ---
 
-## Nächste Schritte
+## Lizenz
 
-1. **Backend-Integration**: API-Endpunkte im SVT-Backend implementieren
-2. **WebSocket**: Für Echtzeit-Updates während Transkription
-3. **Mobile Layout**: Optimierung für Tablets/Smartphones
-4. **Mehrsprachigkeit**: Englische UI hinzufügen
-5. **Dark Mode**: Optionaler dunkler Theme
-
----
-
-**Erstellt am:** 2026-02-15  
-**GitHub:** https://github.com/DYAI2025/Semantic_Voice_Transcriber
+SVT - Semantic Voice Transcriber  
+Lizenz: Creative Commons BY-NC-SA 4.0
