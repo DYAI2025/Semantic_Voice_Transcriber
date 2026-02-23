@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVT Therapeuten Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="2"/>
+                    <path d="M10 12v8l6 4 6-4v-8" stroke="currentColor" stroke-width="2" fill="none"/>
+                    <circle cx="16" cy="16" r="4" fill="currentColor"/>
+                </svg>
+                <span>SVT <strong>Therapie Dashboard</strong></span>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="status-indicator online"></span>
+            <span class="status-text">System bereit</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="nav-menu">
+                <button class="nav-item active" data-view="upload">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Upload
+                </button>
+                <button class="nav-item" data-view="transcript">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                    Transkription
+                </button>
+                <button class="nav-item" data-view="analysis">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                        <line x1="12" y1="22.08" x2="12" y2="12"/>
+                    </svg>
+                    Analyse
+                </button>
+                <button class="nav-item" data-view="turnpoints">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Wendepunkte
+                </button>
+                <button class="nav-item" data-view="export">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Export
+                </button>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="speaker-legend">
+                    <h4>Sprecher</h4>
+                    <div class="legend-item">
+                        <span class="speaker-dot therapist"></span>
+                        <span>Therapeut</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="speaker-dot patient"></span>
+                        <span>Patient</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="speaker-dot unknown"></span>
+                        <span>Unbekannt</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            
+            <!-- View: Upload -->
+            <section id="view-upload" class="view active">
+                <div class="view-header">
+                    <h1>Audio-Datei hochladen</h1>
+                    <p>Laden Sie Ihre Therapie-Sitzungsaufnahme für Transkription und Analyse hoch.</p>
+                </div>
+
+                <div class="upload-zone" id="dropZone">
+                    <div class="upload-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </div>
+                    <h2>Dateien hier ablegen oder klicken</h2>
+                    <p>Unterstützte Formate: MP3, WAV, M4A, OGG, FLAC (max. 500 MB)</p>
+                    <input type="file" id="fileInput" accept="audio/*" hidden>
+                    <button class="btn btn-primary" id="selectFileBtn">Datei auswählen</button>
+                </div>
+
+                <div class="upload-progress-container" id="uploadProgress" style="display: none;">
+                    <div class="progress-header">
+                        <span class="file-name" id="progressFileName"></span>
+                        <span class="progress-percent" id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p class="progress-status" id="progressStatus">Bereit zum Hochladen...</p>
+                </div>
+
+                <div class="recent-files" id="recentFiles" style="display: none;">
+                    <h3>Zuletzt hochgeladen</h3>
+                    <div class="file-list" id="fileList"></div>
+                </div>
+            </section>
+
+            <!-- View: Transcript -->
+            <section id="view-transcript" class="view">
+                <div class="view-header">
+                    <h1>Transkription</h1>
+                    <div class="view-actions">
+                        <button class="btn btn-secondary" id="filterMarkers">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                            </svg>
+                            ATO-Marker filtern
+                        </button>
+                        <button class="btn btn-secondary" id="exportTranscript">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Exportieren
+                        </button>
+                    </div>
+                </div>
+
+                <div class="transcript-container">
+                    <div class="transcript-toolbar">
+                        <div class="search-box">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            <input type="text" id="searchInput" placeholder="Suchen...">
+                        </div>
+                        <div class="speaker-filter">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="showTherapist" checked>
+                                <span class="checkmark"></span>
+                                Therapeut
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="showPatient" checked>
+                                <span class="checkmark"></span>
+                                Patient
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="transcript-content" id="transcriptContent">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            <p>Keine Transkription geladen</p>
+                            <span>Laden Sie zuerst eine Audio-Datei hoch</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- View: Analysis -->
+            <section id="view-analysis" class="view">
+                <div class="view-header">
+                    <h1>Analyse & Interpretation</h1>
+                    <button class="btn btn-primary" id="runAnalysis">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        Analyse starten
+                    </button>
+                </div>
+
+                <div class="analysis-grid">
+                    <!-- Summary Card -->
+                    <div class="analysis-card full-width" id="summaryCard">
+                        <div class="card-header">
+                            <h3>Zusammenfassung</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="empty-state small">
+                                <p>Keine Analyse verfügbar</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ATO Markers -->
+                    <div class="analysis-card">
+                        <div class="card-header">
+                            <h3>ATO-Marker</h3>
+                            <span class="badge" id="markerCount">0</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="marker-list" id="markerList">
+                                <div class="empty-state small">
+                                    <p>Keine Marker erkannt</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Themes -->
+                    <div class="analysis-card">
+                        <div class="card-header">
+                            <h3>Themen</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="theme-tags" id="themeList">
+                                <div class="empty-state small">
+                                    <p>Keine Themen erkannt</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Therapeutic Suggestions -->
+                    <div class="analysis-card full-width">
+                        <div class="card-header">
+                            <h3>Therapeutische Vorschläge</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="suggestions-list" id="suggestionsList">
+                                <div class="empty-state small">
+                                    <p>Keine Vorschläge verfügbar</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Speaker Stats -->
+                    <div class="analysis-card">
+                        <div class="card-header">
+                            <h3>Sprecher-Verhältnis</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="speaker-stats" id="speakerStats">
+                                <div class="stat-row">
+                                    <span class="stat-label">Therapeut:</span>
+                                    <span class="stat-value" id="therapistTime">--</span>
+                                </div>
+                                <div class="stat-row">
+                                    <span class="stat-label">Patient:</span>
+                                    <span class="stat-value" id="patientTime">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sentiment -->
+                    <div class="analysis-card">
+                        <div class="card-header">
+                            <h3>Sentiment-Verlauf</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="sentiment-chart" id="sentimentChart">
+                                <div class="empty-state small">
+                                    <p>Keine Daten</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- View: Turnpoints -->
+            <section id="view-turnpoints" class="view">
+                <div class="view-header">
+                    <h1>Therapeutische Wendepunkte</h1>
+                    <div class="turnpoint-filters">
+                        <select id="turnpointTypeFilter">
+                            <option value="all">Alle Typen</option>
+                            <option value="emotional">Emotional</option>
+                            <option value="resistance">Widerstand</option>
+                            <option value="defense">Abwehr</option>
+                            <option value="narrative">Narrativ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="turnpoints-timeline" id="turnpointsTimeline">
+                    <div class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                        <p>Keine Wendepunkte erkannt</p>
+                        <span>Führen Sie eine Analyse durch</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- View: Export -->
+            <section id="view-export" class="view">
+                <div class="view-header">
+                    <h1>Export</h1>
+                    <p>Wählen Sie das gewünschte Exportformat für Ihre Transkription und Analyse.</p>
+                </div>
+
+                <div class="export-options">
+                    <div class="export-card" data-format="pdf">
+                        <div class="export-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10 9 9 9 8 9"/>
+                            </svg>
+                        </div>
+                        <h3>PDF</h3>
+                        <p>Für Akten, Archivierung und Ausdruck</p>
+                        <button class="btn btn-secondary">PDF exportieren</button>
+                    </div>
+
+                    <div class="export-card" data-format="docx">
+                        <div class="export-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <text x="8" y="21" font-size="6" fill="currentColor">DOCX</text>
+                            </svg>
+                        </div>
+                        <h3>DOCX</h3>
+                        <p>Für Weiterbearbeitung in Word</p>
+                        <button class="btn btn-secondary">DOCX exportieren</button>
+                    </div>
+
+                    <div class="export-card" data-format="json">
+                        <div class="export-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <polyline points="16 18 22 12 16 6"/>
+                                <polyline points="8 6 2 12 8 18"/>
+                            </svg>
+                        </div>
+                        <h3>JSON</h3>
+                        <p>Strukturierte Daten für weitere Verarbeitung</p>
+                        <button class="btn btn-secondary">JSON exportieren</button>
+                    </div>
+                </div>
+
+                <div class="export-preview" id="exportPreview" style="display: none;">
+                    <h3>Vorschau</h3>
+                    <div class="preview-content" id="previewContent"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay" style="display: none;">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal Title</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-content" id="modalContent">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p id="loadingText">Lädt...</p>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
